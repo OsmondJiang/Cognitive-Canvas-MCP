@@ -4,7 +4,7 @@ from tools.chat_fork import ChatForkManager
 from tools.diagram_tool import DiagramManager
 from tools.structured_knowledge_tool import StructuredKnowledgeManager
 
-manager = ChatForkManager()
+chat_fork_manager = ChatForkManager()
 diagram_manager = DiagramManager()
 structured_knowledge_manager = StructuredKnowledgeManager()
 
@@ -118,16 +118,16 @@ def chat_fork_command(conversation_id: str, action: str, summary: str = None):
     if action == "fork_topic":
         if not summary:
             return "Error: summary is required for fork_topic"
-        return manager.fork_topic(conversation_id, summary)
+        return chat_fork_manager.fork_topic(conversation_id, summary)
 
     elif action == "return_to_parent":
-        return manager.return_to_parent(conversation_id)
+        return chat_fork_manager.return_to_parent(conversation_id)
 
     elif action == "get_current_summary":
-        return manager.get_current_summary(conversation_id)
+        return chat_fork_manager.get_current_summary(conversation_id)
 
     elif action == "list_subtopics":
-        return manager.list_subtopics(conversation_id)
+        return chat_fork_manager.list_subtopics(conversation_id)
 
     else:
         return f"Unknown action: {action}"
@@ -147,17 +147,17 @@ def diagram_command(conversation_id: str, action: str, params: dict):
     - render: params={}  # returns final diagram text
     """
     if action == "set_diagram_type":
-        return manager.set_diagram_type(conversation_id, params["diagram_type"])
+        return diagram_manager.set_diagram_type(conversation_id, params["diagram_type"])
     elif action == "add_node":
-        return manager.add_node(conversation_id, **params)
+        return diagram_manager.add_node(conversation_id, **params)
     elif action == "update_node":
-        return manager.update_node(conversation_id, **params)
+        return diagram_manager.update_node(conversation_id, **params)
     elif action == "add_edge":
-        return manager.add_edge(conversation_id, **params)
+        return diagram_manager.add_edge(conversation_id, **params)
     elif action == "update_edge":
-        return manager.update_edge(conversation_id, **params)
+        return diagram_manager.update_edge(conversation_id, **params)
     elif action == "render":
-        return manager.render(conversation_id)
+        return diagram_manager.render(conversation_id)
     else:
         return f"Unknown action {action}"
     
@@ -186,15 +186,15 @@ def structured_knowledge_command(conversation_id: str, action: str, params: dict
       Example: structured_knowledge_command('conv1', 'metrics', {'structure_id': 'tasks'})
     """
     if action == "create":
-        return manager.create_structure(conversation_id, **params)
+        return structured_knowledge_manager.create_structure(conversation_id, **params)
     elif action == "add":
-        return manager.add_row(conversation_id, **params)
+        return structured_knowledge_manager.add_row(conversation_id, **params)
     elif action == "update":
-        return manager.update_row(conversation_id, **params)
+        return structured_knowledge_manager.update_row(conversation_id, **params)
     elif action == "render":
-        return manager.render(conversation_id, **params)
+        return structured_knowledge_manager.render(conversation_id, **params)
     elif action == "metrics":
-        return manager.get_metrics(conversation_id, **params)
+        return structured_knowledge_manager.get_metrics(conversation_id, **params)
     else:
         return f"Unknown action {action}"
 

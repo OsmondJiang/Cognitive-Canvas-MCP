@@ -64,87 +64,82 @@ class DiagramManager:
         return f"Diagram type set to {diagram_type}"
 
     # ---------------- Render ----------------
-    def render(self, conversation_id: str):
-        self._ensure_conv(conversation_id)
+    def render(self,conversation_id: str):
+        """
+        Render the diagram for the conversation as Markdown table or tree.
+        Supports diagram types: flowchart, sequence, mindmap, orgchart, tree.
+        Returns a string with both structured table and readable text-based diagram.
+        """
+        diagram_type = self.conversations[conversation_id]["diagram_type"]
         nodes = self.conversations[conversation_id]["nodes"]
         edges = self.conversations[conversation_id]["edges"]
-        dtype = self.conversations[conversation_id]["diagram_type"]
 
-        # ----------------- Markdown Table -----------------
-        # 自动计算每列最大宽度
-        headers = ["Level", "Entity A", "Relationship", "Entity B", "Condition", "Weight"]
-        rows = []
+        if not nodes:
+            return "No nodes to render."
 
-        # 计算层级（Level）
-        parent_map = {nid: [] for nid in nodes}
-        child_set = set()
+        # Build child mapping
+        node_children = {nid: [] for nid in nodes}
         for e in edges:
-            parent_map[e.source].append(e.target)
-            child_set.add(e.target)
-        roots = [nid for nid in nodes if nid not in child_set]
+            source = e.source
+            target = e.target
+            if source in node_children:
+                node_children[source].append(target)
 
-        level_map = {}
+        # Assign levels for tree-like render
+        node_levels = {}
 
-        def assign_level(nid, level=0):
-            level_map[nid] = level
-            for child in parent_map.get(nid, []):
-                assign_level(child, level + 1)
-        for r in roots:
-            assign_level(r)
+        def assign_level(node_id, level, visited=None):
+            if visited is None:
+                visited = set()
+            if node_id in visited:
+                return  # Avoid infinite loop
+            visited.add(node_id)
+            node_levels[node_id] = max(node_levels.get(node_id, 0), level)
+            for child in node_children.get(node_id, []):
+                assign_level(child, level + 1, visited.copy())
 
-        # 构建 rows
-        for e in edges:
-            row = [
-                str(level_map.get(e.source, 0)),
-                nodes[e.source].label,
-                e.type,
-                nodes[e.target].label,
-                e.metadata.get("condition", ""),
-                str(e.metadata.get("weight", "")),
-            ]
-            rows.append(row)
+        # Find root nodes (nodes with no incoming edges)
+        all_targets = {e.target for e in edges}
+        root_nodes = [nid for nid in nodes if nid not in all_targets]
+        if not root_nodes:
+            root_nodes = list(nodes.keys())  # fallback
 
-        # 计算每列最大宽度
-        col_widths = [len(h) for h in headers]
-        for row in rows:
-            for i, val in enumerate(row):
-                col_widths[i] = max(col_widths[i], len(val))
+        for root in root_nodes:
+            assign_level(root, 0)
 
-        # 构建 Markdown Table 字符串
-        markdown = "| " + " | ".join([h.ljust(col_widths[i]) for i, h in enumerate(headers)]) + " |\n"
-        markdown += "|-" + "-|-".join(["-" * col_widths[i] for i in range(len(headers))]) + "-|\n"
-        for row in rows:
-            markdown += "| " + " | ".join([row[i].ljust(col_widths[i]) for i in range(len(headers))]) + " |\n"
+        # Sort nodes by level then by node id
+        sorted_nodes = sorted(nodes.items(), key=lambda x: (node_levels.get(x[0], 0), x[0]))
 
-        # ----------------- Text Graph -----------------
-        def render_node(nid, prefix="", is_last=True):
-            line_symbol = "└─ " if is_last else "├─ "
-            line = f"{prefix}{line_symbol}{nodes[nid].label}"
-            # metadata
-            meta_parts = [f"{k}:{v}" for k,v in (edges_meta_map.get(nid, []) or [])]
-            if meta_parts:
-                line += f" [{', '.join(meta_parts)}]"
-            lines = [line]
-            children = parent_map.get(nid, [])
-            for idx, child in enumerate(children):
-                sub_prefix = prefix + ("    " if is_last else "│   ")
-                lines.extend(render_node(child, sub_prefix, idx == len(children)-1))
-            return lines
+        # Build Markdown table
+        table_lines = ["| Node ID | Label | Level |"]
+        table_lines.append("| --- | --- | --- |")
+        for nid, node in sorted_nodes:
+            table_lines.append(f"| {nid} | {node.label} | {node_levels.get(nid,0)} |")
+        table_text = "\n".join(table_lines)
 
-        # 为每个 source 节点收集 edges metadata
-        edges_meta_map = {}
-        for e in edges:
-            if e.source not in edges_meta_map:
-                edges_meta_map[e.source] = []
-            edges_meta_map[e.source].append((e.type, e.metadata.get("condition", "")))
+        # Build text tree
+        tree_lines = []
 
-        # 生成树状文本
-        text_lines = []
-        for r in roots:
-            text_lines.extend(render_node(r))
-        text_graph = "\n".join(text_lines)
+        def build_tree(node_id, prefix="", visited=None):
+            if visited is None:
+                visited = set()
+            if node_id in visited:
+                tree_lines.append(f"{prefix}{nodes[node_id].label} (loop)")
+                return
+            visited.add(node_id)
+            tree_lines.append(f"{prefix}{nodes[node_id].label}")
+            children = node_children.get(node_id, [])
+            for i, child in enumerate(children):
+                branch_prefix = prefix + ("└─ " if i == len(children) - 1 else "├─ ")
+                build_tree(child, prefix=branch_prefix, visited=visited.copy())
 
-        # ----------------- Summary -----------------
-        summary = f"Diagram Summary: {len(nodes)} nodes, {len(edges)} edges, max depth {max(level_map.values(), default=0)}"
+        for root in root_nodes:
+            build_tree(root)
 
-        return f"{summary}\n\n## Markdown Table\n\n{markdown}\n## Text Graph\n\n{text_graph}"
+        tree_text = "\n".join(tree_lines)
+
+        # Return based on diagram type
+        if diagram_type in ["tree", "orgchart", "mindmap"]:
+            return f"### Diagram (Tree Style)\n```\n{tree_text}\n```\n\n### Table View\n{table_text}"
+        else:  # flowchart, sequence
+            return f"### Diagram (Table Style)\n{table_text}\n\n### Text View\n```\n{tree_text}\n```"
