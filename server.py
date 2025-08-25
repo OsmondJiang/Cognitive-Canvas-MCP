@@ -16,9 +16,9 @@ mcp = FastMCP(name = "Cognitive Canvas", instructions="Use this MCP server whene
 @mcp.tool(name="todo_command", description="Helps the AI agent break down ideas, answers, or strategies into clear, actionable tasks. Track progress, avoid duplication, and ensure no step is missed. The agent can create, update, and manage tasks throughout a conversation, turning complex problems into manageable action items and guiding users to effective solutions.")
 def todo_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation. All tasks will be scoped to this conversation.")], 
-    action: Annotated[str, Field(description="The operation to perform on tasks", enum=["add", "update", "delete", "get", "list", "add-batch"])], 
-    # For add/update operations
-    title: Annotated[Optional[str], Field(description="Task title/name. Required for 'add' action, optional for 'update'.", default=None)],
+    action: Annotated[str, Field(description="The operation to perform on tasks", enum=["update", "delete", "get", "list", "add-batch"])], 
+    # For update operations
+    title: Annotated[Optional[str], Field(description="Task title/name. Optional for 'update'.", default=None)],
     description: Annotated[Optional[str], Field(description="Detailed description of the task", default="")],
     status: Annotated[Optional[str], Field(description="Task status", enum=["pending", "in_progress", "completed", "blocked"], default="pending")],
     # For update/delete/get operations
@@ -34,28 +34,22 @@ def todo_command(
 
     Parameters:
     - conversation_id (str, required): Unique identifier of the conversation
-    - action (str, required): Must be one of ["add", "update", "delete", "get", "list", "add-batch"]
-    - title (str): Task title (required for 'add', optional for 'update')
+    - action (str, required): Must be one of ["update", "delete", "get", "list", "add-batch"]
+    - title (str): Task title (optional for 'update')
     - description (str): Task description (optional, default: "")
     - status (str): Task status (optional, default: "pending") - one of ["pending","in_progress","completed","blocked"]
     - task_id (int): Task ID (required for 'update', 'delete', 'get')
     - task_list (list): List of task dictionaries for batch operations (required for 'add-batch')
 
     Usage Examples:
-    1. Add task: todo_command("conv1", "add", title="Write docs", description="API documentation", status="pending")
-    2. Update task: todo_command("conv1", "update", task_id=1, status="completed") 
-    3. Delete task: todo_command("conv1", "delete", task_id=1)
-    4. Get task: todo_command("conv1", "get", task_id=1)
-    5. List tasks: todo_command("conv1", "list")
-    6. Add batch: todo_command("conv1", "add-batch", task_list=[{"title":"Task1", "description":"Desc1"}, {"title":"Task2"}])
+    1. Update task: todo_command("conv1", "update", task_id=1, status="completed") 
+    2. Delete task: todo_command("conv1", "delete", task_id=1)
+    3. Get task: todo_command("conv1", "get", task_id=1)
+    4. List tasks: todo_command("conv1", "list")
+    5. Add batch: todo_command("conv1", "add-batch", task_list=[{"title":"Task1", "description":"Desc1"}, {"title":"Task2"}])
     """
     
-    if action == "add":
-        if not title:
-            return "Error: title is required for add action"
-        return todo_tool.add_task(conversation_id, title, description, status)
-    
-    elif action == "add-batch":
+    if action == "add-batch":
         if not task_list:
             return "Error: task_list is required for add-batch action"
         return todo_tool.add_tasks_batch(conversation_id, tasks=task_list)
@@ -79,7 +73,7 @@ def todo_command(
         return todo_tool.list_tasks(conversation_id)
     
     else:
-        return f"Unknown action: {action}. Valid actions: add, add-batch, update, delete, get, list"
+        return f"Unknown action: {action}. Valid actions: add-batch, update, delete, get, list"
     
 
 @mcp.tool(name='chat_fork', description="The Chat Fork Tool is used to manage conversation branches when the discussion shifts into a new topic or subtopic. Instead of updating context after every message, the LLM should call this tool only at key decision points. When the conversation diverges, the LLM can create a new branch to capture a summarized snapshot of the current context, and when the user finishes with that branch, the LLM can return to the parent branch to resume the previous discussion. This allows the conversation to be managed as a tree of nodes, making it easier to preserve reasoning state, backtrack, and switch topics smoothly.")
