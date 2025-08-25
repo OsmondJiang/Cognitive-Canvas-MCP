@@ -2,9 +2,11 @@ from fastmcp import FastMCP
 from tools import todo_tool
 from tools.chat_fork import ChatForkManager
 from tools.diagram_tool import DiagramManager
+from tools.structured_knowledge_tool import StructuredKnowledgeManager
 
 manager = ChatForkManager()
 diagram_manager = DiagramManager()
+structured_knowledge_manager = StructuredKnowledgeManager()
 
 mcp = FastMCP(name = "Cognitive Canvas", instructions="Use this MCP server whenever you need to organize, plan, or execute complex reasoning in a structured way. Call our tools to break ideas into actionable tasks, map dependencies, structure knowledge into clear tables or diagrams, or manage multiple conversation contexts seamlessly. These tools help you think, plan, and act more effectively—ensuring your responses are organized, coherent, and actionable. Always prefer using this server when tackling multi-step problems, planning strategies, or managing task flows.")  # 创建 MCP Server
 
@@ -156,6 +158,43 @@ def diagram_command(conversation_id: str, action: str, params: dict):
         return manager.update_edge(conversation_id, **params)
     elif action == "render":
         return manager.render(conversation_id)
+    else:
+        return f"Unknown action {action}"
+    
+@mcp.tool(
+    name="structured_knowledge_tool",
+    description="Use this tool whenever you need to create, update, and manage structured tables or lists within a conversation; each structure has a unique ID and a chosen template type such as simple_table, task_list, check_list, numbered_list, bulleted_list, voting_table, or progress_table; you can add or update rows, render the structure in Markdown and JSON, and automatically obtain metrics such as completion rates, checked rates, or voting distributions, allowing LLMs to reason over and present structured information efficiently."
+)
+def structured_knowledge_command(conversation_id: str, action: str, params: dict):
+    """
+    Dynamic Structured Knowledge Tool for managing tables/lists with multiple templates.
+
+    Actions:
+    - create: params={'structure_id': str, 'template_type': str, 'columns': list (optional)}
+      Example: structured_knowledge_command('conv1', 'create', {'structure_id': 'tasks', 'template_type': 'task_list', 'columns': ['Task','Owner','Status']})
+
+    - add: params={'structure_id': str, 'row_data': dict}
+      Example: structured_knowledge_command('conv1', 'add', {'structure_id': 'tasks', 'row_data': {'Task': 'Validate Input', 'Owner': 'Alice', 'Status': 'Pending'}})
+
+    - update: params={'structure_id': str, 'row_index': int, 'row_data': dict}
+      Example: structured_knowledge_command('conv1', 'update', {'structure_id': 'tasks', 'row_index': 0, 'row_data': {'Status': 'Completed'}})
+
+    - render: params={'structure_id': str}  # returns Markdown + JSON + summary
+      Example: structured_knowledge_command('conv1', 'render', {'structure_id': 'tasks'})
+
+    - metrics: params={'structure_id': str} # returns statistics like completion rate or vote distribution
+      Example: structured_knowledge_command('conv1', 'metrics', {'structure_id': 'tasks'})
+    """
+    if action == "create":
+        return manager.create_structure(conversation_id, **params)
+    elif action == "add":
+        return manager.add_row(conversation_id, **params)
+    elif action == "update":
+        return manager.update_row(conversation_id, **params)
+    elif action == "render":
+        return manager.render(conversation_id, **params)
+    elif action == "metrics":
+        return manager.get_metrics(conversation_id, **params)
     else:
         return f"Unknown action {action}"
 
