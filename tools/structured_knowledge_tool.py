@@ -63,6 +63,109 @@ class StructuredKnowledgeManager:
         structure["rows"][row_index].update(row_data)
         return f"Row {row_index} updated in '{structure_id}'."
 
+    # ---------------- Batch Operations ----------------
+    def batch_add_rows(self, conversation_id: str, structure_id: str, rows: List[Dict]):
+        """
+        Batch add rows
+        rows: [{"column1": "value1", "column2": "value2"}, ...]
+        """
+        self._ensure_conv(conversation_id)
+        structure = self.conversations[conversation_id].get(structure_id)
+        if not structure:
+            return f"Structure '{structure_id}' does not exist."
+        
+        results = []
+        for i, row_data in enumerate(rows):
+            if not isinstance(row_data, dict):
+                results.append(f"Error: Row {i} is not a valid dictionary")
+                continue
+            structure["rows"].append(row_data)
+            results.append(f"Row {i} added to '{structure_id}'.")
+        
+        return "\n".join(results)
+
+    def batch_update_rows(self, conversation_id: str, structure_id: str, updates: List[Dict]):
+        """
+        Batch update rows
+        updates: [{"index": int, "data": dict}, ...]
+        """
+        self._ensure_conv(conversation_id)
+        structure = self.conversations[conversation_id].get(structure_id)
+        if not structure:
+            return f"Structure '{structure_id}' does not exist."
+        
+        results = []
+        for update in updates:
+            row_index = update.get("index")
+            row_data = update.get("data", {})
+            
+            if row_index is None:
+                results.append(f"Error: Missing 'index' for update {update}")
+                continue
+                
+            if not isinstance(row_data, dict):
+                results.append(f"Error: Invalid 'data' for row {row_index}")
+                continue
+                
+            if row_index < 0 or row_index >= len(structure["rows"]):
+                results.append(f"Error: Row index {row_index} out of range.")
+                continue
+                
+            structure["rows"][row_index].update(row_data)
+            results.append(f"Row {row_index} updated in '{structure_id}'.")
+        
+        return "\n".join(results)
+
+    def batch_operations(self, conversation_id: str, structure_id: str, operations: List[Dict]):
+        """
+        批量执行混合操作
+        operations: [
+            {"action": "add", "data": dict},
+            {"action": "update", "data": {"index": int, "row_data": dict}},
+            ...
+        ]
+        """
+        self._ensure_conv(conversation_id)
+        structure = self.conversations[conversation_id].get(structure_id)
+        if not structure:
+            return f"Structure '{structure_id}' does not exist."
+        
+        results = []
+        for op in operations:
+            action = op.get("action")
+            data = op.get("data", {})
+            
+            if action == "add":
+                if not isinstance(data, dict):
+                    results.append(f"Error: Invalid data for add operation")
+                    continue
+                structure["rows"].append(data)
+                results.append(f"Row added to '{structure_id}'.")
+                
+            elif action == "update":
+                row_index = data.get("index")
+                row_data = data.get("row_data", {})
+                
+                if row_index is None:
+                    results.append(f"Error: Missing 'index' for update operation")
+                    continue
+                    
+                if not isinstance(row_data, dict):
+                    results.append(f"Error: Invalid 'row_data' for update operation")
+                    continue
+                    
+                if row_index < 0 or row_index >= len(structure["rows"]):
+                    results.append(f"Error: Row index {row_index} out of range.")
+                    continue
+                    
+                structure["rows"][row_index].update(row_data)
+                results.append(f"Row {row_index} updated in '{structure_id}'.")
+                
+            else:
+                results.append(f"Error: Unknown action '{action}' in batch operations")
+        
+        return "\n".join(results)
+
     def get_metrics(self, conversation_id: str, structure_id: str):
         """
         Automatically calculate indicators based on template type, such as completion rate, tick ratio, voting statistics, etc.

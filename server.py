@@ -1,5 +1,5 @@
 from fastmcp import FastMCP
-from typing import Annotated, Optional
+from typing import Annotated, Optional, List
 from pydantic import Field
 from tools import todo_tool
 from tools.chat_fork import ChatForkManager
@@ -125,44 +125,35 @@ def chat_fork_command(
 @mcp.tool(name="diagram_tool", description="Use this tool whenever you need to capture, manage, and visualize complex relationships or dependencies between entities such as tasks, systems, or concepts within a conversation; you can add or update nodes and edges with optional metadata, set the desired diagram type from flowchart, sequence, mindmap, orgchart, or tree, and then render a complete textual diagram that includes both a structured Markdown table of relationships and a readable text-based graph, allowing you to easily track dependencies, hierarchies, and interactions for reasoning or presentation purposes.")
 def diagram_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")], 
-    action: Annotated[str, Field(description="The operation to perform on the diagram", enum=["set_diagram_type", "add_node", "update_node", "add_edge", "update_edge", "render"])], 
+    action: Annotated[str, Field(description="The operation to perform on the diagram", enum=["set_diagram_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "render"])], 
     # For diagram type
     diagram_type: Annotated[Optional[str], Field(description="Type of diagram to create", enum=["flowchart", "sequence", "mindmap", "orgchart", "tree"], default=None)],
-    # For node operations
-    node_id: Annotated[Optional[str], Field(description="Unique identifier for the node. Required for node operations.", default=None)],
-    label: Annotated[Optional[str], Field(description="Display text/label for the node. Required for 'add_node', optional for 'update_node'.", default=None)],
-    # For edge operations
-    source: Annotated[Optional[str], Field(description="Source node ID for the edge. Required for 'add_edge'.", default=None)],
-    target: Annotated[Optional[str], Field(description="Target node ID for the edge. Required for 'add_edge'.", default=None)],
-    edge_type: Annotated[Optional[str], Field(description="Type/label of the relationship between nodes. Required for 'add_edge', optional for 'update_edge'.", default=None)],
-    edge_index: Annotated[Optional[int], Field(description="Index of the edge to update. Required for 'update_edge'.", default=None)],
-    # Optional metadata
-    metadata: Annotated[Optional[dict], Field(description="Additional properties/metadata for nodes or edges", default=None)]
+    # For batch operations
+    nodes: Annotated[Optional[List[dict]], Field(description="Array of node objects for batch operations. Each object should have 'id', 'label', and optional 'metadata' fields.", default=None)],
+    edges: Annotated[Optional[List[dict]], Field(description="Array of edge objects for batch operations. Each object should have 'source', 'target', 'type', and optional 'metadata' fields.", default=None)],
+    operations: Annotated[Optional[List[dict]], Field(description="Array of mixed operations for batch_operations. Each object should have 'action' and 'data' fields.", default=None)]
 ):
     """
-    Diagram Tool with Simple Parameter Interface
+    Simplified Diagram Tool with Batch-Only Operations
     
-    Manages diagram nodes and relationships with clear, direct parameters.
+    Manages diagram nodes and relationships using only batch operations to reduce complexity.
 
     Parameters:
     - conversation_id (str, required): Unique identifier of the conversation
-    - action (str, required): Must be one of ["set_diagram_type", "add_node", "update_node", "add_edge", "update_edge", "render"]
-    - diagram_type (str): Type of diagram (required for "set_diagram_type") - one of ["flowchart", "sequence", "mindmap", "orgchart", "tree"]
-    - node_id (str): Node identifier (required for node operations)
-    - label (str): Node display label (required for "add_node", optional for "update_node")
-    - source (str): Source node ID (required for "add_edge")
-    - target (str): Target node ID (required for "add_edge")
-    - edge_type (str): Edge relationship type (required for "add_edge", optional for "update_edge")
-    - edge_index (int): Edge index (required for "update_edge")
-    - metadata (dict): Additional properties (optional for all operations)
+    - action (str, required): Operation type - ["set_diagram_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "render"]
+    - diagram_type (str): Type of diagram (required for "set_diagram_type")
+    - nodes (list): Array of node objects for batch node operations
+    - edges (list): Array of edge objects for batch edge operations  
+    - operations (list): Array of mixed operations for batch_operations
 
-    Usage Examples:
+    Examples:
     1. Set diagram type: diagram_command("conv1", "set_diagram_type", diagram_type="flowchart")
-    2. Add node: diagram_command("conv1", "add_node", node_id="start", label="Start Process")
-    3. Update node: diagram_command("conv1", "update_node", node_id="start", label="Begin Process")
-    4. Add edge: diagram_command("conv1", "add_edge", source="start", target="process", edge_type="leads_to")
-    5. Update edge: diagram_command("conv1", "update_edge", edge_index=0, edge_type="triggers")
-    6. Render: diagram_command("conv1", "render")
+    2. Add nodes: diagram_command("conv1", "batch_add_nodes", nodes=[{"id": "node1", "label": "Label1"}, {"id": "node2", "label": "Label2"}])
+    3. Add edges: diagram_command("conv1", "batch_add_edges", edges=[{"source": "node1", "target": "node2", "type": "connects"}])
+    4. Update nodes: diagram_command("conv1", "batch_update_nodes", nodes=[{"id": "node1", "label": "Updated Label1"}])
+    5. Update edges: diagram_command("conv1", "batch_update_edges", edges=[{"index": 0, "type": "new_type"}])
+    6. Mixed operations: diagram_command("conv1", "batch_operations", operations=[{"action": "add_node", "data": {"id": "n1", "label": "Node1"}}, {"action": "add_edge", "data": {"source": "n1", "target": "n2", "type": "link"}}])
+    7. Render: diagram_command("conv1", "render")
     """
     
     if action == "set_diagram_type":
@@ -170,69 +161,76 @@ def diagram_command(
             return "Error: diagram_type is required for set_diagram_type action"
         return diagram_manager.set_diagram_type(conversation_id, diagram_type)
     
-    elif action == "add_node":
-        if not node_id or not label:
-            return "Error: node_id and label are required for add_node action"
-        return diagram_manager.add_node(conversation_id, node_id, label, metadata)
+    elif action == "batch_add_nodes":
+        if not nodes:
+            return "Error: 'nodes' array is required for batch_add_nodes action"
+        return diagram_manager.batch_add_nodes(conversation_id, nodes)
     
-    elif action == "update_node":
-        if not node_id:
-            return "Error: node_id is required for update_node action"
-        return diagram_manager.update_node(conversation_id, node_id, label, metadata)
+    elif action == "batch_update_nodes":
+        if not nodes:
+            return "Error: 'nodes' array is required for batch_update_nodes action"
+        return diagram_manager.batch_update_nodes(conversation_id, nodes)
     
-    elif action == "add_edge":
-        if not source or not target or not edge_type:
-            return "Error: source, target, and edge_type are required for add_edge action"
-        return diagram_manager.add_edge(conversation_id, source, target, edge_type, metadata)
+    elif action == "batch_add_edges":
+        if not edges:
+            return "Error: 'edges' array is required for batch_add_edges action"
+        return diagram_manager.batch_add_edges(conversation_id, edges)
     
-    elif action == "update_edge":
-        if edge_index is None:
-            return "Error: edge_index is required for update_edge action"
-        return diagram_manager.update_edge(conversation_id, edge_index, edge_type, metadata)
+    elif action == "batch_update_edges":
+        if not edges:
+            return "Error: 'edges' array is required for batch_update_edges action"
+        return diagram_manager.batch_update_edges(conversation_id, edges)
+    
+    elif action == "batch_operations":
+        if not operations:
+            return "Error: 'operations' array is required for batch_operations action"
+        return diagram_manager.batch_operations(conversation_id, operations)
     
     elif action == "render":
         return diagram_manager.render(conversation_id)
     
     else:
-        return f"Unknown action: {action}. Valid actions: set_diagram_type, add_node, update_node, add_edge, update_edge, render"
+        return f"Unknown action: {action}. Valid actions: set_diagram_type, batch_add_nodes, batch_update_nodes, batch_add_edges, batch_update_edges, batch_operations, render"
     
 @mcp.tool(
     name="structured_knowledge_tool",
-    description="Use this tool whenever you need to create, update, and manage structured tables or lists within a conversation; each structure has a unique ID and a chosen template type such as simple_table, task_list, check_list, numbered_list, bulleted_list, voting_table, or progress_table; you can add or update rows, render the structure in Markdown and JSON, and automatically obtain metrics such as completion rates, checked rates, or voting distributions, allowing LLMs to reason over and present structured information efficiently."
+    description="Use this tool whenever you need to create, update, and manage structured tables or lists within a conversation; each structure has a unique ID and a chosen template type such as simple_table, task_list, check_list, numbered_list, bulleted_list, voting_table, or progress_table; you can batch add or update rows, render the structure in Markdown and JSON, and automatically obtain metrics such as completion rates, checked rates, or voting distributions, allowing LLMs to reason over and present structured information efficiently."
 )
 def structured_knowledge_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")], 
-    action: Annotated[str, Field(description="The operation to perform on the structured knowledge", enum=["create", "add", "update", "render", "metrics"])], 
+    action: Annotated[str, Field(description="The operation to perform on the structured knowledge", enum=["create", "batch_add_rows", "batch_update_rows", "batch_operations", "render", "metrics"])], 
     # For all operations
     structure_id: Annotated[Optional[str], Field(description="Unique identifier for the structure. Required for all actions.", default=None)],
     # For create operation
     template_type: Annotated[Optional[str], Field(description="Type of structure to create", enum=["simple_table", "task_list", "check_list", "numbered_list", "bulleted_list", "voting_table", "progress_table"], default=None)],
-    columns: Annotated[Optional[list], Field(description="List of column names for table structures. Optional for 'create' action.", default=None)],
-    # For add operation
-    row_data: Annotated[Optional[dict], Field(description="Dictionary containing the data for a new row or updates to an existing row. Keys should match column names.", default=None)],
-    # For update operation  
-    row_index: Annotated[Optional[int], Field(description="Zero-based index of the row to update. Required for 'update' action.", default=None)]
+    columns: Annotated[Optional[List[str]], Field(description="List of column names for table structures. Optional for 'create' action.", default=None)],
+    # For batch operations
+    rows: Annotated[Optional[List[dict]], Field(description="Array of row objects for batch_add_rows. Each object should contain key-value pairs matching the structure columns.", default=None)],
+    updates: Annotated[Optional[List[dict]], Field(description="Array of update objects for batch_update_rows. Each object should have 'index' and 'data' fields.", default=None)],
+    operations: Annotated[Optional[List[dict]], Field(description="Array of mixed operations for batch_operations. Each object should have 'action' and 'data' fields.", default=None)]
 ):
     """
-    Structured Knowledge Tool with Simple Parameter Interface
+    Enhanced Structured Knowledge Tool with Batch Operations Only
     
-    Manages tables and lists with clear, direct parameters.
+    Manages tables and lists with support for batch operations to reduce LLM tool calls.
 
     Parameters:
     - conversation_id (str, required): Unique identifier of the conversation
-    - action (str, required): Must be one of ["create", "add", "update", "render", "metrics"]
+    - action (str, required): Operation type - ["create", "batch_add_rows", "batch_update_rows", "batch_operations", "render", "metrics"]
     - structure_id (str): Structure identifier (required for all actions)
-    - template_type (str): Type of structure (required for "create") - one of ["simple_table", "task_list", "check_list", "numbered_list", "bulleted_list", "voting_table", "progress_table"]
+    - template_type (str): Type of structure (required for "create")
     - columns (list): Column names (optional for "create")
-    - row_data (dict): Row data to add/update (required for "add", "update")
-    - row_index (int): Row index to update (required for "update")
+    - rows (list): Array of row data for batch_add_rows
+    - updates (list): Array of update objects for batch_update_rows
+    - operations (list): Array of mixed operations for batch_operations
 
     Usage Examples:
     1. Create structure: structured_knowledge_command("conv1", "create", structure_id="tasks", template_type="task_list", columns=["Task", "Owner", "Status"])
-    2. Add row: structured_knowledge_command("conv1", "add", structure_id="tasks", row_data={"Task": "Review code", "Owner": "Alice", "Status": "Pending"})
-    3. Update row: structured_knowledge_command("conv1", "update", structure_id="tasks", row_index=0, row_data={"Status": "Completed"})
-    4. Render: structured_knowledge_command("conv1", "render", structure_id="tasks")
-    5. Metrics: structured_knowledge_command("conv1", "metrics", structure_id="tasks")
+    2. Batch add rows: structured_knowledge_command("conv1", "batch_add_rows", structure_id="tasks", rows=[{"Task": "Review code", "Owner": "Alice", "Status": "Pending"}, {"Task": "Write tests", "Owner": "Bob", "Status": "In Progress"}])
+    3. Batch update rows: structured_knowledge_command("conv1", "batch_update_rows", structure_id="tasks", updates=[{"index": 0, "data": {"Status": "Completed"}}, {"index": 1, "data": {"Status": "Completed"}}])
+    4. Mixed operations: structured_knowledge_command("conv1", "batch_operations", structure_id="tasks", operations=[{"action": "add", "data": {"Task": "Deploy", "Owner": "Charlie", "Status": "Pending"}}, {"action": "update", "data": {"index": 0, "row_data": {"Status": "Done"}}}])
+    5. Render: structured_knowledge_command("conv1", "render", structure_id="tasks")
+    6. Metrics: structured_knowledge_command("conv1", "metrics", structure_id="tasks")
     """
     
     if action == "create":
@@ -240,15 +238,20 @@ def structured_knowledge_command(
             return "Error: structure_id and template_type are required for create action"
         return structured_knowledge_manager.create_structure(conversation_id, structure_id, template_type, columns)
     
-    elif action == "add":
-        if not structure_id or not row_data:
-            return "Error: structure_id and row_data are required for add action"
-        return structured_knowledge_manager.add_row(conversation_id, structure_id, row_data)
+    elif action == "batch_add_rows":
+        if not structure_id or not rows:
+            return "Error: structure_id and rows array are required for batch_add_rows action"
+        return structured_knowledge_manager.batch_add_rows(conversation_id, structure_id, rows)
     
-    elif action == "update":
-        if not structure_id or row_index is None or not row_data:
-            return "Error: structure_id, row_index, and row_data are required for update action"
-        return structured_knowledge_manager.update_row(conversation_id, structure_id, row_index, row_data)
+    elif action == "batch_update_rows":
+        if not structure_id or not updates:
+            return "Error: structure_id and updates array are required for batch_update_rows action"
+        return structured_knowledge_manager.batch_update_rows(conversation_id, structure_id, updates)
+    
+    elif action == "batch_operations":
+        if not structure_id or not operations:
+            return "Error: structure_id and operations array are required for batch_operations action"
+        return structured_knowledge_manager.batch_operations(conversation_id, structure_id, operations)
     
     elif action == "render":
         if not structure_id:
@@ -261,7 +264,7 @@ def structured_knowledge_command(
         return structured_knowledge_manager.get_metrics(conversation_id, structure_id)
     
     else:
-        return f"Unknown action: {action}. Valid actions: create, add, update, render, metrics"
+        return f"Unknown action: {action}. Valid actions: create, batch_add_rows, batch_update_rows, batch_operations, render, metrics"
 
 if __name__ == "__main__":
     mcp.run(transport='http',  host='127.0.0.1', port=8000, path='/mcp')  # 启动 MCP Server

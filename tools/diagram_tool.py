@@ -21,7 +21,7 @@ class DiagramManager:
         if conversation_id not in self.conversations:
             self.conversations[conversation_id] = {"nodes": {}, "edges": [], "diagram_type": "flowchart"}
 
-    # ---------------- Node / Edge 操作 ----------------
+    # ---------------- Node / Edge Operations ----------------
     def add_node(self, conversation_id: str, node_id: str, label: str, metadata: Optional[dict] = None):
         self._ensure_conv(conversation_id)
         self.conversations[conversation_id]["nodes"][node_id] = Node(node_id, label, metadata)
@@ -54,6 +54,188 @@ class DiagramManager:
         if metadata:
             edge.metadata.update(metadata)
         return f"Edge at index {index} updated."
+
+    # ---------------- Batch Operations ----------------
+    def batch_add_nodes(self, conversation_id: str, nodes: List[Dict]):
+        """
+        Batch add nodes
+        nodes: [{"id": str, "label": str, "metadata": dict}, ...]
+        """
+        self._ensure_conv(conversation_id)
+        results = []
+        for node_data in nodes:
+            node_id = node_data.get("id")
+            label = node_data.get("label")
+            metadata = node_data.get("metadata")
+            
+            if not node_id or not label:
+                results.append(f"Error: Missing id or label for node {node_data}")
+                continue
+                
+            self.conversations[conversation_id]["nodes"][node_id] = Node(node_id, label, metadata)
+            results.append(f"Node '{label}' (id: {node_id}) added.")
+        
+        return "\n".join(results)
+
+    def batch_update_nodes(self, conversation_id: str, nodes: List[Dict]):
+        """
+        Batch update nodes
+        nodes: [{"id": str, "label": str (optional), "metadata": dict (optional)}, ...]
+        """
+        self._ensure_conv(conversation_id)
+        results = []
+        for node_data in nodes:
+            node_id = node_data.get("id")
+            label = node_data.get("label")
+            metadata = node_data.get("metadata")
+            
+            if not node_id:
+                results.append(f"Error: Missing id for node update {node_data}")
+                continue
+                
+            node = self.conversations[conversation_id]["nodes"].get(node_id)
+            if not node:
+                results.append(f"Error: Node {node_id} not found.")
+                continue
+                
+            if label:
+                node.label = label
+            if metadata:
+                node.metadata.update(metadata)
+            results.append(f"Node '{node_id}' updated.")
+        
+        return "\n".join(results)
+
+    def batch_add_edges(self, conversation_id: str, edges: List[Dict]):
+        """
+        Batch add edges
+        edges: [{"source": str, "target": str, "type": str, "metadata": dict}, ...]
+        """
+        self._ensure_conv(conversation_id)
+        results = []
+        for edge_data in edges:
+            source = edge_data.get("source")
+            target = edge_data.get("target")
+            edge_type = edge_data.get("type")
+            metadata = edge_data.get("metadata")
+            
+            if not source or not target or not edge_type:
+                results.append(f"Error: Missing source, target, or type for edge {edge_data}")
+                continue
+                
+            self.conversations[conversation_id]["edges"].append(Edge(source, target, edge_type, metadata))
+            results.append(f"Edge {source} -> {target} ({edge_type}) added.")
+        
+        return "\n".join(results)
+
+    def batch_update_edges(self, conversation_id: str, edges: List[Dict]):
+        """
+        Batch update edges
+        edges: [{"index": int, "type": str (optional), "metadata": dict (optional)}, ...]
+        """
+        self._ensure_conv(conversation_id)
+        results = []
+        conversation_edges = self.conversations[conversation_id]["edges"]
+        
+        for edge_data in edges:
+            index = edge_data.get("index")
+            edge_type = edge_data.get("type")
+            metadata = edge_data.get("metadata")
+            
+            if index is None:
+                results.append(f"Error: Missing index for edge update {edge_data}")
+                continue
+                
+            if index >= len(conversation_edges):
+                results.append(f"Error: Edge index {index} out of range.")
+                continue
+                
+            edge = conversation_edges[index]
+            if edge_type:
+                edge.type = edge_type
+            if metadata:
+                edge.metadata.update(metadata)
+            results.append(f"Edge at index {index} updated.")
+        
+        return "\n".join(results)
+
+    def batch_operations(self, conversation_id: str, operations: List[Dict]):
+        """
+        Batch execute mixed operations
+        operations: [
+            {"action": "add_node", "data": {"id": str, "label": str, "metadata": dict}},
+            {"action": "add_edge", "data": {"source": str, "target": str, "type": str, "metadata": dict}},
+            {"action": "update_node", "data": {"id": str, "label": str, "metadata": dict}},
+            {"action": "update_edge", "data": {"index": int, "type": str, "metadata": dict}},
+            ...
+        ]
+        """
+        self._ensure_conv(conversation_id)
+        results = []
+        
+        for op in operations:
+            action = op.get("action")
+            data = op.get("data", {})
+            
+            if action == "add_node":
+                node_id = data.get("id")
+                label = data.get("label")
+                metadata = data.get("metadata")
+                if node_id and label:
+                    self.conversations[conversation_id]["nodes"][node_id] = Node(node_id, label, metadata)
+                    results.append(f"Node '{label}' (id: {node_id}) added.")
+                else:
+                    results.append(f"Error: Missing id or label for add_node operation")
+                    
+            elif action == "add_edge":
+                source = data.get("source")
+                target = data.get("target")
+                edge_type = data.get("type")
+                metadata = data.get("metadata")
+                if source and target and edge_type:
+                    self.conversations[conversation_id]["edges"].append(Edge(source, target, edge_type, metadata))
+                    results.append(f"Edge {source} -> {target} ({edge_type}) added.")
+                else:
+                    results.append(f"Error: Missing source, target, or type for add_edge operation")
+                    
+            elif action == "update_node":
+                node_id = data.get("id")
+                label = data.get("label")
+                metadata = data.get("metadata")
+                if node_id:
+                    node = self.conversations[conversation_id]["nodes"].get(node_id)
+                    if node:
+                        if label:
+                            node.label = label
+                        if metadata:
+                            node.metadata.update(metadata)
+                        results.append(f"Node '{node_id}' updated.")
+                    else:
+                        results.append(f"Error: Node {node_id} not found.")
+                else:
+                    results.append(f"Error: Missing id for update_node operation")
+                    
+            elif action == "update_edge":
+                index = data.get("index")
+                edge_type = data.get("type")
+                metadata = data.get("metadata")
+                if index is not None:
+                    edges = self.conversations[conversation_id]["edges"]
+                    if index < len(edges):
+                        edge = edges[index]
+                        if edge_type:
+                            edge.type = edge_type
+                        if metadata:
+                            edge.metadata.update(metadata)
+                        results.append(f"Edge at index {index} updated.")
+                    else:
+                        results.append(f"Error: Edge index {index} out of range.")
+                else:
+                    results.append(f"Error: Missing index for update_edge operation")
+            else:
+                results.append(f"Error: Unknown action '{action}' in batch operations")
+        
+        return "\n".join(results)
 
     # ---------------- Diagram Type ----------------
     def set_diagram_type(self, conversation_id: str, diagram_type: str):

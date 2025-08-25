@@ -4,6 +4,7 @@ import unittest
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.diagram_tool import DiagramManager, Node, Edge
+import server
 
 class TestDiagramTool(unittest.TestCase):
     def setUp(self):
@@ -315,6 +316,305 @@ class TestDiagramTool(unittest.TestCase):
         self.assertIn("Child 1", result)
         self.assertIn("Child 2", result)
         self.assertIn("Grandchild 1", result)
+
+    def test_batch_add_nodes(self):
+        """Test batch adding nodes"""
+        nodes = [
+            {"id": "batch1", "label": "Batch Node 1", "metadata": {"type": "start"}},
+            {"id": "batch2", "label": "Batch Node 2", "metadata": {"type": "process"}},
+            {"id": "batch3", "label": "Batch Node 3", "metadata": {"type": "end"}}
+        ]
+        
+        result = self.manager.batch_add_nodes(self.conv_id, nodes)
+        
+        # Check that all nodes were added
+        self.assertIn("Batch Node 1", result)
+        self.assertIn("Batch Node 2", result)
+        self.assertIn("Batch Node 3", result)
+        
+        # Verify nodes exist in the conversation
+        conv_nodes = self.manager.conversations[self.conv_id]["nodes"]
+        self.assertIn("batch1", conv_nodes)
+        self.assertIn("batch2", conv_nodes)
+        self.assertIn("batch3", conv_nodes)
+        
+        # Check metadata
+        self.assertEqual(conv_nodes["batch1"].metadata["type"], "start")
+        self.assertEqual(conv_nodes["batch2"].metadata["type"], "process")
+        self.assertEqual(conv_nodes["batch3"].metadata["type"], "end")
+
+    def test_batch_add_edges(self):
+        """Test batch adding edges"""
+        # First add some nodes
+        self.manager.add_node(self.conv_id, "source1", "Source 1")
+        self.manager.add_node(self.conv_id, "target1", "Target 1")
+        self.manager.add_node(self.conv_id, "target2", "Target 2")
+        
+        edges = [
+            {"source": "source1", "target": "target1", "type": "connects", "metadata": {"weight": 1}},
+            {"source": "target1", "target": "target2", "type": "flows_to", "metadata": {"weight": 2}}
+        ]
+        
+        result = self.manager.batch_add_edges(self.conv_id, edges)
+        
+        # Check that edges were added
+        self.assertIn("source1 -> target1 (connects) added", result)
+        self.assertIn("target1 -> target2 (flows_to) added", result)
+        
+        # Verify edges exist
+        conv_edges = self.manager.conversations[self.conv_id]["edges"]
+        self.assertEqual(len(conv_edges), 2)
+        self.assertEqual(conv_edges[0].source, "source1")
+        self.assertEqual(conv_edges[0].target, "target1")
+        self.assertEqual(conv_edges[0].type, "connects")
+        self.assertEqual(conv_edges[0].metadata["weight"], 1)
+
+    def test_batch_update_nodes(self):
+        """Test batch updating nodes"""
+        # First add some nodes
+        self.manager.add_node(self.conv_id, "update1", "Original Label 1")
+        self.manager.add_node(self.conv_id, "update2", "Original Label 2")
+        
+        updates = [
+            {"id": "update1", "label": "Updated Label 1", "metadata": {"updated": True}},
+            {"id": "update2", "label": "Updated Label 2", "metadata": {"version": 2}}
+        ]
+        
+        result = self.manager.batch_update_nodes(self.conv_id, updates)
+        
+        # Check update results
+        self.assertIn("Node 'update1' updated", result)
+        self.assertIn("Node 'update2' updated", result)
+        
+        # Verify updates
+        conv_nodes = self.manager.conversations[self.conv_id]["nodes"]
+        self.assertEqual(conv_nodes["update1"].label, "Updated Label 1")
+        self.assertEqual(conv_nodes["update2"].label, "Updated Label 2")
+        self.assertTrue(conv_nodes["update1"].metadata["updated"])
+        self.assertEqual(conv_nodes["update2"].metadata["version"], 2)
+
+    def test_batch_update_edges(self):
+        """Test batch updating edges"""
+        # First add nodes and edges
+        self.manager.add_node(self.conv_id, "edge_source", "Edge Source")
+        self.manager.add_node(self.conv_id, "edge_target", "Edge Target")
+        self.manager.add_edge(self.conv_id, "edge_source", "edge_target", "original_type")
+        self.manager.add_edge(self.conv_id, "edge_target", "edge_source", "reverse_type")
+        
+        updates = [
+            {"index": 0, "type": "updated_type", "metadata": {"updated": True}},
+            {"index": 1, "type": "new_reverse_type", "metadata": {"version": 2}}
+        ]
+        
+        result = self.manager.batch_update_edges(self.conv_id, updates)
+        
+        # Check update results
+        self.assertIn("Edge at index 0 updated", result)
+        self.assertIn("Edge at index 1 updated", result)
+        
+        # Verify updates
+        conv_edges = self.manager.conversations[self.conv_id]["edges"]
+        self.assertEqual(conv_edges[0].type, "updated_type")
+        self.assertEqual(conv_edges[1].type, "new_reverse_type")
+        self.assertTrue(conv_edges[0].metadata["updated"])
+        self.assertEqual(conv_edges[1].metadata["version"], 2)
+
+    def test_batch_operations(self):
+        """Test mixed batch operations"""
+        operations = [
+            {"action": "add_node", "data": {"id": "mixed1", "label": "Mixed Node 1", "metadata": {"type": "start"}}},
+            {"action": "add_node", "data": {"id": "mixed2", "label": "Mixed Node 2", "metadata": {"type": "end"}}},
+            {"action": "add_edge", "data": {"source": "mixed1", "target": "mixed2", "type": "connects"}},
+            {"action": "update_node", "data": {"id": "mixed1", "label": "Updated Mixed Node 1", "metadata": {"updated": True}}}
+        ]
+        
+        result = self.manager.batch_operations(self.conv_id, operations)
+        
+        # Check that all operations were performed
+        self.assertIn("Mixed Node 1", result)
+        self.assertIn("Mixed Node 2", result)
+        self.assertIn("mixed1 -> mixed2 (connects) added", result)
+        self.assertIn("Node 'mixed1' updated", result)
+        
+        # Verify final state
+        conv_nodes = self.manager.conversations[self.conv_id]["nodes"]
+        conv_edges = self.manager.conversations[self.conv_id]["edges"]
+        
+        self.assertEqual(conv_nodes["mixed1"].label, "Updated Mixed Node 1")
+        self.assertTrue(conv_nodes["mixed1"].metadata["updated"])
+        self.assertEqual(len(conv_edges), 1)
+        self.assertEqual(conv_edges[0].source, "mixed1")
+        self.assertEqual(conv_edges[0].target, "mixed2")
+
+    def test_batch_error_handling(self):
+        """Test error handling in batch operations"""
+        # Test batch add nodes with missing data
+        invalid_nodes = [
+            {"label": "Missing ID"},  # Missing id
+            {"id": "valid", "label": "Valid Node"}
+        ]
+        
+        result = self.manager.batch_add_nodes(self.conv_id, invalid_nodes)
+        self.assertIn("Error: Missing id or label", result)
+        self.assertIn("Valid Node", result)
+        
+        # Test batch update with non-existent node
+        invalid_updates = [
+            {"id": "nonexistent", "label": "This won't work"}
+        ]
+        
+        result = self.manager.batch_update_nodes(self.conv_id, invalid_updates)
+        self.assertIn("Error: Node nonexistent not found", result)
+        
+        # Test batch add edges with missing data
+        invalid_edges = [
+            {"source": "missing_target", "type": "incomplete"},  # Missing target
+            {"source": "valid", "target": "valid", "type": "complete"}
+        ]
+        
+        result = self.manager.batch_add_edges(self.conv_id, invalid_edges)
+        self.assertIn("Error: Missing source, target, or type", result)
+
+    def test_server_batch_operations(self):
+        """Test server-level batch operations with verification"""
+        conversation_id = "test_server_batch"
+        
+        # Test batch add nodes through manager (since server tools can't be called directly in tests)
+        nodes_data = [
+            {"id": "start", "label": "Start", "metadata": {"type": "start"}},
+            {"id": "process", "label": "Process", "metadata": {"type": "process"}},
+            {"id": "end", "label": "End", "metadata": {"type": "end"}}
+        ]
+        
+        result = server.diagram_manager.batch_add_nodes(conversation_id, nodes_data)
+        
+        # Verify nodes were added
+        self.assertIn("(id: start) added", result)
+        self.assertIn("(id: process) added", result)
+        self.assertIn("(id: end) added", result)
+        
+        # Verify nodes exist in manager
+        conv_data = server.diagram_manager.conversations[conversation_id]
+        self.assertEqual(len(conv_data["nodes"]), 3)
+        self.assertIn("start", conv_data["nodes"])
+        self.assertIn("process", conv_data["nodes"])
+        self.assertIn("end", conv_data["nodes"])
+        
+        # Test batch add edges through manager
+        edges_data = [
+            {"source": "start", "target": "process", "type": "flows_to"},
+            {"source": "process", "target": "end", "type": "completes_to"}
+        ]
+        
+        result = server.diagram_manager.batch_add_edges(conversation_id, edges_data)
+        
+        # Verify edges were added
+        self.assertIn("start -> process", result)
+        self.assertIn("process -> end", result)
+        self.assertEqual(len(conv_data["edges"]), 2)
+        
+        # Test rendering and verify structure
+        render_result = server.diagram_manager.render(conversation_id)
+        
+        # Verify render contains expected elements
+        self.assertIn("Start", render_result)
+        self.assertIn("Process", render_result)
+        self.assertIn("End", render_result)
+        self.assertIn("### Text View", render_result)
+        
+    def test_server_batch_update_operations(self):
+        """Test server-level batch update operations with verification"""
+        conversation_id = "test_server_update"
+        
+        # First add some nodes and edges
+        server.diagram_manager.batch_add_nodes(conversation_id, [
+            {"id": "node1", "label": "Original 1"},
+            {"id": "node2", "label": "Original 2"}
+        ])
+        
+        server.diagram_manager.batch_add_edges(conversation_id, [
+            {"source": "node1", "target": "node2", "type": "original_type"}
+        ])
+        
+        # Test batch update nodes
+        update_result = server.diagram_manager.batch_update_nodes(conversation_id, [
+            {"id": "node1", "label": "Updated 1", "metadata": {"updated": True}},
+            {"id": "node2", "label": "Updated 2", "metadata": {"version": 2}}
+        ])
+        
+        # Verify updates
+        self.assertIn("node1", update_result)
+        self.assertIn("node2", update_result)
+        
+        conv_data = server.diagram_manager.conversations[conversation_id]
+        self.assertEqual(conv_data["nodes"]["node1"].label, "Updated 1")
+        self.assertEqual(conv_data["nodes"]["node2"].label, "Updated 2")
+        self.assertEqual(conv_data["nodes"]["node1"].metadata["updated"], True)
+        self.assertEqual(conv_data["nodes"]["node2"].metadata["version"], 2)
+        
+        # Test batch update edges
+        edge_update_result = server.diagram_manager.batch_update_edges(conversation_id, [
+            {"index": 0, "type": "updated_type", "metadata": {"modified": True}}
+        ])
+        
+        # Verify edge update
+        self.assertIn("Edge at index 0 updated", edge_update_result)
+        self.assertEqual(conv_data["edges"][0].type, "updated_type")
+        self.assertEqual(conv_data["edges"][0].metadata["modified"], True)
+        
+    def test_server_mixed_batch_operations(self):
+        """Test mixed batch operations through server with verification"""
+        conversation_id = "test_mixed_batch"
+        
+        # Test mixed operations
+        mixed_ops = [
+            {"action": "add_node", "data": {"id": "root", "label": "Root Node"}},
+            {"action": "add_node", "data": {"id": "child1", "label": "Child 1"}},
+            {"action": "add_node", "data": {"id": "child2", "label": "Child 2"}},
+            {"action": "add_edge", "data": {"source": "root", "target": "child1", "type": "parent_of"}},
+            {"action": "add_edge", "data": {"source": "root", "target": "child2", "type": "parent_of"}},
+            {"action": "update_node", "data": {"id": "root", "label": "Updated Root", "metadata": {"level": 0}}}
+        ]
+        
+        result = server.diagram_manager.batch_operations(conversation_id, mixed_ops)
+        
+        # Verify all operations succeeded
+        self.assertIn("(id: root) added", result)
+        self.assertIn("(id: child1) added", result)
+        self.assertIn("(id: child2) added", result)
+        self.assertIn("parent_of", result)
+        self.assertIn("'root' updated", result)
+        
+        # Verify final state
+        conv_data = server.diagram_manager.conversations[conversation_id]
+        self.assertEqual(len(conv_data["nodes"]), 3)
+        self.assertEqual(len(conv_data["edges"]), 2)
+        self.assertEqual(conv_data["nodes"]["root"].label, "Updated Root")
+        self.assertEqual(conv_data["nodes"]["root"].metadata["level"], 0)
+        
+        # Test rendering of mixed operations result
+        render_result = server.diagram_manager.render(conversation_id)
+        
+        # Verify render contains all elements
+        self.assertIn("Updated Root", render_result)
+        self.assertIn("Child 1", render_result)
+        self.assertIn("Child 2", render_result)
+        
+    def test_server_error_handling(self):
+        """Test server-level error handling for batch operations"""
+        conversation_id = "test_server_errors"
+        
+        # Test invalid node data in batch
+        result = server.diagram_manager.batch_add_nodes(conversation_id, [
+            {"label": "Missing ID"}  # Missing required id field
+        ])
+        self.assertIn("Error: Missing id or label", result)
+        
+        # Test invalid edge data in batch
+        result = server.diagram_manager.batch_add_edges(conversation_id, [
+            {"source": "node1", "target": "node2"}  # Missing type field
+        ])
+        self.assertIn("Error: Missing source, target, or type", result)
 
 if __name__ == "__main__":
     unittest.main()

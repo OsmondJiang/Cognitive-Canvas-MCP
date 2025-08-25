@@ -4,6 +4,7 @@ import unittest
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.structured_knowledge_tool import StructuredKnowledgeManager
+import server
 
 class TestStructuredKnowledgeManager(unittest.TestCase):
     def setUp(self):
@@ -266,6 +267,252 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         # Test rendering non-existent structure
         result = self.manager.render(self.conv_id, "nonexistent")
         self.assertIn("does not exist", result)
+
+    def test_batch_add_rows(self):
+        """测试批量添加行功能"""
+        # Create a structure first
+        self.manager.create_structure(
+            self.conv_id, 
+            self.structure_id, 
+            template_type="task_list", 
+            columns=["Task", "Owner", "Status"]
+        )
+        
+        # Test batch adding rows
+        rows_data = [
+            {"Task": "Task 1", "Owner": "Alice", "Status": "Pending"},
+            {"Task": "Task 2", "Owner": "Bob", "Status": "In Progress"},
+            {"Task": "Task 3", "Owner": "Charlie", "Status": "Completed"}
+        ]
+        
+        result = self.manager.batch_add_rows(self.conv_id, self.structure_id, rows_data)
+        
+        # Verify all rows were added
+        self.assertIn("Row 0 added", result)
+        self.assertIn("Row 1 added", result)
+        self.assertIn("Row 2 added", result)
+        
+        # Verify rows are in the structure
+        structure = self.manager.conversations[self.conv_id][self.structure_id]
+        self.assertEqual(len(structure["rows"]), 3)
+        self.assertEqual(structure["rows"][0]["Task"], "Task 1")
+        self.assertEqual(structure["rows"][1]["Owner"], "Bob")
+        self.assertEqual(structure["rows"][2]["Status"], "Completed")
+        
+        # Test with non-existent structure
+        result = self.manager.batch_add_rows(self.conv_id, "nonexistent", rows_data)
+        self.assertIn("does not exist", result)
+
+    def test_batch_update_rows(self):
+        """测试批量更新行功能"""
+        # Create structure and add initial rows
+        self.manager.create_structure(
+            self.conv_id, 
+            self.structure_id, 
+            template_type="task_list", 
+            columns=["Task", "Status"]
+        )
+        
+        initial_rows = [
+            {"Task": "Task 1", "Status": "Pending"},
+            {"Task": "Task 2", "Status": "Pending"},
+            {"Task": "Task 3", "Status": "Pending"}
+        ]
+        self.manager.batch_add_rows(self.conv_id, self.structure_id, initial_rows)
+        
+        # Test batch updating rows
+        updates_data = [
+            {"index": 0, "data": {"Status": "Completed"}},
+            {"index": 1, "data": {"Status": "In Progress"}},
+            {"index": 2, "data": {"Status": "Completed", "Task": "Updated Task 3"}}
+        ]
+        
+        result = self.manager.batch_update_rows(self.conv_id, self.structure_id, updates_data)
+        
+        # Verify all updates were applied
+        self.assertIn("Row 0 updated", result)
+        self.assertIn("Row 1 updated", result)
+        self.assertIn("Row 2 updated", result)
+        
+        # Verify the updates
+        structure = self.manager.conversations[self.conv_id][self.structure_id]
+        self.assertEqual(structure["rows"][0]["Status"], "Completed")
+        self.assertEqual(structure["rows"][1]["Status"], "In Progress")
+        self.assertEqual(structure["rows"][2]["Status"], "Completed")
+        self.assertEqual(structure["rows"][2]["Task"], "Updated Task 3")
+        
+        # Test with invalid index
+        invalid_updates = [{"index": 10, "data": {"Status": "Invalid"}}]
+        result = self.manager.batch_update_rows(self.conv_id, self.structure_id, invalid_updates)
+        self.assertIn("out of range", result)
+
+    def test_batch_operations(self):
+        """测试混合批量操作功能"""
+        # Create structure
+        self.manager.create_structure(
+            self.conv_id, 
+            self.structure_id, 
+            template_type="simple_table", 
+            columns=["Item", "Quantity", "Status"]
+        )
+        
+        # Add initial row
+        self.manager.batch_add_rows(self.conv_id, self.structure_id, [
+            {"Item": "Initial Item", "Quantity": "1", "Status": "Active"}
+        ])
+        
+        # Test mixed batch operations
+        mixed_ops = [
+            {"action": "add", "data": {"Item": "New Item 1", "Quantity": "5", "Status": "Pending"}},
+            {"action": "add", "data": {"Item": "New Item 2", "Quantity": "3", "Status": "Active"}},
+            {"action": "update", "data": {"index": 0, "row_data": {"Status": "Inactive"}}},
+            {"action": "update", "data": {"index": 1, "row_data": {"Quantity": "10"}}}
+        ]
+        
+        result = self.manager.batch_operations(self.conv_id, self.structure_id, mixed_ops)
+        
+        # Verify operations
+        self.assertIn("Row added", result)
+        self.assertIn("Row 0 updated", result)
+        self.assertIn("Row 1 updated", result)
+        
+        # Verify final state
+        structure = self.manager.conversations[self.conv_id][self.structure_id]
+        self.assertEqual(len(structure["rows"]), 3)  # 1 initial + 2 added
+        self.assertEqual(structure["rows"][0]["Status"], "Inactive")  # Updated
+        self.assertEqual(structure["rows"][1]["Quantity"], "10")  # Updated
+        self.assertEqual(structure["rows"][2]["Item"], "New Item 2")  # Added
+        
+        # Test with invalid action
+        invalid_ops = [{"action": "invalid", "data": {}}]
+        result = self.manager.batch_operations(self.conv_id, self.structure_id, invalid_ops)
+        self.assertIn("Unknown action", result)
+
+    def test_server_batch_operations(self):
+        """Test server-level batch operations with verification"""
+        conversation_id = "test_server_batch"
+        structure_id = "test_table"
+        
+        # Create structure through manager (since server tools can't be called directly in tests)
+        result = server.structured_knowledge_manager.create_structure(
+            conversation_id, structure_id, "simple_table", ["Name", "Status", "Priority"]
+        )
+        self.assertIn("Structure 'test_table' created", result)
+        
+        # Test batch add rows through manager
+        rows_data = [
+            {"Name": "Task 1", "Status": "Active", "Priority": "High"},
+            {"Name": "Task 2", "Status": "Pending", "Priority": "Medium"},
+            {"Name": "Task 3", "Status": "Completed", "Priority": "Low"}
+        ]
+        
+        result = server.structured_knowledge_manager.batch_add_rows(
+            conversation_id, structure_id, rows_data
+        )
+        
+        # Verify rows were added
+        self.assertIn("Row 0 added", result)
+        self.assertIn("Row 1 added", result)
+        self.assertIn("Row 2 added", result)
+        
+        # Verify structure exists and has correct data
+        conv_data = server.structured_knowledge_manager.conversations[conversation_id]
+        structure = conv_data[structure_id]
+        self.assertEqual(len(structure["rows"]), 3)
+        self.assertEqual(structure["rows"][0]["Name"], "Task 1")
+        self.assertEqual(structure["rows"][1]["Status"], "Pending")
+        self.assertEqual(structure["rows"][2]["Priority"], "Low")
+        
+        # Test rendering and verify content
+        render_result = server.structured_knowledge_manager.render(
+            conversation_id, structure_id
+        )
+        
+        # Verify render contains expected elements
+        self.assertIn("Task 1", render_result)
+        self.assertIn("Task 2", render_result)
+        self.assertIn("Task 3", render_result)
+        self.assertIn("Active", render_result)
+        self.assertIn("High", render_result)
+        
+        # Test metrics
+        metrics_result = server.structured_knowledge_manager.get_metrics(
+            conversation_id, structure_id
+        )
+        
+        # Verify metrics
+        self.assertEqual(metrics_result['total_items'], 3)
+        
+    def test_server_batch_update_operations(self):
+        """Test server-level batch update operations with verification"""
+        conversation_id = "test_server_update"
+        structure_id = "update_table"
+        
+        # Setup: create structure and add initial rows
+        server.structured_knowledge_manager.create_structure(
+            conversation_id, structure_id, "task_list", ["Task", "Status", "Progress"]
+        )
+        
+        server.structured_knowledge_manager.batch_add_rows(
+            conversation_id, structure_id, [
+                {"Task": "Original Task 1", "Status": "To Do", "Progress": "0%"},
+                {"Task": "Original Task 2", "Status": "In Progress", "Progress": "50%"}
+            ]
+        )
+        
+        # Test batch update rows
+        updates_data = [
+            {"index": 0, "data": {"Status": "In Progress", "Progress": "25%"}},
+            {"index": 1, "data": {"Status": "Completed", "Progress": "100%"}}
+        ]
+        
+        update_result = server.structured_knowledge_manager.batch_update_rows(
+            conversation_id, structure_id, updates_data
+        )
+        
+        # Verify updates
+        self.assertIn("Row 0 updated", update_result)
+        self.assertIn("Row 1 updated", update_result)
+        
+        # Verify final state
+        conv_data = server.structured_knowledge_manager.conversations[conversation_id]
+        structure = conv_data[structure_id]
+        self.assertEqual(structure["rows"][0]["Status"], "In Progress")
+        self.assertEqual(structure["rows"][0]["Progress"], "25%")
+        self.assertEqual(structure["rows"][1]["Status"], "Completed")
+        self.assertEqual(structure["rows"][1]["Progress"], "100%")
+        
+        # Test rendering after updates
+        render_result = server.structured_knowledge_manager.render(
+            conversation_id, structure_id
+        )
+        
+        # Verify updated content in render
+        self.assertIn("25%", render_result)
+        self.assertIn("100%", render_result)
+        self.assertIn("Completed", render_result)
+        
+    def test_server_error_handling(self):
+        """Test server-level error handling for batch operations"""
+        conversation_id = "test_server_errors"
+        structure_id = "error_table"
+        
+        # Test batch operations on non-existent structure
+        result = server.structured_knowledge_manager.batch_add_rows(
+            conversation_id, "nonexistent", [{"test": "data"}]
+        )
+        self.assertIn("does not exist", result)
+        
+        # Create structure for further tests
+        server.structured_knowledge_manager.create_structure(
+            conversation_id, structure_id, "simple_table"
+        )
+        
+        # Test invalid update index
+        result = server.structured_knowledge_manager.batch_update_rows(
+            conversation_id, structure_id, [{"index": 999, "data": {"test": "value"}}]
+        )
+        self.assertIn("out of range", result)
 
 if __name__ == "__main__":
     unittest.main()
