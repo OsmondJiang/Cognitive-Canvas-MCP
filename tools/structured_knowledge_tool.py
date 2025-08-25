@@ -155,7 +155,7 @@ class StructuredKnowledgeManager:
             markdown = "\n".join(f"[{'x' if row.get('checked') else ' '}] {row.get('content', str(row))}" for row in rows)
 
         # JSON output
-        json_output = json.dumps(rows, indent=2)
+        json_output = json.dumps(rows, indent=2, ensure_ascii=False)
 
         # Summary text
         metrics = self.get_metrics(conversation_id, structure_id)
