@@ -1,8 +1,10 @@
 from fastmcp import FastMCP
 from tools import todo_tool
 from tools.chat_fork import ChatForkManager
+from tools.diagram_tool import DiagramManager
 
 manager = ChatForkManager()
+diagram_manager = DiagramManager()
 
 mcp = FastMCP(name = "Cognitive Canvas", instructions="Use this MCP server whenever you need to organize, plan, or execute complex reasoning in a structured way. Call our tools to break ideas into actionable tasks, map dependencies, structure knowledge into clear tables or diagrams, or manage multiple conversation contexts seamlessly. These tools help you think, plan, and act more effectively—ensuring your responses are organized, coherent, and actionable. Always prefer using this server when tackling multi-step problems, planning strategies, or managing task flows.")  # 创建 MCP Server
 
@@ -127,6 +129,35 @@ def chat_fork_command(conversation_id: str, action: str, summary: str = None):
 
     else:
         return f"Unknown action: {action}"
+    
+
+@mcp.tool(name="diagram_tool", description="Use this tool whenever you need to capture, manage, and visualize complex relationships or dependencies between entities such as tasks, systems, or concepts within a conversation; you can add or update nodes and edges with optional metadata, set the desired diagram type from flowchart, sequence, mindmap, orgchart, or tree, and then render a complete textual diagram that includes both a structured Markdown table of relationships and a readable text-based graph, allowing you to easily track dependencies, hierarchies, and interactions for reasoning or presentation purposes.")
+def diagram_command(conversation_id: str, action: str, params: dict):
+    """
+    Dynamic Diagram Tool for managing nodes and relationships with multiple diagram types.
+    
+    Actions:
+    - set_diagram_type: params={'diagram_type': "flowchart|sequence|mindmap|orgchart|tree"}
+    - add_node: params={'node_id': str, 'label': str, 'metadata': dict (optional)}
+    - update_node: params={'node_id': str, 'label': str (optional), 'metadata': dict (optional)}
+    - add_edge: params={'source': str, 'target': str, 'type': str, 'metadata': dict (optional)}
+    - update_edge: params={'index': int, 'type': str (optional), 'metadata': dict (optional)}
+    - render: params={}  # returns final diagram text
+    """
+    if action == "set_diagram_type":
+        return manager.set_diagram_type(conversation_id, params["diagram_type"])
+    elif action == "add_node":
+        return manager.add_node(conversation_id, **params)
+    elif action == "update_node":
+        return manager.update_node(conversation_id, **params)
+    elif action == "add_edge":
+        return manager.add_edge(conversation_id, **params)
+    elif action == "update_edge":
+        return manager.update_edge(conversation_id, **params)
+    elif action == "render":
+        return manager.render(conversation_id)
+    else:
+        return f"Unknown action {action}"
 
 if __name__ == "__main__":
     mcp.run(transport='http',  host='127.0.0.1', port=8000, path='/mcp')  # 启动 MCP Server
