@@ -79,8 +79,10 @@ def todo_command(
 @mcp.tool(name='chat_fork', description="The Chat Fork Tool is used to manage conversation branches when the discussion shifts into a new topic or subtopic. Instead of updating context after every message, the LLM should call this tool only at key decision points. When the conversation diverges, the LLM can create a new branch to capture a summarized snapshot of the current context, and when the user finishes with that branch, the LLM can return to the parent branch to resume the previous discussion. This allows the conversation to be managed as a tree of nodes, making it easier to preserve reasoning state, backtrack, and switch topics smoothly.")
 def chat_fork_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")], 
-    action: Annotated[str, Field(description="The operation to perform on conversation branches", enum=["fork_topic", "return_to_parent", "get_current_summary", "list_subtopics"])], 
-    summary: Annotated[Optional[str], Field(description="Summary description of the current topic/branch. Required only for 'fork_topic' action.", default=None)]
+    action: Annotated[str, Field(description="The operation to perform on conversation branches", enum=["fork_topic", "return_to_previous_context", "get_current_context", "list_subtopics"])], 
+    summary: Annotated[Optional[str], Field(description="Summary description of the current topic/branch. Required only for 'fork_topic' action.", default=None)],
+    details: Annotated[Optional[str], Field(description="Detailed information about the current topic/branch for future reference. Optional for 'fork_topic' action.", default="")],
+    include_details: Annotated[Optional[bool], Field(description="Whether to include detailed information when listing subtopics. Optional for 'list_subtopics' action.", default=False)]
 ):
     """
     Chat Fork Tool with Simple Parameter Interface
@@ -89,31 +91,34 @@ def chat_fork_command(
 
     Parameters:
     - conversation_id (str, required): Unique identifier of the conversation
-    - action (str, required): Must be one of ["fork_topic", "return_to_parent", "get_current_summary", "list_subtopics"]
+    - action (str, required): Must be one of ["fork_topic", "return_to_previous_context", "get_current_context", "list_subtopics"]
     - summary (str): Topic summary (required only for "fork_topic" action)
+    - details (str): Detailed information for future reference (optional for "fork_topic" action)
+    - include_details (bool): Whether to include details when listing subtopics (optional for "list_subtopics" action)
 
     Usage Examples:
-    1. Fork new topic: chat_fork_command("conv1", "fork_topic", summary="Discussing authentication implementation")
-    2. Return to parent: chat_fork_command("conv1", "return_to_parent") 
-    3. Get current summary: chat_fork_command("conv1", "get_current_summary")
+    1. Fork new topic: chat_fork_command("conv1", "fork_topic", summary="Discussing authentication implementation", details="Exploring JWT vs OAuth2 options, security considerations, and implementation timeline")
+    2. Return to previous context: chat_fork_command("conv1", "return_to_previous_context") 
+    3. Get current context: chat_fork_command("conv1", "get_current_context")
     4. List subtopics: chat_fork_command("conv1", "list_subtopics")
+    5. List subtopics with details: chat_fork_command("conv1", "list_subtopics", include_details=True)
     """
     if action == "fork_topic":
         if not summary:
             return "Error: summary is required for fork_topic action"
-        return chat_fork_manager.fork_topic(conversation_id, summary)
+        return chat_fork_manager.fork_topic(conversation_id, summary, details or "")
 
-    elif action == "return_to_parent":
-        return chat_fork_manager.return_to_parent(conversation_id)
+    elif action == "return_to_previous_context":
+        return str(chat_fork_manager.return_to_previous_context(conversation_id))
 
-    elif action == "get_current_summary":
-        return chat_fork_manager.get_current_summary(conversation_id)
+    elif action == "get_current_context":
+        return str(chat_fork_manager.get_current_context(conversation_id))
 
     elif action == "list_subtopics":
-        return chat_fork_manager.list_subtopics(conversation_id)
+        return chat_fork_manager.list_subtopics(conversation_id, include_details or False)
 
     else:
-        return f"Unknown action: {action}. Valid actions: fork_topic, return_to_parent, get_current_summary, list_subtopics"
+        return f"Unknown action: {action}. Valid actions: fork_topic, return_to_previous_context, get_current_context, list_subtopics"
     
 
 @mcp.tool(name="diagram_tool", description="Use this tool whenever you need to capture, manage, and visualize complex relationships or dependencies between entities such as tasks, systems, or concepts within a conversation; you can add or update nodes and edges with optional metadata, set the desired diagram type from flowchart, sequence, mindmap, orgchart, or tree, and then render a complete textual diagram that includes both a structured Markdown table of relationships and a readable text-based graph, allowing you to easily track dependencies, hierarchies, and interactions for reasoning or presentation purposes.")
