@@ -322,6 +322,6 @@ class DiagramManager:
 
         # Return based on diagram type
         if diagram_type in ["tree", "orgchart", "mindmap"]:
-            return f"### Diagram (Tree Style)\n```\n{tree_text}\n```\n\n### Table View\n{table_text}"
+            return f"### Diagram (Tree Style)\n```\n{tree_text}\n```"
         else:  # flowchart, sequence
-            return f"### Diagram (Table Style)\n{table_text}\n\n### Text View\n```\n{tree_text}\n```"
+            return f"### Diagram (Table Style)\n{table_text}"

@@ -244,39 +244,34 @@ class TestDiagramTool(unittest.TestCase):
         self.assertIn("Child 1", result)
         self.assertIn("Child 2", result)
         
-        # Check for text representation
-        if "```" in result:
-            # New format with code block
+        # For flowchart (default), we only get table view
+        # For tree/mindmap/orgchart, we only get text/tree view
+        if "### Diagram (Table Style)" in result:
+            # Table style - verify table structure
+            self.assertIn("| Node ID | Label | Level |", result)
+            self.assertIn("| root | Root Node | 0 |", result)
+        elif "### Diagram (Tree Style)" in result:
+            # Tree style - check for text representation with code block
             text_graph = result.split("```")[1].strip()
             self.assertIn("Root Node", text_graph)
             # Check for tree structure indicators
             self.assertTrue("└─" in text_graph or "├─" in text_graph)
-        else:
-            # Old format
-            # Verify the Text Graph section
-            self.assertIn("## Text Graph", result)
             
-            # Extract the text graph content
-            text_graph = result.split('## Text Graph\n\n')[1]
-        
-        # Verify text graph structure
-        self.assertIn("Root Node", text_graph)
-        
-        # Check for hierarchical structure markers (should show parent-child relationships)
-        text_lines = text_graph.split('\n')
-        self.assertGreater(len(text_lines), 1)  # Should have at least the root and one child
-        root_line_idx = next(i for i, line in enumerate(text_lines) if "Root Node" in line)
-        
-        # Verify children are indented under the root
-        child_lines = text_lines[root_line_idx+1:]
-        child_found = 0
-        for line in child_lines:
-            if "Child 1" in line or "Child 2" in line:
-                # Check for tree structure markers - at least one of these should be in the line
-                self.assertTrue("└─ " in line or "├─ " in line, f"Tree structure marker not found in line: {line}")
-                child_found += 1
-                
-        self.assertEqual(child_found, 2)  # Both children should be found
+            # Verify text graph structure
+            text_lines = text_graph.split('\n')
+            self.assertGreater(len(text_lines), 1)  # Should have at least the root and one child
+            root_line_idx = next(i for i, line in enumerate(text_lines) if "Root Node" in line)
+            
+            # Verify children are indented under the root
+            child_lines = text_lines[root_line_idx+1:]
+            child_found = 0
+            for line in child_lines:
+                if "Child 1" in line or "Child 2" in line:
+                    # Check for tree structure markers - at least one of these should be in the line
+                    self.assertTrue("└─ " in line or "├─ " in line, f"Tree structure marker not found in line: {line}")
+                    child_found += 1
+                    
+            self.assertEqual(child_found, 2)  # Both children should be found
         
         # Test rendering a more complex diagram
         self.manager.add_node(self.conv_id, "grandchild1", "Grandchild 1")
@@ -310,12 +305,18 @@ class TestDiagramTool(unittest.TestCase):
         self.manager.set_diagram_type(self.conv_id, "mindmap")
         result = self.manager.render(self.conv_id)
         
-        # Should still have the same content but possibly different formatting
-        self.assertIn("Diagram", result)
+        # Should still have the same content but mindmap should show tree style
+        self.assertIn("### Diagram (Tree Style)", result)
         self.assertIn("Root Node", result)
         self.assertIn("Child 1", result)
         self.assertIn("Child 2", result)
         self.assertIn("Grandchild 1", result)
+        
+        # Test flowchart type shows table style
+        self.manager.set_diagram_type(self.conv_id, "flowchart")
+        result = self.manager.render(self.conv_id)
+        self.assertIn("### Diagram (Table Style)", result)
+        self.assertIn("Root Node", result)
 
     def test_batch_add_nodes(self):
         """Test batch adding nodes"""
@@ -520,7 +521,7 @@ class TestDiagramTool(unittest.TestCase):
         self.assertIn("Start", render_result)
         self.assertIn("Process", render_result)
         self.assertIn("End", render_result)
-        self.assertIn("### Text View", render_result)
+        self.assertIn("### Diagram (Table Style)", render_result)
         
     def test_server_batch_update_operations(self):
         """Test server-level batch update operations with verification"""

@@ -10,10 +10,10 @@ chat_fork_manager = ChatForkManager()
 diagram_manager = DiagramManager()
 structured_knowledge_manager = StructuredKnowledgeManager()
 
-mcp = FastMCP(name = "Cognitive Canvas", instructions="Use this MCP server whenever you need to organize, plan, or execute complex reasoning in a structured way. Call our tools to break ideas into actionable tasks, map dependencies, structure knowledge into clear tables or diagrams, or manage multiple conversation contexts seamlessly. These tools help you think, plan, and act more effectively—ensuring your responses are organized, coherent, and actionable. Always prefer using this server when tackling multi-step problems, planning strategies, or managing task flows.")  # 创建 MCP Server
+mcp = FastMCP(name = "Cognitive Canvas", instructions="Use this MCP server to enhance your thinking and problem-solving capabilities through structured organization. This server helps you break down complex problems, visualize relationships, organize information systematically, and manage conversation contexts effectively. Choose the most appropriate tool for your specific need: TODO_COMMAND excels at task and project management with status tracking; DIAGRAM_TOOL is perfect for visualizing relationships, dependencies, and hierarchical structures; STRUCTURED_KNOWLEDGE_TOOL organizes data in tables and lists for analysis; CHAT_FORK manages conversation branches and contexts. While each tool has its specialty, you can combine them when tackling multi-faceted problems that require both planning and visualization.") 
 
 
-@mcp.tool(name="todo_command", description="Helps the AI agent break down ideas, answers, or strategies into clear, actionable tasks. Track progress, avoid duplication, and ensure no step is missed. The agent can create, update, and manage tasks throughout a conversation, turning complex problems into manageable action items and guiding users to effective solutions.")
+@mcp.tool(name="todo_command", description="Use this tool specifically for task and project management - creating, tracking, and updating actionable work items with status tracking (pending, in_progress, completed, blocked). Best for breaking down complex projects into manageable tasks, monitoring progress, and ensuring nothing falls through the cracks. Use when you need to manage workflows, deadlines, or action items that require status updates over time.")
 def todo_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation. All tasks will be scoped to this conversation.")], 
     action: Annotated[str, Field(description="The operation to perform on tasks", enum=["update", "delete", "get", "list", "add-batch"])], 
@@ -121,7 +121,7 @@ def chat_fork_command(
         return f"Unknown action: {action}. Valid actions: fork_topic, return_to_previous_context, get_current_context, list_subtopics"
     
 
-@mcp.tool(name="diagram_tool", description="Use this tool whenever you need to capture, manage, and visualize complex relationships or dependencies between entities such as tasks, systems, or concepts within a conversation; you can add or update nodes and edges with optional metadata, set the desired diagram type from flowchart, sequence, mindmap, orgchart, or tree, and then render a complete textual diagram that includes both a structured Markdown table of relationships and a readable text-based graph, allowing you to easily track dependencies, hierarchies, and interactions for reasoning or presentation purposes.")
+@mcp.tool(name="diagram_tool", description="Use this tool for visualizing relationships, dependencies, and hierarchical structures between entities. Create flowcharts for processes, organizational charts for hierarchies, mind maps for concept exploration, or dependency trees for system architecture. Best for showing how things connect, flow, or depend on each other. Use when you need to map relationships, visualize system architecture, or show process flows rather than just listing items.")
 def diagram_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")], 
     action: Annotated[str, Field(description="The operation to perform on the diagram", enum=["set_diagram_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "render"])], 
@@ -193,7 +193,7 @@ def diagram_command(
     
 @mcp.tool(
     name="structured_knowledge_tool",
-    description="Use this tool whenever you need to create, update, and manage structured tables or lists within a conversation; each structure has a unique ID and a chosen template type such as simple_table, task_list, check_list, numbered_list, bulleted_list, voting_table, or progress_table; you can batch add or update rows, render the structure in Markdown and JSON, and automatically obtain metrics such as completion rates, checked rates, or voting distributions, allowing LLMs to reason over and present structured information efficiently."
+    description="Use this tool for organizing and presenting structured data in tables, lists, and specialized formats. Create comparison tables, checklists, voting matrices, progress tables, or formatted lists when you need to organize information systematically. Best for data collection, comparison analysis, surveys, or any scenario where you need structured presentation of information rather than task management or relationship mapping."
 )
 def structured_knowledge_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")], 

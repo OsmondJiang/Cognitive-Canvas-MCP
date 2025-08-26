@@ -156,7 +156,6 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         # Verify structure of the result
         self.assertIn(f"Structure '{self.structure_id}' (simple_table) with 2 items", render_result)
         self.assertIn("## Markdown", render_result)
-        self.assertIn("## JSON", render_result)
         
         # Verify table formatting is correct
         markdown_lines = [line for line in render_result.split('\n') if '|' in line]
@@ -171,16 +170,6 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         # Verify data rows
         self.assertRegex(markdown_lines[2], r'\|\s*John\s*\|\s*30\s*\|')
         self.assertRegex(markdown_lines[3], r'\|\s*Jane\s*\|\s*25\s*\|')
-        
-        # Verify JSON format
-        import json
-        json_section = render_result.split('## JSON\n')[1].strip()
-        data = json.loads(json_section)
-        self.assertEqual(len(data), 2)
-        self.assertEqual(data[0]["Name"], "John")
-        self.assertEqual(data[0]["Age"], 30)
-        self.assertEqual(data[1]["Name"], "Jane")
-        self.assertEqual(data[1]["Age"], 25)
         
         # Test rendering a bulleted list
         self.manager.create_structure(
@@ -205,13 +194,6 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         self.assertEqual(markdown_lines[0], "- Item 1")
         self.assertEqual(markdown_lines[1], "- Item 2")
         
-        # Verify JSON content
-        json_section = render_result.split('## JSON\n')[1].strip()
-        data = json.loads(json_section)
-        self.assertEqual(len(data), 2)
-        self.assertEqual(data[0]["content"], "Item 1")
-        self.assertEqual(data[1]["content"], "Item 2")
-        
         # Test rendering a check list
         self.manager.create_structure(
             self.conv_id, 
@@ -235,14 +217,10 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         self.assertEqual(markdown_lines[0], "[x] Item 1")
         self.assertEqual(markdown_lines[1], "[ ] Item 2")
         
-        # Verify JSON format includes checked status
-        json_section = render_result.split('## JSON\n')[1].strip()
-        data = json.loads(json_section)
-        self.assertEqual(len(data), 2)
-        self.assertEqual(data[0]["content"], "Item 1")
-        self.assertTrue(data[0]["checked"])
-        self.assertEqual(data[1]["content"], "Item 2")
-        self.assertFalse(data[1]["checked"])
+        # Verify check list format
+        self.assertEqual(len(markdown_lines), 2)
+        self.assertEqual(markdown_lines[0], "[x] Item 1")
+        self.assertEqual(markdown_lines[1], "[ ] Item 2")
         
         # Test rendering a numbered list
         self.manager.create_structure(

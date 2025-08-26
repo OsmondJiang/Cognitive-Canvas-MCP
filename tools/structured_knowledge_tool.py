@@ -118,7 +118,6 @@ class StructuredKnowledgeManager:
 
     def batch_operations(self, conversation_id: str, structure_id: str, operations: List[Dict]):
         """
-        批量执行混合操作
         operations: [
             {"action": "add", "data": dict},
             {"action": "update", "data": {"index": int, "row_data": dict}},
@@ -264,4 +263,4 @@ class StructuredKnowledgeManager:
         metrics = self.get_metrics(conversation_id, structure_id)
         summary = f"Structure '{structure_id}' ({template_type}) with {len(rows)} items.\nMetrics: {metrics}"
 
-        return f"{summary}\n\n## Markdown\n{markdown}\n\n## JSON\n{json_output}"
+        return f"{summary}\n\n## Markdown\n{markdown}"
