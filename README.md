@@ -41,11 +41,12 @@ Think of it as giving AI agents a "research laboratory" - a complete workspace w
 
 ### 5. **Statistical Evidence Tool** (`statistical_evidence_tool`)
 - Automated statistical analysis to support evidence-based arguments and decision making
-- Auto-detects appropriate statistical methods (t-tests, ANOVA, correlation analysis) based on data structure
-- Supports paired comparisons, group comparisons, correlation analysis, and descriptive statistics
+- Auto-detects appropriate statistical methods (t-tests, ANOVA, correlation analysis, chi-square tests) based on data structure
+- Supports both numerical data analysis (descriptive statistics, hypothesis testing) and categorical data analysis (frequency distributions, chi-square independence tests)
+- Advanced features: paired comparisons, group comparisons, correlation analysis, chi-square tests for categorical relationships
+- Comprehensive statistical reporting with p-values, effect sizes (Cohen's d, Cramér's V), confidence intervals, and significance testing
 - Batch analysis capabilities for processing multiple statistical questions efficiently
-- Generates comprehensive reports with statistical conclusions, effect sizes, and significance testing
-- Multiple output formats: business summaries, academic reports, comprehensive analysis
+- Multiple output formats: business summaries, academic reports, comprehensive analysis with statistical interpretations
 
 ## 🎯 Transform Any AI into a Deep-Thinking Research Agent
 
@@ -98,8 +99,8 @@ Enhanced AI: Breaks down strategic goals → maps resource dependencies →
 ```
 Normal AI: "The data suggests..."
 Enhanced AI: Automatically detects analysis type → performs appropriate statistical tests → 
-             calculates effect sizes and significance → generates evidence-based conclusions → 
-             provides actionable insights with confidence levels
+             analyzes categorical relationships with chi-square tests → calculates effect sizes and significance → 
+             generates evidence-based conclusions → provides actionable insights with confidence levels
 ```
 
 **Learning & Education**
@@ -250,6 +251,21 @@ statistical_evidence_tool("teaching_study", "analyze",
         "interactive": [78, 82, 76, 80], 
         "ai_assisted": [88, 91, 86, 89]
     }
+)
+
+# Chi-square test for categorical data analysis
+statistical_evidence_tool("customer_survey", "analyze",
+    data={
+        "age_group": ["18-25", "26-35", "36-45", "46-55", "18-25", "26-35"],
+        "product_preference": ["Electronics", "Books", "Fashion", "Electronics", "Fashion", "Books"]
+    },
+    analysis_type="chi_square_test"
+)
+
+# Frequency analysis for categorical distributions
+statistical_evidence_tool("feedback_analysis", "analyze",
+    data={"feedback": ["Excellent", "Good", "Average", "Poor", "Excellent", "Good"]},
+    analysis_type="frequency_analysis"
 )
 
 # Batch analysis for comprehensive insights
