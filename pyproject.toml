@@ -33,7 +33,7 @@ Repository = "https://github.com/OsmondJiang/Cognitive-Canvas"
 Issues = "https://github.com/OsmondJiang/Cognitive-Canvas/issues"
 
 [project.scripts]
-cognitive-canvas = "cognitive_canvas_server:main"
+cognitive-canvas-mcp = "cognitive_canvas_server:main"
 
 [tool.setuptools]
 packages = ["tools"]

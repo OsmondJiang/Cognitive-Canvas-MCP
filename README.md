@@ -4,35 +4,38 @@
 
 ## What is Cognitive Canvas?
 
-Cognitive Canvas is a comprehensive Model Context Protocol (MCP) server that provides AI agents, LLMs, and Copilot-style systems with advanced cognitive tools. It transforms how AI handles complex reasoning by offering structured approaches to task management, dependency mapping, knowledge organization, and context switching.
+Cognitive Canvas is a comprehensive Model Context Protocol (MCP) server that provides AI agents, LLMs, and Copilot-style systems with advanced cognitive tools. It transforms how AI handles complex reasoning by offering structured approaches to task management, dependency mapping, knowledge organization, and conversation context management.
 
-Think of it as giving AI agents a "second brain" - a workspace where they can organize thoughts, break down complex problems, visualize relationships, and maintain coherent reasoning across extended conversations.
+Think of it as giving AI agents a "second brain" - a workspace where they can organize thoughts, break down complex problems, visualize relationships, maintain coherent reasoning across extended conversations, and seamlessly switch between topics without losing context.
 
 ## 🚀 What Can It Do?
 
-### 1. **Task Management & Action Planning** 
-- Break down complex problems into actionable tasks
-- Track progress and ensure nothing is missed
-- Batch operations for efficient task creation
-- Status tracking (pending, in_progress, completed, blocked)
+### 1. **Task Management & Action Planning** (`todo_command`)
+- Break down complex problems into actionable tasks with batch operations
+- Track progress with status tracking (pending, in_progress, completed, blocked)
+- Add, update, delete, and organize tasks efficiently
+- List and retrieve specific tasks for project management
 
-### 2. **Dependency & Relationship Mapping**
-- Create visual diagrams of task dependencies
-- Map relationships between concepts and ideas
-- Support for flowcharts, sequence diagrams, mindmaps, org charts, and trees
-- Generate both structured tables and readable text-based graphs
+### 2. **Conversation Context Management** (`chat_fork`)
+- Create conversation branches for handling interruptions and topic switches
+- Pause current discussions and seamlessly switch to new topics
+- Resume previous conversations with full context restoration
+- Search and visualize conversation trees with bookmark functionality
+- Support for nested drilling and parallel topic switching
 
-### 3. **Structured Knowledge Organization**
-- Transform unstructured information into organized tables
-- Support for various template types (task lists, checklists, voting tables, progress tables)
-- Automatic metrics calculation (completion rates, voting distributions)
-- JSON and Markdown export capabilities
+### 3. **Dependency & Relationship Mapping** (`diagram_tool`)
+- Create visual diagrams of task dependencies and relationships
+- Support for multiple diagram types: flowcharts, sequence diagrams, mindmaps, org charts, and trees
+- Batch operations for adding nodes and edges efficiently
+- Generate both structured relationship tables and readable text-based graphs
+- Visualize system architecture and process flows
 
-### 4. **Context Management & Conversation Forking**
-- Create conversation branches for handling interruptions
-- Maintain reasoning state across topic switches
-- Seamless context switching and restoration
-- Tree-like conversation management
+### 4. **Structured Knowledge Organization** (`structured_knowledge_tool`)
+- Transform unstructured information into organized tables and lists
+- Support for various template types: simple tables, task lists, checklists, numbered/bulleted lists, voting tables, progress tables
+- Batch operations for adding and updating data efficiently
+- Automatic metrics calculation (completion rates, voting distributions, progress tracking)
+- JSON and Markdown export capabilities for structured presentation
 
 ## 🎯 Transform Any AI into a Deep-Thinking Research Agent
 
@@ -97,6 +100,37 @@ Enhanced AI: Structures learning progression → tracks mastery →
 
 ### Installation
 
+#### Install from PyPI (Easy)
+
+```bash
+pip install cognitive-canvas-mcp
+```
+
+Then add to your `claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "cognitive-canvas": {
+      "command": "cognitive-canvas-mcp"
+    }
+  }
+}
+```
+
+**Note**: If you get "command not recognized" error, add your Python Scripts folder to PATH or use:
+```json
+{
+  "mcpServers": {
+    "cognitive-canvas": {
+      "command": "python",
+      "args": ["-m", "cognitive_canvas_server"]
+    }
+  }
+}
+```
+
+#### Development Installation
+
 1. **Clone the repository:**
 ```bash
 git clone https://github.com/OsmondJiang/Cognitive-Canvas.git
@@ -110,7 +144,7 @@ pip install -r requirements.txt
 
 3. **Run the MCP server:**
 ```bash
-python server.py
+python cognitive_canvas_server.py
 ```
 
 ### Configuration
@@ -122,7 +156,7 @@ Add Cognitive Canvas to your MCP client configuration. For Claude Desktop, add t
   "mcpServers": {
     "cognitive-canvas": {
       "command": "python",
-      "args": ["path/to/Cognitive-Canvas/server.py"]
+      "args": ["path/to/Cognitive-Canvas/cognitive_canvas_server.py"]
     }
   }
 }
@@ -183,38 +217,43 @@ structured_knowledge_tool("project1", "add_row", {
 ### Project Structure
 ```
 Cognitive-Canvas/
-├── server.py              # Main MCP server
-├── requirements.txt        # Python dependencies
-├── tools/                 # Core tool implementations
+├── cognitive_canvas_server.py    # Main MCP server entry point
+├── cognitive_canvas_mcp/         # Package directory
+│   ├── server.py                 # Core MCP server implementation
+│   └── __init__.py
+├── tools/                        # Core tool implementations
 │   ├── __init__.py
-│   ├── todo_tool.py       # Task management
-│   ├── diagram_tool.py    # Diagram creation
+│   ├── todo_tool.py              # Task management
+│   ├── diagram_tool.py           # Diagram creation
 │   ├── structured_knowledge_tool.py  # Knowledge organization
-│   └── chat_fork.py       # Context management
-└── tests/                 # Test suite
-    ├── test_server.py
-    ├── test_todo_tool.py
-    └── ...
+│   └── chat_fork.py              # Context management
+├── tests/                        # Test suite
+│   ├── test_server.py
+│   ├── test_todo_tool.py
+│   └── ...
+├── pyproject.toml                # Package configuration
+├── requirements.txt              # Python dependencies
+└── publish.ps1                   # Publishing script
 ```
 
 ### Adding New Features
 
 1. **Create a new tool module** in the `tools/` directory
 2. **Implement the core functionality** following existing patterns
-3. **Add MCP endpoint** in `server.py`
+3. **Add MCP endpoint** in `cognitive_canvas_mcp/server.py`
 4. **Write tests** in the `tests/` directory
 5. **Update documentation**
 
 ### Running Tests
 ```bash
 # Run all tests
-python -m pytest tests/
+python tests/run_all_tests.py
 
 # Run specific test file
-python -m pytest tests/test_todo_tool.py
+python -m unittest tests.test_todo_tool
 
-# Run with coverage
-python -m pytest tests/ --cov=tools
+# Run with verbose output
+python tests/run_all_tests.py -v
 ```
 
 ### Code Style
@@ -235,11 +274,13 @@ python -m pytest tests/ --cov=tools
 
 Cognitive Canvas is built on the FastMCP framework, providing:
 
-- **Modular Design**: Each cognitive tool is independently implemented
+- **Modular Design**: Each cognitive tool is independently implemented in the `tools/` directory
+- **Package Structure**: Clean separation with `cognitive_canvas_mcp` package for distribution
 - **Conversation Scoping**: All data is organized by conversation ID
 - **Memory Management**: In-memory storage for fast access during sessions
 - **Extensible Framework**: Easy to add new cognitive tools
 - **Type Safety**: Full type hints and validation using Pydantic
+- **PyPI Distribution**: Simple installation via `pip install cognitive-canvas-mcp`
 
 ## 📝 License
 
