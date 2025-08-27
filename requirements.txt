@@ -1,1 +1,10 @@
+# Core MCP framework
 fastmcp==0.0.9
+
+# Data validation and type checking
+pydantic>=2.0.0
+
+# Optional: For development and testing
+# pytest>=7.0.0  # Alternative test runner
+# black>=23.0.0  # Code formatting
+# flake8>=6.0.0  # Code linting
