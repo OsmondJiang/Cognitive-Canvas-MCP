@@ -4,9 +4,11 @@
 
 ## What is Cognitive Canvas?
 
-Cognitive Canvas is a comprehensive Model Context Protocol (MCP) server that provides AI agents, LLMs, and Copilot-style systems with advanced cognitive tools. It transforms how AI handles complex reasoning by offering structured approaches to task management, dependency mapping, knowledge organization, and conversation context management.
+Cognitive Canvas is a comprehensive Model Context Protocol (MCP) server that transforms AI agents, LLMs, and Copilot-style systems into research-grade cognitive workspaces. It provides advanced cognitive tools for systematic reasoning, evidence-based analysis, and persistent memory management.
 
-Think of it as giving AI agents a "second brain" - a workspace where they can organize thoughts, break down complex problems, visualize relationships, maintain coherent reasoning across extended conversations, and seamlessly switch between topics without losing context.
+Think of it as giving AI agents a "research laboratory" - a complete workspace where they can organize complex thoughts, break down multi-step problems, visualize intricate relationships, maintain coherent reasoning across extended conversations, generate statistical evidence, and seamlessly switch between topics without losing context.
+
+**Core Philosophy**: Transform any AI from a simple chat assistant into a sophisticated research agent capable of PhD-level systematic thinking, evidence-based conclusions, and persistent knowledge building.
 
 ## 🚀 What Can It Do?
 
@@ -37,6 +39,14 @@ Think of it as giving AI agents a "second brain" - a workspace where they can or
 - Automatic metrics calculation (completion rates, voting distributions, progress tracking)
 - JSON and Markdown export capabilities for structured presentation
 
+### 5. **Statistical Evidence Tool** (`statistical_evidence_tool`)
+- Automated statistical analysis to support evidence-based arguments and decision making
+- Auto-detects appropriate statistical methods (t-tests, ANOVA, correlation analysis) based on data structure
+- Supports paired comparisons, group comparisons, correlation analysis, and descriptive statistics
+- Batch analysis capabilities for processing multiple statistical questions efficiently
+- Generates comprehensive reports with statistical conclusions, effect sizes, and significance testing
+- Multiple output formats: business summaries, academic reports, comprehensive analysis
+
 ## 🎯 Transform Any AI into a Deep-Thinking Research Agent
 
 Cognitive Canvas transforms ordinary Copilot/Agent/AI into sophisticated **research-agent** and **deep-thinking mode** capabilities, enabling systematic reasoning and persistent memory.
@@ -49,11 +59,15 @@ Cognitive Canvas transforms ordinary Copilot/Agent/AI into sophisticated **resea
 
 🔍 **From Linear Responses → Deep-Thinking Mode**
 - **Before**: AI provides immediate, surface-level responses  
-- **After**: AI breaks down complex problems, maps dependencies, and reasons through multi-step solutions
+- **After**: AI breaks down complex problems, maps dependencies, validates hypotheses with statistical evidence, and reasons through multi-step solutions
 
 📊 **From Stateless → Persistent Intelligence**
 - **Before**: Each conversation starts from scratch
-- **After**: AI accumulates knowledge, tracks progress, and builds upon previous work
+- **After**: AI accumulates knowledge, tracks progress, maintains statistical evidence, and builds upon previous work
+
+🎯 **From Opinion-Based → Evidence-Driven**
+- **Before**: AI provides subjective recommendations and gut feelings
+- **After**: AI generates statistical evidence, calculates significance levels, measures effect sizes, and provides data-backed conclusions
 
 ### Real-World Impact Examples
 
@@ -68,14 +82,24 @@ Enhanced AI: Systematically plans project phases → tracks implementation progr
 ```
 Normal AI: "Based on this paper..."
 Enhanced AI: Organizes literature systematically → builds concept maps → 
-             tracks hypothesis development → synthesizes findings coherently
+             tracks hypothesis development → validates with statistical evidence → 
+             synthesizes findings with confidence intervals
 ```
 
 **Business Planning**
 ```
 Normal AI: "You should consider these factors..."
 Enhanced AI: Breaks down strategic goals → maps resource dependencies → 
-             tracks milestone progress → maintains decision rationale
+             tracks milestone progress → validates decisions with A/B test analysis → 
+             maintains decision rationale with statistical backing
+```
+
+**Data-Driven Decision Making**
+```
+Normal AI: "The data suggests..."
+Enhanced AI: Automatically detects analysis type → performs appropriate statistical tests → 
+             calculates effect sizes and significance → generates evidence-based conclusions → 
+             provides actionable insights with confidence levels
 ```
 
 **Learning & Education**
@@ -87,10 +111,10 @@ Enhanced AI: Structures learning progression → tracks mastery →
 
 ### The Core Difference
 
-**Without Cognitive Canvas**: AI = Smart autocomplete with no memory or systematic thinking
-**With Cognitive Canvas**: AI = Research assistant with structured reasoning, persistent memory, and goal-oriented planning
+**Without Cognitive Canvas**: AI = Smart autocomplete with no memory, systematic thinking, or evidence validation
+**With Cognitive Canvas**: AI = Research assistant with structured reasoning, persistent memory, statistical validation, and evidence-based conclusions
 
-**Result**: Any AI system becomes capable of PhD-level systematic thinking and research methodology.
+**Result**: Any AI system becomes capable of PhD-level systematic thinking, research methodology, and data-driven analysis with statistical rigor.
 
 ## 🛠 How to Use It
 
@@ -212,6 +236,35 @@ table_builder("project1", "add_row", {
 })
 ```
 
+#### Statistical Evidence Analysis
+```python
+# Auto-detect analysis type for A/B testing
+statistical_evidence_tool("ab_test", "analyze", 
+    data={"control_group": [6.1, 5.8, 6.2], "test_group": [7.8, 8.2, 7.5]}
+)
+
+# Compare multiple groups (ANOVA)
+statistical_evidence_tool("teaching_study", "analyze", 
+    groups={
+        "traditional": [72, 74, 70, 73],
+        "interactive": [78, 82, 76, 80], 
+        "ai_assisted": [88, 91, 86, 89]
+    }
+)
+
+# Batch analysis for comprehensive insights
+statistical_evidence_tool("survey", "batch_analyze",
+    data={"satisfaction": [7.2, 8.1, 6.8], "productivity": [85, 92, 78]},
+    batch_analyses=[
+        {"type": "descriptive", "variables": ["satisfaction", "productivity"]},
+        {"type": "correlation", "var1": "satisfaction", "var2": "productivity"}
+    ]
+)
+
+# Generate comprehensive statistical report
+statistical_evidence_tool("survey", "render_report")
+```
+
 ## 🔧 Development Guide
 
 ### Project Structure
@@ -224,9 +277,10 @@ Cognitive-Canvas/
 ├── tools/                        # Core tool implementations
 │   ├── __init__.py
 │   ├── todo_tool.py              # Task management
-│   ├── relationship_mapper.py       # Relationship visualization
-│   ├── table_builder.py             # Table and list creation
-│   └── chat_fork.py              # Context management
+│   ├── relationship_mapper.py    # Relationship visualization
+│   ├── table_builder.py         # Table and list creation
+│   ├── chat_fork.py              # Context management
+│   └── statistical_evidence.py  # Statistical analysis and evidence generation
 ├── tests/                        # Test suite
 │   ├── test_server.py
 │   ├── test_todo_tool.py
