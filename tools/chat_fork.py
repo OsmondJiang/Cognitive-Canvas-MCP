@@ -3,15 +3,20 @@ from typing import Dict, List, Optional
 class ChatNode:
     def __init__(self, summary: str, details: str = "", parent: Optional['ChatNode'] = None):
         self.summary = summary
-        self.details = details  # 新增详细信息字段
+        self.details = details
         self.parent = parent
         self.children: List['ChatNode'] = []
+        # Enhanced context fields
+        self.current_context = ""
+        self.progress_status = ""
+        self.next_steps = ""
 
 class ChatForkManager:
     def __init__(self):
         self.conversations: Dict[str, ChatNode] = {}
 
-    def pause_topic(self, conversation_id: str, new_topic: str, state_update: str = "", pause_type: str = "nested") -> dict:
+    def pause_topic(self, conversation_id: str, new_topic: str, current_context: str = "", 
+                    progress_status: str = "", next_steps: str = "", pause_type: str = "nested") -> dict:
         """
         Pause current topic and switch to a new topic.
         Supports two pause modes: nested drilling vs parallel switching
@@ -19,7 +24,9 @@ class ChatForkManager:
         Args:
             conversation_id: Conversation ID
             new_topic: The new topic to switch to
-            state_update: Update description of current topic state (optional)
+            current_context: Current discussion context and details (optional)
+            progress_status: Current progress and status (optional)
+            next_steps: Next steps or pending tasks (optional)
             pause_type: Pause type
                        - "nested": Nested pause, drill deeper into current topic's subtopic
                        - "parallel": Parallel pause, switch to a sibling topic at the same level
@@ -30,19 +37,25 @@ class ChatForkManager:
         # If new conversation, create root node
         if conversation_id not in self.conversations:
             root_summary = "Main conversation"
-            self.conversations[conversation_id] = ChatNode(root_summary, state_update or "")
+            root_node = ChatNode(root_summary)
+            if current_context:
+                root_node.current_context = current_context
+            if progress_status:
+                root_node.progress_status = progress_status
+            if next_steps:
+                root_node.next_steps = next_steps
+            self.conversations[conversation_id] = root_node
         else:
-            # Existing conversation, update current node's state
+            # Existing conversation, update current node's context
             current = self.conversations[conversation_id]
             
-            # Smart state update
-            if state_update:
-                if not current.details:
-                    current.details = state_update
-                elif len(current.details) < 50 or "..." in current.details:
-                    current.details = state_update
-                else:
-                    current.details += f" | Latest progress: {state_update}"
+            # Update context information
+            if current_context:
+                current.current_context = current_context
+            if progress_status:
+                current.progress_status = progress_status
+            if next_steps:
+                current.next_steps = next_steps
         
         current = self.conversations[conversation_id]
         
@@ -58,7 +71,11 @@ class ChatForkManager:
                 "message": f"Nested pause: diving deeper into '{new_topic}' from '{current.summary}'",
                 "paused_topic": current.summary,
                 "current_topic": new_topic,
-                "paused_state": current.details,
+                "saved_context": {
+                    "current_context": current.current_context,
+                    "progress_status": current.progress_status,
+                    "next_steps": current.next_steps
+                },
                 "pause_type": "nested",
                 "action": "topic_paused",
                 "depth": self._get_conversation_depth(new_topic_node)
@@ -84,7 +101,11 @@ class ChatForkManager:
                 "message": f"Parallel pause: switched to '{new_topic}', can resume back to '{current.summary}'",
                 "paused_topic": current.summary,
                 "current_topic": new_topic,
-                "paused_state": current.details,
+                "saved_context": {
+                    "current_context": current.current_context,
+                    "progress_status": current.progress_status,
+                    "next_steps": current.next_steps
+                },
                 "pause_type": "parallel",
                 "action": "topic_paused",
                 "depth": self._get_conversation_depth(new_topic_node),
@@ -157,8 +178,11 @@ class ChatForkManager:
                 "status": "warning",
                 "message": "Already at main conversation, no topic to resume",
                 "current_topic": current.summary,
-                "current_state": current.details,
-                "has_state": bool(current.details),
+                "current_context": {
+                    "current_context": current.current_context,
+                    "progress_status": current.progress_status,
+                    "next_steps": current.next_steps
+                },
                 "action": "already_at_main"
             }
         
@@ -169,9 +193,13 @@ class ChatForkManager:
             "status": "success",
             "message": f"Completed topic '{current.summary}' and resumed: {target_node.summary}",
             "completed_topic": current.summary,
+            "completed_summary": completed_summary,
             "resumed_topic": target_node.summary,
-            "restored_state": target_node.details,
-            "has_restored_state": bool(target_node.details),
+            "restored_context": {
+                "current_context": target_node.current_context,
+                "progress_status": target_node.progress_status,
+                "next_steps": target_node.next_steps
+            },
             "resume_type": resume_type,
             "actual_resume_type": getattr(current, '_pause_type', 'nested'),
             "action": "topic_resumed"
@@ -192,3 +220,95 @@ class ChatForkManager:
         while current.parent is not None:
             current = current.parent
         return current
+
+    def render_conversation_tree(self, conversation_id: str) -> str:
+        """
+        Render the conversation tree as a text-based tree structure.
+        Shows all topics in a hierarchical view with the current topic marked.
+        
+        Args:
+            conversation_id: Conversation ID
+            
+        Returns:
+            String containing the rendered tree text
+        """
+        if conversation_id not in self.conversations:
+            return "Error: Conversation not found"
+        
+        current_node = self.conversations[conversation_id]
+        root_node = self._find_root(current_node)
+        
+        # Build the tree representation
+        tree_lines = []
+        self._render_node(root_node, current_node, tree_lines, "", True, True)  # Mark as root
+        
+        return "\n".join(tree_lines)
+    
+    def _render_node(self, node: ChatNode, current_node: ChatNode, tree_lines: List[str], 
+                     prefix: str, is_last: bool, is_root: bool = False) -> None:
+        """
+        Recursively render a node and its children in tree format.
+        
+        Args:
+            node: Node to render
+            current_node: Current active node (for marking)
+            tree_lines: List to append rendered lines to
+            prefix: Prefix for the current line
+            is_last: Whether this is the last child of its parent
+            is_root: Whether this is the root node
+        """
+        # Determine the marker for current position
+        current_marker = " 👈 [HERE]" if node == current_node else ""
+        
+        # Format the topic summary with context info
+        topic_info = node.summary
+        
+        # Show context information if available
+        context_parts = []
+        if node.current_context:
+            context_parts.append(node.current_context[:30] + "..." if len(node.current_context) > 30 else node.current_context)
+        if node.progress_status:
+            context_parts.append(f"Progress: {node.progress_status}")
+        if node.next_steps:
+            context_parts.append(f"Next: {node.next_steps[:20]}..." if len(node.next_steps) > 20 else f"Next: {node.next_steps}")
+        
+        if context_parts:
+            topic_info += f" ({'; '.join(context_parts)})"
+        
+        # Add pause type indicator
+        pause_type = getattr(node, '_pause_type', '')
+        if pause_type:
+            type_indicator = " [N]" if pause_type == "nested" else " [P]" if pause_type == "parallel" else ""
+            topic_info += type_indicator
+        
+        # Determine the tree connector
+        if is_root:
+            # Root node - no connector, just the topic
+            line = f"{topic_info}{current_marker}"
+        else:
+            # Child node - add tree connector
+            connector = "└── " if is_last else "├── "
+            line = f"{prefix}{connector}{topic_info}{current_marker}"
+        
+        tree_lines.append(line)
+        
+        # Render children
+        if len(node.children) > 0:
+            for i, child in enumerate(node.children):
+                is_last_child = (i == len(node.children) - 1)
+                
+                if is_root:
+                    # For root node children, no prefix yet
+                    child_prefix = ""
+                else:
+                    # For deeper level children
+                    child_prefix = prefix + ("    " if is_last else "│   ")
+                
+                self._render_node(child, current_node, tree_lines, child_prefix, is_last_child, False)
+    
+    def _count_nodes(self, node: ChatNode) -> int:
+        """Count total number of nodes in the tree starting from given node"""
+        count = 1  # Count current node
+        for child in node.children:
+            count += self._count_nodes(child)
+        return count
