@@ -10,13 +10,17 @@ class ChatNode:
         self.current_context = ""
         self.progress_status = ""
         self.next_steps = ""
+        # Bookmark functionality
+        self.is_bookmarked = False
+        self.bookmark_name = ""
 
 class ChatForkManager:
     def __init__(self):
         self.conversations: Dict[str, ChatNode] = {}
 
     def pause_topic(self, conversation_id: str, new_topic: str, current_context: str = "", 
-                    progress_status: str = "", next_steps: str = "", pause_type: str = "nested") -> dict:
+                    progress_status: str = "", next_steps: str = "", pause_type: str = "nested",
+                    bookmark: str = "") -> dict:
         """
         Pause current topic and switch to a new topic.
         Supports two pause modes: nested drilling vs parallel switching
@@ -30,6 +34,7 @@ class ChatForkManager:
             pause_type: Pause type
                        - "nested": Nested pause, drill deeper into current topic's subtopic
                        - "parallel": Parallel pause, switch to a sibling topic at the same level
+            bookmark: If provided, mark the current topic as a bookmark with this name (optional)
         
         Returns:
             Dictionary containing operation result and context information
@@ -61,6 +66,11 @@ class ChatForkManager:
         
         current = self.conversations[conversation_id]
         
+        # Handle bookmark functionality - mark current topic as bookmark if requested
+        if bookmark:
+            current.is_bookmarked = True
+            current.bookmark_name = bookmark
+        
         if pause_type == "nested":
             # Nested mode: create subtopic under current node
             new_topic_node = ChatNode(new_topic, "", parent=current)
@@ -89,7 +99,8 @@ class ChatForkManager:
                 },
                 "pause_type": "nested",
                 "action": "topic_paused",
-                "depth": self._get_conversation_depth(new_topic_node)
+                "depth": self._get_conversation_depth(new_topic_node),
+                "bookmark_created": bookmark if bookmark else None
             }
             
         elif pause_type == "parallel":
@@ -134,7 +145,8 @@ class ChatForkManager:
                 "pause_type": "parallel",
                 "action": "topic_paused",
                 "depth": self._get_conversation_depth(new_topic_node),
-                "paused_from_depth": self._get_conversation_depth(current)
+                "paused_from_depth": self._get_conversation_depth(current),
+                "bookmark_created": bookmark if bookmark else None
             }
         
         else:
@@ -143,10 +155,11 @@ class ChatForkManager:
                 "message": f"Invalid pause_type: {pause_type}. Must be 'nested' or 'parallel'"
             }
 
-    def resume_topic(self, conversation_id: str, completed_summary: str = "", resume_type: str = "auto") -> dict:
+    def resume_topic(self, conversation_id: str, completed_summary: str = "", 
+                    resume_type: str = "auto", bookmark: str = "") -> dict:
         """
         Complete current topic and resume previously paused topic.
-        Smart resume based on pause type.
+        Smart resume based on pause type, or jump to specific bookmark.
         
         Args:
             conversation_id: Conversation ID
@@ -155,6 +168,8 @@ class ChatForkManager:
                         - "auto": Automatically decide resume location based on pause type
                         - "parent": Force resume to parent topic
                         - "root": Force resume to root topic
+                        - "bookmark": Resume to specific bookmark (requires bookmark)
+            bookmark: Name of bookmark to resume to (used when resume_type="bookmark" or as direct target)
         
         Returns:
             Dictionary containing operation result and restored context information
@@ -173,7 +188,16 @@ class ChatForkManager:
             current.details = completed_summary
         
         # Determine resume target based on resume_type
-        if resume_type == "auto":
+        if bookmark:
+            # If bookmark is provided, try to find and jump to that bookmark
+            target_node = self._find_bookmark(conversation_id, bookmark)
+            if target_node is None:
+                return {
+                    "status": "error",
+                    "message": f"Bookmark '{bookmark}' not found",
+                    "action": "bookmark_not_found"
+                }
+        elif resume_type == "auto":
             # Auto mode: smart decision based on pause type
             pause_type = getattr(current, '_pause_type', 'nested')
             
@@ -191,10 +215,22 @@ class ChatForkManager:
             target_node = current.parent
         elif resume_type == "root":
             target_node = self._find_root(current)
+        elif resume_type == "bookmark":
+            if not bookmark:
+                return {
+                    "status": "error",
+                    "message": "bookmark is required when resume_type is 'bookmark'"
+                }
+            target_node = self._find_bookmark(conversation_id, bookmark)
+            if target_node is None:
+                return {
+                    "status": "error",
+                    "message": f"Bookmark '{bookmark}' not found"
+                }
         else:
             return {
                 "status": "error",
-                "message": f"Invalid resume_type: {resume_type}. Must be 'auto', 'parent', or 'root'"
+                "message": f"Invalid resume_type: {resume_type}. Must be 'auto', 'parent', 'root', or 'bookmark'"
             }
         
         # Check if target node exists
@@ -227,7 +263,8 @@ class ChatForkManager:
             },
             "resume_type": resume_type,
             "actual_resume_type": getattr(current, '_pause_type', 'nested'),
-            "action": "topic_resumed"
+            "action": "topic_resumed",
+            "resumed_to_bookmark": target_node.bookmark_name if target_node.is_bookmarked else None
         }
 
     def _get_conversation_depth(self, node: ChatNode) -> int:
@@ -245,6 +282,42 @@ class ChatForkManager:
         while current.parent is not None:
             current = current.parent
         return current
+    
+    def _find_bookmark(self, conversation_id: str, bookmark_name: str) -> Optional[ChatNode]:
+        """Find a node with the specified bookmark name"""
+        if conversation_id not in self.conversations:
+            return None
+        
+        current_node = self.conversations[conversation_id]
+        root_node = self._find_root(current_node)
+        
+        # Search entire tree for the bookmark
+        return self._search_bookmark_recursive(root_node, bookmark_name)
+    
+    def _search_bookmark_recursive(self, node: ChatNode, bookmark_name: str) -> Optional[ChatNode]:
+        """Recursively search for a bookmark in the tree"""
+        if node.is_bookmarked and node.bookmark_name == bookmark_name:
+            return node
+        
+        for child in node.children:
+            result = self._search_bookmark_recursive(child, bookmark_name)
+            if result:
+                return result
+        
+        return None
+    
+    def _list_bookmarks_recursive(self, node: ChatNode, bookmarks: List[dict]) -> None:
+        """Recursively collect all bookmarks in the tree"""
+        if node.is_bookmarked:
+            bookmarks.append({
+                "name": node.bookmark_name,
+                "topic": node.summary,
+                "context": node.current_context,
+                "progress": node.progress_status
+            })
+        
+        for child in node.children:
+            self._list_bookmarks_recursive(child, bookmarks)
 
     def render_conversation_tree(self, conversation_id: str) -> str:
         """
@@ -267,7 +340,19 @@ class ChatForkManager:
         tree_lines = []
         self._render_node(root_node, current_node, tree_lines, "", True, True)  # Mark as root
         
-        return "\n".join(tree_lines)
+        # Collect bookmarks
+        bookmarks = []
+        self._list_bookmarks_recursive(root_node, bookmarks)
+        
+        result = "\n".join(tree_lines)
+        
+        # Add bookmarks summary if any exist
+        if bookmarks:
+            result += "\n\n📖 Bookmarks:\n"
+            for bookmark in bookmarks:
+                result += f"  🔖 {bookmark['name']}: {bookmark['topic']}\n"
+        
+        return result
     
     def _render_node(self, node: ChatNode, current_node: ChatNode, tree_lines: List[str], 
                      prefix: str, is_last: bool, is_root: bool = False) -> None:
@@ -285,18 +370,21 @@ class ChatForkManager:
         # Determine the marker for current position
         current_marker = " 👈 [HERE]" if node == current_node else ""
         
-        # Add pause type indicator
+        # Add pause type and bookmark indicators
         pause_type = getattr(node, '_pause_type', '')
         type_indicator = ""
         if pause_type:
             type_indicator = " [N]" if pause_type == "nested" else " [P]" if pause_type == "parallel" else ""
         
+        # Add bookmark indicator
+        bookmark_indicator = f" 🔖[{node.bookmark_name}]" if node.is_bookmarked else ""
+        
         # Main topic line
         if is_root:
-            line = f"{node.summary}{type_indicator}{current_marker}"
+            line = f"{node.summary}{type_indicator}{bookmark_indicator}{current_marker}"
         else:
             connector = "└── " if is_last else "├── "
-            line = f"{prefix}{connector}{node.summary}{type_indicator}{current_marker}"
+            line = f"{prefix}{connector}{node.summary}{type_indicator}{bookmark_indicator}{current_marker}"
         
         tree_lines.append(line)
         

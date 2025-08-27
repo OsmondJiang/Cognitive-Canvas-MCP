@@ -85,7 +85,8 @@ def chat_fork_command(
     progress_status: Annotated[Optional[str], Field(description="Current progress and status. Optional for 'pause_topic' action.", default="")],
     next_steps: Annotated[Optional[str], Field(description="Next steps or pending tasks. Optional for 'pause_topic' action.", default="")],
     pause_type: Annotated[Optional[str], Field(description="Type of pause: 'nested' (dive deeper into current topic) or 'parallel' (switch to different topic). Optional for 'pause_topic' action.", enum=["nested", "parallel"], default="nested")],
-    resume_type: Annotated[Optional[str], Field(description="How to resume: 'auto' (smart resume based on pause type), 'parent' (to parent topic), 'root' (to main topic). Optional for 'resume_topic' action.", enum=["auto", "parent", "root"], default="auto")],
+    bookmark: Annotated[Optional[str], Field(description="Bookmark name - for 'pause_topic': mark current topic as important bookmark; for 'resume_topic': jump to specific bookmark. Optional for both actions.", default="")],
+    resume_type: Annotated[Optional[str], Field(description="How to resume: 'auto' (smart resume based on pause type), 'parent' (to parent topic), 'root' (to main topic), 'bookmark' (to specific bookmark). Optional for 'resume_topic' action.", enum=["auto", "parent", "root", "bookmark"], default="auto")],
     completed_summary: Annotated[Optional[str], Field(description="Summary of the completed topic when resuming. Optional for 'resume_topic' action.", default="")]
 ):
     """
@@ -108,20 +109,23 @@ def chat_fork_command(
     - progress_status (str, optional): Current progress and status
     - next_steps (str, optional): Next steps or pending tasks
     - pause_type (str, optional): "nested" for diving deeper, "parallel" for switching topics
+    - bookmark (str, optional): Bookmark name to mark current topic as important
     
     For resume_topic:
     - completed_summary (str, optional): Summary of what was completed in the current topic
-    - resume_type (str, optional): "auto" for smart resume, "parent" for parent topic, "root" for main topic
+    - resume_type (str, optional): "auto" for smart resume, "parent" for parent topic, "root" for main topic, "bookmark" for specific bookmark
+    - bookmark (str, optional): Name of bookmark to resume to (when resume_type="bookmark" or as direct target)
     
     For render:
     - No additional parameters needed
 
     Usage Examples:
-    1. Nested pause (dive deeper): chat_fork_command("conv1", "pause_topic", new_topic="API security details", current_context="Designing user authentication system", progress_status="Completed basic auth flow", next_steps="Implement JWT tokens", pause_type="nested")
-    2. Parallel pause (switch topics): chat_fork_command("conv1", "pause_topic", new_topic="Team meeting discussion", current_context="Working on database design", progress_status="50% complete", pause_type="parallel")  
+    1. Nested pause with bookmark: chat_fork_command("conv1", "pause_topic", new_topic="API security details", current_context="Designing user authentication system", progress_status="Completed basic auth flow", next_steps="Implement JWT tokens", pause_type="nested", bookmark="auth_design")
+    2. Parallel pause: chat_fork_command("conv1", "pause_topic", new_topic="Team meeting discussion", current_context="Working on database design", progress_status="50% complete", pause_type="parallel")  
     3. Auto resume: chat_fork_command("conv1", "resume_topic", completed_summary="Security implementation completed")
-    4. Resume to specific level: chat_fork_command("conv1", "resume_topic", completed_summary="Meeting done", resume_type="root")
-    5. Visualize conversation tree: chat_fork_command("conv1", "render")
+    4. Resume to bookmark: chat_fork_command("conv1", "resume_topic", bookmark="auth_design", completed_summary="Meeting done")
+    5. Resume to specific level: chat_fork_command("conv1", "resume_topic", completed_summary="Meeting done", resume_type="root")
+    6. Visualize conversation tree: chat_fork_command("conv1", "render")
     """
     
     if action == "pause_topic":
@@ -133,11 +137,17 @@ def chat_fork_command(
             current_context or "", 
             progress_status or "", 
             next_steps or "", 
-            pause_type or "nested"
+            pause_type or "nested",
+            bookmark or ""
         )
     
     elif action == "resume_topic":
-        return chat_fork_manager.resume_topic(conversation_id, completed_summary or "", resume_type or "auto")
+        return chat_fork_manager.resume_topic(
+            conversation_id, 
+            completed_summary or "", 
+            resume_type or "auto",
+            bookmark or ""
+        )
     
     elif action == "render":
         return chat_fork_manager.render_conversation_tree(conversation_id)
