@@ -3,14 +3,14 @@ from typing import Annotated, Optional, List
 from pydantic import Field
 from tools import todo_tool
 from tools.chat_fork import ChatForkManager
-from tools.diagram_tool import DiagramManager
+from tools.relationship_mapper import RelationshipMapper
 from tools.table_builder import TableBuilder
 
 chat_fork_manager = ChatForkManager()
-diagram_manager = DiagramManager()
+relationship_mapper_manager = RelationshipMapper()
 table_builder_manager = TableBuilder()
 
-mcp = FastMCP(name = "Cognitive Canvas", instructions="Use this MCP server to enhance your thinking and problem-solving capabilities through structured organization. This server helps you break down complex problems, visualize relationships, organize information systematically, and manage conversation contexts effectively. Choose the most appropriate tool for your specific need: TODO_COMMAND excels at task and project management with status tracking; DIAGRAM_TOOL is perfect for visualizing relationships, dependencies, and hierarchical structures; TABLE_BUILDER creates and manages tables and lists for data organization; CHAT_FORK manages conversation branches and contexts. While each tool has its specialty, you can combine them when tackling multi-faceted problems that require both planning and visualization.") 
+mcp = FastMCP(name = "Cognitive Canvas", instructions="Use this MCP server to enhance your thinking and problem-solving capabilities through structured organization. This server helps you break down complex problems, visualize relationships, organize information systematically, and manage conversation contexts effectively. Choose the most appropriate tool for your specific need: TODO_COMMAND excels at task and project management with status tracking; RELATIONSHIP_MAPPER is perfect for visualizing relationships, dependencies, and hierarchical structures; TABLE_BUILDER creates and manages tables and lists for data organization; CHAT_FORK manages conversation branches and contexts. While each tool has its specialty, you can combine them when tackling multi-faceted problems that require both planning and visualization.") 
 
 
 @mcp.tool(name="todo_command", description="Use this tool specifically for task and project management - creating, tracking, and updating actionable work items with status tracking (pending, in_progress, completed, blocked). Best for breaking down complex projects into manageable tasks, monitoring progress, and ensuring nothing falls through the cracks. Use when you need to manage workflows, deadlines, or action items that require status updates over time.")
@@ -171,10 +171,10 @@ def chat_fork_command(
         return f"Unknown action: {action}. Valid actions: pause_topic, resume_topic, search"
     
 
-@mcp.tool(name="diagram_tool", description="Use this tool for visualizing relationships, dependencies, and hierarchical structures between entities. Create flowcharts for processes, organizational charts for hierarchies, mind maps for concept exploration, or dependency trees for system architecture. Best for showing how things connect, flow, or depend on each other. Use when you need to map relationships, visualize system architecture, or show process flows rather than just listing items.")
-def diagram_command(
+@mcp.tool(name="relationship_mapper", description="Use this tool for visualizing relationships, dependencies, and hierarchical structures between entities. Create flowcharts for processes, organizational charts for hierarchies, mind maps for concept exploration, or dependency trees for system architecture. Best for showing how things connect, flow, or depend on each other. Use when you need to map relationships, visualize system architecture, or show process flows rather than just listing items.")
+def relationship_mapper_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")], 
-    action: Annotated[str, Field(description="The operation to perform on the diagram", enum=["set_diagram_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "render"])], 
+    action: Annotated[str, Field(description="The operation to perform on the relationship mapper", enum=["set_visualization_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "render"])], 
     # For diagram type
     diagram_type: Annotated[Optional[str], Field(description="Type of diagram to create", enum=["flowchart", "sequence", "mindmap", "orgchart", "tree"], default=None)],
     # For batch operations
@@ -189,14 +189,14 @@ def diagram_command(
 
     Parameters:
     - conversation_id (str, required): Unique identifier of the conversation
-    - action (str, required): Operation type - ["set_diagram_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "render"]
-    - diagram_type (str): Type of diagram (required for "set_diagram_type")
+    - action (str, required): Operation type - ["set_visualization_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "render"]
+    - visualization_type (str): Type of visualization (required for "set_visualization_type")
     - nodes (list): Array of node objects for batch node operations
     - edges (list): Array of edge objects for batch edge operations  
     - operations (list): Array of mixed operations for batch_operations
 
     Examples:
-    1. Set diagram type: diagram_command("conv1", "set_diagram_type", diagram_type="flowchart")
+    1. Set visualization type: relationship_mapper_command("conv1", "set_visualization_type", diagram_type="flowchart")
     2. Add nodes: diagram_command("conv1", "batch_add_nodes", nodes=[{"id": "node1", "label": "Label1"}, {"id": "node2", "label": "Label2"}])
     3. Add edges: diagram_command("conv1", "batch_add_edges", edges=[{"source": "node1", "target": "node2", "type": "connects"}])
     4. Update nodes: diagram_command("conv1", "batch_update_nodes", nodes=[{"id": "node1", "label": "Updated Label1"}])
@@ -205,41 +205,41 @@ def diagram_command(
     7. Render: diagram_command("conv1", "render")
     """
     
-    if action == "set_diagram_type":
+    if action == "set_visualization_type":
         if not diagram_type:
-            return "Error: diagram_type is required for set_diagram_type action"
-        return diagram_manager.set_diagram_type(conversation_id, diagram_type)
+            return "Error: diagram_type is required for set_visualization_type action"
+        return relationship_mapper_manager.set_visualization_type(conversation_id, diagram_type)
     
     elif action == "batch_add_nodes":
         if not nodes:
             return "Error: 'nodes' array is required for batch_add_nodes action"
-        return diagram_manager.batch_add_nodes(conversation_id, nodes)
+        return relationship_mapper_manager.batch_add_nodes(conversation_id, nodes)
     
     elif action == "batch_update_nodes":
         if not nodes:
             return "Error: 'nodes' array is required for batch_update_nodes action"
-        return diagram_manager.batch_update_nodes(conversation_id, nodes)
+        return relationship_mapper_manager.batch_update_nodes(conversation_id, nodes)
     
     elif action == "batch_add_edges":
         if not edges:
             return "Error: 'edges' array is required for batch_add_edges action"
-        return diagram_manager.batch_add_edges(conversation_id, edges)
+        return relationship_mapper_manager.batch_add_edges(conversation_id, edges)
     
     elif action == "batch_update_edges":
         if not edges:
             return "Error: 'edges' array is required for batch_update_edges action"
-        return diagram_manager.batch_update_edges(conversation_id, edges)
+        return relationship_mapper_manager.batch_update_edges(conversation_id, edges)
     
     elif action == "batch_operations":
         if not operations:
             return "Error: 'operations' array is required for batch_operations action"
-        return diagram_manager.batch_operations(conversation_id, operations)
+        return relationship_mapper_manager.batch_operations(conversation_id, operations)
     
     elif action == "render":
-        return diagram_manager.render(conversation_id)
+        return relationship_mapper_manager.render(conversation_id)
     
     else:
-        return f"Unknown action: {action}. Valid actions: set_diagram_type, batch_add_nodes, batch_update_nodes, batch_add_edges, batch_update_edges, batch_operations, render"
+        return f"Unknown action: {action}. Valid actions: set_visualization_type, batch_add_nodes, batch_update_nodes, batch_add_edges, batch_update_edges, batch_operations, render"
     
 @mcp.tool(
     name="table_builder",

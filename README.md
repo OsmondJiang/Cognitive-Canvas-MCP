@@ -23,7 +23,7 @@ Think of it as giving AI agents a "second brain" - a workspace where they can or
 - Search and visualize conversation trees with bookmark functionality
 - Support for nested drilling and parallel topic switching
 
-### 3. **Dependency & Relationship Mapping** (`diagram_tool`)
+### 3. **Dependency & Relationship Mapping** (`relationship_mapper`)
 - Create visual diagrams of task dependencies and relationships
 - Support for multiple diagram types: flowcharts, sequence diagrams, mindmaps, org charts, and trees
 - Batch operations for adding nodes and edges efficiently
@@ -183,13 +183,13 @@ todo_command("project1", "list")
 #### Diagram Creation
 ```python
 # Create a dependency diagram
-diagram_tool("project1", "create", {
+relationship_mapper("project1", "create", {
     "diagram_type": "flowchart",
     "title": "Development Workflow"
 })
 
 # Add nodes and relationships
-diagram_tool("project1", "add_node", {
+relationship_mapper("project1", "add_node", {
     "node_id": "design",
     "label": "Database Design",
     "metadata": {"priority": "high"}
@@ -224,7 +224,7 @@ Cognitive-Canvas/
 ├── tools/                        # Core tool implementations
 │   ├── __init__.py
 │   ├── todo_tool.py              # Task management
-│   ├── diagram_tool.py           # Diagram creation
+│   ├── relationship_mapper.py       # Relationship visualization
 │   ├── table_builder.py             # Table and list creation
 │   └── chat_fork.py              # Context management
 ├── tests/                        # Test suite

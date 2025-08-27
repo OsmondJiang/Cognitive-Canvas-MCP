@@ -3,12 +3,12 @@ import os
 import unittest
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from tools.diagram_tool import DiagramManager, Node, Edge
-import server
+from tools.relationship_mapper import RelationshipMapper, Node, Edge
+import cognitive_canvas_server
 
-class TestDiagramTool(unittest.TestCase):
+class TestRelationshipMapper(unittest.TestCase):
     def setUp(self):
-        self.manager = DiagramManager()
+        self.manager = RelationshipMapper()
         self.conv_id = "test_conversation"
         
     def test_node_class(self):
@@ -156,25 +156,25 @@ class TestDiagramTool(unittest.TestCase):
         result = self.manager.update_edge(self.conv_id, 999, type="invalid")
         self.assertIn("Edge index out of range", result)
         
-    def test_set_diagram_type(self):
-        # Test setting a valid diagram type
-        result = self.manager.set_diagram_type(self.conv_id, "mindmap")
-        self.assertIn("Diagram type set to mindmap", result)
+    def test_set_visualization_type(self):
+        # Test setting a valid Relationship Map type
+        result = self.manager.set_visualization_type(self.conv_id, "mindmap")
+        self.assertIn("Visualization type set to mindmap", result)
         self.assertEqual(
-            self.manager.conversations[self.conv_id]["diagram_type"],
+            self.manager.conversations[self.conv_id]["visualization_type"],
             "mindmap"
         )
         
-        # Test setting an invalid diagram type
-        result = self.manager.set_diagram_type(self.conv_id, "invalid_type")
-        self.assertIn("Unknown diagram type", result)
+        # Test setting an invalid Relationship Map type
+        result = self.manager.set_visualization_type(self.conv_id, "invalid_type")
+        self.assertIn("Unknown visualization type", result)
         self.assertEqual(
-            self.manager.conversations[self.conv_id]["diagram_type"],
+            self.manager.conversations[self.conv_id]["visualization_type"],
             "mindmap"  # Should remain unchanged
         )
         
     def test_render(self):
-        # Create a simple diagram
+        # Create a simple Relationship Map
         self.manager.add_node(self.conv_id, "root", "Root Node")
         self.manager.add_node(self.conv_id, "child1", "Child 1")
         self.manager.add_node(self.conv_id, "child2", "Child 2")
@@ -185,7 +185,7 @@ class TestDiagramTool(unittest.TestCase):
         result = self.manager.render(self.conv_id)
         
         # Check that the result contains expected components
-        self.assertIn("Diagram", result)
+        self.assertIn("Relationship Map", result)
         self.assertIn("Root Node", result)
         self.assertIn("Child 1", result)
         self.assertIn("Child 2", result)
@@ -246,11 +246,11 @@ class TestDiagramTool(unittest.TestCase):
         
         # For flowchart (default), we only get table view
         # For tree/mindmap/orgchart, we only get text/tree view
-        if "### Diagram (Table Style)" in result:
+        if "### Relationship Map (Table Style)" in result:
             # Table style - verify table structure
             self.assertIn("| Node ID | Label | Level |", result)
             self.assertIn("| root | Root Node | 0 |", result)
-        elif "### Diagram (Tree Style)" in result:
+        elif "### Relationship Map (Tree Style)" in result:
             # Tree style - check for text representation with code block
             text_graph = result.split("```")[1].strip()
             self.assertIn("Root Node", text_graph)
@@ -273,7 +273,7 @@ class TestDiagramTool(unittest.TestCase):
                     
             self.assertEqual(child_found, 2)  # Both children should be found
         
-        # Test rendering a more complex diagram
+        # Test rendering a more complex Relationship Map
         self.manager.add_node(self.conv_id, "grandchild1", "Grandchild 1")
         self.manager.add_edge(
             self.conv_id, 
@@ -301,21 +301,21 @@ class TestDiagramTool(unittest.TestCase):
         # Note: Current implementation doesn't display edge metadata in the render output
         # If metadata display is needed, the render method would need to be updated
         
-        # Test diagram type change
-        self.manager.set_diagram_type(self.conv_id, "mindmap")
+        # Test Relationship Map type change
+        self.manager.set_visualization_type(self.conv_id, "mindmap")
         result = self.manager.render(self.conv_id)
         
         # Should still have the same content but mindmap should show tree style
-        self.assertIn("### Diagram (Tree Style)", result)
+        self.assertIn("### Relationship Map (Tree Style)", result)
         self.assertIn("Root Node", result)
         self.assertIn("Child 1", result)
         self.assertIn("Child 2", result)
         self.assertIn("Grandchild 1", result)
         
         # Test flowchart type shows table style
-        self.manager.set_diagram_type(self.conv_id, "flowchart")
+        self.manager.set_visualization_type(self.conv_id, "flowchart")
         result = self.manager.render(self.conv_id)
-        self.assertIn("### Diagram (Table Style)", result)
+        self.assertIn("### Relationship Map (Table Style)", result)
         self.assertIn("Root Node", result)
 
     def test_batch_add_nodes(self):
@@ -487,7 +487,7 @@ class TestDiagramTool(unittest.TestCase):
             {"id": "end", "label": "End", "metadata": {"type": "end"}}
         ]
         
-        result = server.diagram_manager.batch_add_nodes(conversation_id, nodes_data)
+        result = cognitive_canvas_server.relationship_mapper_manager.batch_add_nodes(conversation_id, nodes_data)
         
         # Verify nodes were added
         self.assertIn("(id: start) added", result)
@@ -495,7 +495,7 @@ class TestDiagramTool(unittest.TestCase):
         self.assertIn("(id: end) added", result)
         
         # Verify nodes exist in manager
-        conv_data = server.diagram_manager.conversations[conversation_id]
+        conv_data = cognitive_canvas_server.relationship_mapper_manager.conversations[conversation_id]
         self.assertEqual(len(conv_data["nodes"]), 3)
         self.assertIn("start", conv_data["nodes"])
         self.assertIn("process", conv_data["nodes"])
@@ -507,7 +507,7 @@ class TestDiagramTool(unittest.TestCase):
             {"source": "process", "target": "end", "type": "completes_to"}
         ]
         
-        result = server.diagram_manager.batch_add_edges(conversation_id, edges_data)
+        result = cognitive_canvas_server.relationship_mapper_manager.batch_add_edges(conversation_id, edges_data)
         
         # Verify edges were added
         self.assertIn("start -> process", result)
@@ -515,30 +515,30 @@ class TestDiagramTool(unittest.TestCase):
         self.assertEqual(len(conv_data["edges"]), 2)
         
         # Test rendering and verify structure
-        render_result = server.diagram_manager.render(conversation_id)
+        render_result = cognitive_canvas_server.relationship_mapper_manager.render(conversation_id)
         
         # Verify render contains expected elements
         self.assertIn("Start", render_result)
         self.assertIn("Process", render_result)
         self.assertIn("End", render_result)
-        self.assertIn("### Diagram (Table Style)", render_result)
+        self.assertIn("### Relationship Map (Table Style)", render_result)
         
     def test_server_batch_update_operations(self):
         """Test server-level batch update operations with verification"""
         conversation_id = "test_server_update"
         
         # First add some nodes and edges
-        server.diagram_manager.batch_add_nodes(conversation_id, [
+        cognitive_canvas_server.relationship_mapper_manager.batch_add_nodes(conversation_id, [
             {"id": "node1", "label": "Original 1"},
             {"id": "node2", "label": "Original 2"}
         ])
         
-        server.diagram_manager.batch_add_edges(conversation_id, [
+        cognitive_canvas_server.relationship_mapper_manager.batch_add_edges(conversation_id, [
             {"source": "node1", "target": "node2", "type": "original_type"}
         ])
         
         # Test batch update nodes
-        update_result = server.diagram_manager.batch_update_nodes(conversation_id, [
+        update_result = cognitive_canvas_server.relationship_mapper_manager.batch_update_nodes(conversation_id, [
             {"id": "node1", "label": "Updated 1", "metadata": {"updated": True}},
             {"id": "node2", "label": "Updated 2", "metadata": {"version": 2}}
         ])
@@ -547,14 +547,14 @@ class TestDiagramTool(unittest.TestCase):
         self.assertIn("node1", update_result)
         self.assertIn("node2", update_result)
         
-        conv_data = server.diagram_manager.conversations[conversation_id]
+        conv_data = cognitive_canvas_server.relationship_mapper_manager.conversations[conversation_id]
         self.assertEqual(conv_data["nodes"]["node1"].label, "Updated 1")
         self.assertEqual(conv_data["nodes"]["node2"].label, "Updated 2")
         self.assertEqual(conv_data["nodes"]["node1"].metadata["updated"], True)
         self.assertEqual(conv_data["nodes"]["node2"].metadata["version"], 2)
         
         # Test batch update edges
-        edge_update_result = server.diagram_manager.batch_update_edges(conversation_id, [
+        edge_update_result = cognitive_canvas_server.relationship_mapper_manager.batch_update_edges(conversation_id, [
             {"index": 0, "type": "updated_type", "metadata": {"modified": True}}
         ])
         
@@ -577,7 +577,7 @@ class TestDiagramTool(unittest.TestCase):
             {"action": "update_node", "data": {"id": "root", "label": "Updated Root", "metadata": {"level": 0}}}
         ]
         
-        result = server.diagram_manager.batch_operations(conversation_id, mixed_ops)
+        result = cognitive_canvas_server.relationship_mapper_manager.batch_operations(conversation_id, mixed_ops)
         
         # Verify all operations succeeded
         self.assertIn("(id: root) added", result)
@@ -587,14 +587,14 @@ class TestDiagramTool(unittest.TestCase):
         self.assertIn("'root' updated", result)
         
         # Verify final state
-        conv_data = server.diagram_manager.conversations[conversation_id]
+        conv_data = cognitive_canvas_server.relationship_mapper_manager.conversations[conversation_id]
         self.assertEqual(len(conv_data["nodes"]), 3)
         self.assertEqual(len(conv_data["edges"]), 2)
         self.assertEqual(conv_data["nodes"]["root"].label, "Updated Root")
         self.assertEqual(conv_data["nodes"]["root"].metadata["level"], 0)
         
         # Test rendering of mixed operations result
-        render_result = server.diagram_manager.render(conversation_id)
+        render_result = cognitive_canvas_server.relationship_mapper_manager.render(conversation_id)
         
         # Verify render contains all elements
         self.assertIn("Updated Root", render_result)
@@ -606,13 +606,13 @@ class TestDiagramTool(unittest.TestCase):
         conversation_id = "test_server_errors"
         
         # Test invalid node data in batch
-        result = server.diagram_manager.batch_add_nodes(conversation_id, [
+        result = cognitive_canvas_server.relationship_mapper_manager.batch_add_nodes(conversation_id, [
             {"label": "Missing ID"}  # Missing required id field
         ])
         self.assertIn("Error: Missing id or label", result)
         
         # Test invalid edge data in batch
-        result = server.diagram_manager.batch_add_edges(conversation_id, [
+        result = cognitive_canvas_server.relationship_mapper_manager.batch_add_edges(conversation_id, [
             {"source": "node1", "target": "node2"}  # Missing type field
         ])
         self.assertIn("Error: Missing source, target, or type", result)

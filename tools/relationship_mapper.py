@@ -13,13 +13,13 @@ class Edge:
         self.type = type
         self.metadata = metadata or {}
 
-class DiagramManager:
+class RelationshipMapper:
     def __init__(self):
-        self.conversations: Dict[str, Dict] = {}  # conversation_id -> {"nodes": {}, "edges": [], "diagram_type": str}
+        self.conversations: Dict[str, Dict] = {}  # conversation_id -> {"nodes": {}, "edges": [], "visualization_type": str}
 
     def _ensure_conv(self, conversation_id: str):
         if conversation_id not in self.conversations:
-            self.conversations[conversation_id] = {"nodes": {}, "edges": [], "diagram_type": "flowchart"}
+            self.conversations[conversation_id] = {"nodes": {}, "edges": [], "visualization_type": "flowchart"}
 
     # ---------------- Node / Edge Operations ----------------
     def add_node(self, conversation_id: str, node_id: str, label: str, metadata: Optional[dict] = None):
@@ -237,22 +237,22 @@ class DiagramManager:
         
         return "\n".join(results)
 
-    # ---------------- Diagram Type ----------------
-    def set_diagram_type(self, conversation_id: str, diagram_type: str):
+    # ---------------- Visualization Type ----------------
+    def set_visualization_type(self, conversation_id: str, visualization_type: str):
         self._ensure_conv(conversation_id)
-        if diagram_type not in ["flowchart", "sequence", "mindmap", "orgchart", "tree"]:
-            return f"Unknown diagram type: {diagram_type}"
-        self.conversations[conversation_id]["diagram_type"] = diagram_type
-        return f"Diagram type set to {diagram_type}"
+        if visualization_type not in ["flowchart", "sequence", "mindmap", "orgchart", "tree"]:
+            return f"Unknown visualization type: {visualization_type}"
+        self.conversations[conversation_id]["visualization_type"] = visualization_type
+        return f"Visualization type set to {visualization_type}"
 
     # ---------------- Render ----------------
     def render(self,conversation_id: str):
         """
-        Render the diagram for the conversation as Markdown table or tree.
-        Supports diagram types: flowchart, sequence, mindmap, orgchart, tree.
-        Returns a string with both structured table and readable text-based diagram.
+        Render the relationship map for the conversation as Markdown table or tree.
+        Supports visualization types: flowchart, sequence, mindmap, orgchart, tree.
+        Returns a string with both structured table and readable text-based visualization.
         """
-        diagram_type = self.conversations[conversation_id]["diagram_type"]
+        visualization_type = self.conversations[conversation_id]["visualization_type"]
         nodes = self.conversations[conversation_id]["nodes"]
         edges = self.conversations[conversation_id]["edges"]
 
@@ -320,8 +320,8 @@ class DiagramManager:
 
         tree_text = "\n".join(tree_lines)
 
-        # Return based on diagram type
-        if diagram_type in ["tree", "orgchart", "mindmap"]:
-            return f"### Diagram (Tree Style)\n```\n{tree_text}\n```"
+        # Return based on visualization type
+        if visualization_type in ["tree", "orgchart", "mindmap"]:
+            return f"### Relationship Map (Tree Style)\n```\n{tree_text}\n```"
         else:  # flowchart, sequence
-            return f"### Diagram (Table Style)\n{table_text}"
+            return f"### Relationship Map (Table Style)\n{table_text}"
