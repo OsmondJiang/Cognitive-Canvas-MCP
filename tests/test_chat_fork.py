@@ -263,18 +263,45 @@ class TestChatForkManager(unittest.TestCase):
         self.assertEqual(bug_node.details, "Bug fixed")
 
     def test_render_conversation_tree(self):
-        """Test the render_conversation_tree functionality"""
-        # Build a complex conversation tree
-        self.manager.pause_topic(self.conv_id, "Project Planning", current_context="Starting new project")
+        """Test the render_conversation_tree functionality with enhanced context"""
+        # Build a complex conversation tree with rich context
+        self.manager.pause_topic(
+            self.conv_id, 
+            "Project Planning", 
+            current_context="Starting new e-commerce project with microservices",
+            progress_status="Completed initial requirements gathering",
+            next_steps="Design system architecture and select technology stack"
+        )
         
         # Nested pause - dive into technical details
-        self.manager.pause_topic(self.conv_id, "Database Design", current_context="Planning phase complete", pause_type="nested")
+        self.manager.pause_topic(
+            self.conv_id, 
+            "Database Design", 
+            current_context="Designing schema for users, products, and orders",
+            progress_status="Planning phase complete, technology selected",
+            next_steps="Create ER diagram and define relationships",
+            pause_type="nested"
+        )
         
         # Parallel switch - discuss API design at same level
-        self.manager.pause_topic(self.conv_id, "API Design", current_context="DB design in progress", pause_type="parallel")
+        self.manager.pause_topic(
+            self.conv_id, 
+            "API Design", 
+            current_context="REST API with authentication and rate limiting",
+            progress_status="DB design 70% complete",
+            next_steps="Finish database design and start API development",
+            pause_type="parallel"
+        )
         
         # Nested dive into API details
-        self.manager.pause_topic(self.conv_id, "Authentication System", current_context="API structure planned", pause_type="nested")
+        self.manager.pause_topic(
+            self.conv_id, 
+            "Authentication System", 
+            current_context="JWT-based authentication with refresh tokens",
+            progress_status="API structure planned and documented",
+            next_steps="Implement JWT token generation and validation",
+            pause_type="nested"
+        )
         
         # Render the tree
         tree = self.manager.render_conversation_tree(self.conv_id)
@@ -290,6 +317,16 @@ class TestChatForkManager(unittest.TestCase):
         # Check tree structure connectors
         self.assertIn("└──", tree)  # Tree connectors should be present
         self.assertIn("├──", tree)  # Multiple children indicators
+        
+        # Check context information display
+        self.assertIn("└─ Context:", tree)  # Context lines should be present
+        self.assertIn("└─ Progress:", tree)  # Progress lines should be present
+        self.assertIn("└─ Next:", tree)  # Next steps lines should be present
+        
+        # Check specific context content
+        self.assertIn("JWT-based authentication", tree)
+        self.assertIn("microservices", tree)
+        self.assertIn("API structure planned", tree)
         
         # Check tree structure indicators
         print("\n" + "="*50)
@@ -317,9 +354,15 @@ class TestChatForkManager(unittest.TestCase):
         self.assertIn("Error", result)
 
     def test_render_single_topic(self):
-        """Test render with only root topic"""
-        # Create a simple conversation
-        self.manager.pause_topic(self.conv_id, "Simple Topic", current_context="Just one topic")
+        """Test render with only root topic with rich context"""
+        # Create a simple conversation with rich context
+        self.manager.pause_topic(
+            self.conv_id, 
+            "Simple Topic", 
+            current_context="Just one topic with detailed context information",
+            progress_status="Just started this single topic",
+            next_steps="Continue working on this topic and add more features"
+        )
         
         tree = self.manager.render_conversation_tree(self.conv_id)
         
@@ -328,6 +371,66 @@ class TestChatForkManager(unittest.TestCase):
         self.assertIn("Simple Topic", tree)
         # For single topic, should have tree connector from root
         self.assertIn("└──", tree)
+        
+        # Check context information is displayed
+        self.assertIn("└─ Context:", tree)
+        self.assertIn("└─ Progress:", tree) 
+        self.assertIn("└─ Next:", tree)
+        self.assertIn("detailed context information", tree)
+        self.assertIn("Just started", tree)
+
+    def test_enhanced_context_functionality(self):
+        """Test the enhanced context features in pause and resume"""
+        # Test initial pause with rich context
+        result1 = self.manager.pause_topic(
+            self.conv_id,
+            "Context Test Topic",
+            current_context="This is a detailed context about what we're discussing",
+            progress_status="We have made significant progress on this topic", 
+            next_steps="Need to implement the remaining features and run tests"
+        )
+        
+        # Check saved context in pause result
+        self.assertEqual(result1["status"], "success")
+        saved_context = result1["saved_context"]
+        self.assertEqual(saved_context["current_context"], "This is a detailed context about what we're discussing")
+        self.assertEqual(saved_context["progress_status"], "We have made significant progress on this topic")
+        self.assertEqual(saved_context["next_steps"], "Need to implement the remaining features and run tests")
+        
+        # Add a parallel topic to test context switching
+        result2 = self.manager.pause_topic(
+            self.conv_id,
+            "Parallel Context Test",
+            current_context="Different context for parallel topic",
+            progress_status="Starting parallel work",
+            next_steps="Complete parallel implementation",
+            pause_type="parallel"
+        )
+        
+        # Check parallel context is saved correctly (should be the original node's context that we paused)
+        self.assertEqual(result2["status"], "success")
+        saved_context2 = result2["saved_context"]
+        self.assertEqual(saved_context2["current_context"], "This is a detailed context about what we're discussing")
+        self.assertEqual(saved_context2["progress_status"], "We have made significant progress on this topic")
+        self.assertEqual(saved_context2["next_steps"], "Need to implement the remaining features and run tests")
+        
+        # Resume and check context restoration
+        result3 = self.manager.resume_topic(self.conv_id, "Parallel work completed successfully")
+        
+        self.assertEqual(result3["status"], "success")
+        self.assertEqual(result3["resumed_topic"], "Context Test Topic")
+        self.assertEqual(result3["completed_summary"], "Parallel work completed successfully")
+        
+        restored_context = result3["restored_context"]
+        self.assertEqual(restored_context["current_context"], "This is a detailed context about what we're discussing")
+        self.assertEqual(restored_context["progress_status"], "We have made significant progress on this topic")
+        self.assertEqual(restored_context["next_steps"], "Need to implement the remaining features and run tests")
+        
+        # Test render shows all context information
+        tree = self.manager.render_conversation_tree(self.conv_id)
+        self.assertIn("detailed context about what we're discussing", tree)
+        self.assertIn("significant progress", tree)
+        self.assertIn("remaining features", tree)
 
 if __name__ == '__main__':
     unittest.main()

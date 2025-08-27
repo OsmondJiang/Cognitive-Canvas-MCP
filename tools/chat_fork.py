@@ -46,16 +46,18 @@ class ChatForkManager:
                 root_node.next_steps = next_steps
             self.conversations[conversation_id] = root_node
         else:
-            # Existing conversation, update current node's context
+            # Existing conversation - behavior depends on pause type
             current = self.conversations[conversation_id]
             
-            # Update context information
-            if current_context:
-                current.current_context = current_context
-            if progress_status:
-                current.progress_status = progress_status
-            if next_steps:
-                current.next_steps = next_steps
+            if pause_type == "nested":
+                # For nested pause: update current node's context
+                if current_context:
+                    current.current_context = current_context
+                if progress_status:
+                    current.progress_status = progress_status
+                if next_steps:
+                    current.next_steps = next_steps
+            # For parallel pause: don't update current node, save original context
         
         current = self.conversations[conversation_id]
         
@@ -63,6 +65,15 @@ class ChatForkManager:
             # Nested mode: create subtopic under current node
             new_topic_node = ChatNode(new_topic, "", parent=current)
             new_topic_node._pause_type = "nested"  # Mark pause type
+            
+            # The new subtopic should get the context information
+            if current_context:
+                new_topic_node.current_context = current_context
+            if progress_status:
+                new_topic_node.progress_status = progress_status
+            if next_steps:
+                new_topic_node.next_steps = next_steps
+                
             current.children.append(new_topic_node)
             self.conversations[conversation_id] = new_topic_node
             
@@ -90,9 +101,27 @@ class ChatForkManager:
                 # Create sibling under the same parent
                 parent_node = current.parent
             
+            # Store original context before any modifications
+            original_context = {
+                "current_context": current.current_context,
+                "progress_status": current.progress_status,
+                "next_steps": current.next_steps
+            }
+            
+            # DON'T update current node context for parallel - we're switching topics, not updating
+            # The parallel pause context describes the NEW topic we're starting
             new_topic_node = ChatNode(new_topic, "", parent=parent_node)
             new_topic_node._pause_type = "parallel"  # Mark pause type
             new_topic_node._paused_from = current  # Record which node we paused from
+            
+            # Set the new topic's context from the provided parameters
+            if current_context:
+                new_topic_node.current_context = current_context
+            if progress_status:
+                new_topic_node.progress_status = progress_status
+            if next_steps:
+                new_topic_node.next_steps = next_steps
+                
             parent_node.children.append(new_topic_node)
             self.conversations[conversation_id] = new_topic_node
             
@@ -101,11 +130,7 @@ class ChatForkManager:
                 "message": f"Parallel pause: switched to '{new_topic}', can resume back to '{current.summary}'",
                 "paused_topic": current.summary,
                 "current_topic": new_topic,
-                "saved_context": {
-                    "current_context": current.current_context,
-                    "progress_status": current.progress_status,
-                    "next_steps": current.next_steps
-                },
+                "saved_context": original_context,
                 "pause_type": "parallel",
                 "action": "topic_paused",
                 "depth": self._get_conversation_depth(new_topic_node),
@@ -247,7 +272,7 @@ class ChatForkManager:
     def _render_node(self, node: ChatNode, current_node: ChatNode, tree_lines: List[str], 
                      prefix: str, is_last: bool, is_root: bool = False) -> None:
         """
-        Recursively render a node and its children in tree format.
+        Recursively render a node and its children in tree format with detailed context.
         
         Args:
             node: Node to render
@@ -260,37 +285,38 @@ class ChatForkManager:
         # Determine the marker for current position
         current_marker = " 👈 [HERE]" if node == current_node else ""
         
-        # Format the topic summary with context info
-        topic_info = node.summary
-        
-        # Show context information if available
-        context_parts = []
-        if node.current_context:
-            context_parts.append(node.current_context[:30] + "..." if len(node.current_context) > 30 else node.current_context)
-        if node.progress_status:
-            context_parts.append(f"Progress: {node.progress_status}")
-        if node.next_steps:
-            context_parts.append(f"Next: {node.next_steps[:20]}..." if len(node.next_steps) > 20 else f"Next: {node.next_steps}")
-        
-        if context_parts:
-            topic_info += f" ({'; '.join(context_parts)})"
-        
         # Add pause type indicator
         pause_type = getattr(node, '_pause_type', '')
+        type_indicator = ""
         if pause_type:
             type_indicator = " [N]" if pause_type == "nested" else " [P]" if pause_type == "parallel" else ""
-            topic_info += type_indicator
         
-        # Determine the tree connector
+        # Main topic line
         if is_root:
-            # Root node - no connector, just the topic
-            line = f"{topic_info}{current_marker}"
+            line = f"{node.summary}{type_indicator}{current_marker}"
         else:
-            # Child node - add tree connector
             connector = "└── " if is_last else "├── "
-            line = f"{prefix}{connector}{topic_info}{current_marker}"
+            line = f"{prefix}{connector}{node.summary}{type_indicator}{current_marker}"
         
         tree_lines.append(line)
+        
+        # Add context details as sub-lines if available
+        if not is_root:
+            detail_prefix = prefix + ("    " if is_last else "│   ")
+        else:
+            detail_prefix = ""
+        
+        if node.current_context:
+            context_line = f"{detail_prefix}    └─ Context: {node.current_context}"
+            tree_lines.append(context_line)
+        
+        if node.progress_status:
+            progress_line = f"{detail_prefix}    └─ Progress: {node.progress_status}"
+            tree_lines.append(progress_line)
+        
+        if node.next_steps:
+            next_line = f"{detail_prefix}    └─ Next: {node.next_steps}"
+            tree_lines.append(next_line)
         
         # Render children
         if len(node.children) > 0:
@@ -298,10 +324,8 @@ class ChatForkManager:
                 is_last_child = (i == len(node.children) - 1)
                 
                 if is_root:
-                    # For root node children, no prefix yet
                     child_prefix = ""
                 else:
-                    # For deeper level children
                     child_prefix = prefix + ("    " if is_last else "│   ")
                 
                 self._render_node(child, current_node, tree_lines, child_prefix, is_last_child, False)
