@@ -3,12 +3,12 @@ import os
 import unittest
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from tools.structured_knowledge_tool import StructuredKnowledgeManager
-import server
+from tools.table_builder import TableBuilder
+import cognitive_canvas_server
 
-class TestStructuredKnowledgeManager(unittest.TestCase):
+class TestTableBuilder(unittest.TestCase):
     def setUp(self):
-        self.manager = StructuredKnowledgeManager()
+        self.manager = TableBuilder()
         self.conv_id = "test_conversation"
         self.structure_id = "test_structure"
     
@@ -247,7 +247,7 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         self.assertIn("does not exist", result)
 
     def test_batch_add_rows(self):
-        """测试批量添加行功能"""
+        """测试批量添加行功�?""
         # Create a structure first
         self.manager.create_structure(
             self.conv_id, 
@@ -282,7 +282,7 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         self.assertIn("does not exist", result)
 
     def test_batch_update_rows(self):
-        """测试批量更新行功能"""
+        """测试批量更新行功�?""
         # Create structure and add initial rows
         self.manager.create_structure(
             self.conv_id, 
@@ -372,7 +372,7 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         structure_id = "test_table"
         
         # Create structure through manager (since server tools can't be called directly in tests)
-        result = server.structured_knowledge_manager.create_structure(
+        result = cognitive_canvas_server.table_builder_manager.create_structure(
             conversation_id, structure_id, "simple_table", ["Name", "Status", "Priority"]
         )
         self.assertIn("Structure 'test_table' created", result)
@@ -384,7 +384,7 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
             {"Name": "Task 3", "Status": "Completed", "Priority": "Low"}
         ]
         
-        result = server.structured_knowledge_manager.batch_add_rows(
+        result = cognitive_canvas_server.table_builder_manager.batch_add_rows(
             conversation_id, structure_id, rows_data
         )
         
@@ -394,7 +394,7 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         self.assertIn("Row 2 added", result)
         
         # Verify structure exists and has correct data
-        conv_data = server.structured_knowledge_manager.conversations[conversation_id]
+        conv_data = cognitive_canvas_server.table_builder_manager.conversations[conversation_id]
         structure = conv_data[structure_id]
         self.assertEqual(len(structure["rows"]), 3)
         self.assertEqual(structure["rows"][0]["Name"], "Task 1")
@@ -402,7 +402,7 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         self.assertEqual(structure["rows"][2]["Priority"], "Low")
         
         # Test rendering and verify content
-        render_result = server.structured_knowledge_manager.render(
+        render_result = cognitive_canvas_server.table_builder_manager.render(
             conversation_id, structure_id
         )
         
@@ -414,7 +414,7 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         self.assertIn("High", render_result)
         
         # Test metrics
-        metrics_result = server.structured_knowledge_manager.get_metrics(
+        metrics_result = cognitive_canvas_server.table_builder_manager.get_metrics(
             conversation_id, structure_id
         )
         
@@ -427,11 +427,11 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         structure_id = "update_table"
         
         # Setup: create structure and add initial rows
-        server.structured_knowledge_manager.create_structure(
+        cognitive_canvas_server.table_builder_manager.create_structure(
             conversation_id, structure_id, "task_list", ["Task", "Status", "Progress"]
         )
         
-        server.structured_knowledge_manager.batch_add_rows(
+        cognitive_canvas_server.table_builder_manager.batch_add_rows(
             conversation_id, structure_id, [
                 {"Task": "Original Task 1", "Status": "To Do", "Progress": "0%"},
                 {"Task": "Original Task 2", "Status": "In Progress", "Progress": "50%"}
@@ -444,7 +444,7 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
             {"index": 1, "data": {"Status": "Completed", "Progress": "100%"}}
         ]
         
-        update_result = server.structured_knowledge_manager.batch_update_rows(
+        update_result = cognitive_canvas_server.table_builder_manager.batch_update_rows(
             conversation_id, structure_id, updates_data
         )
         
@@ -453,7 +453,7 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         self.assertIn("Row 1 updated", update_result)
         
         # Verify final state
-        conv_data = server.structured_knowledge_manager.conversations[conversation_id]
+        conv_data = cognitive_canvas_server.table_builder_manager.conversations[conversation_id]
         structure = conv_data[structure_id]
         self.assertEqual(structure["rows"][0]["Status"], "In Progress")
         self.assertEqual(structure["rows"][0]["Progress"], "25%")
@@ -461,7 +461,7 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         self.assertEqual(structure["rows"][1]["Progress"], "100%")
         
         # Test rendering after updates
-        render_result = server.structured_knowledge_manager.render(
+        render_result = cognitive_canvas_server.table_builder_manager.render(
             conversation_id, structure_id
         )
         
@@ -476,18 +476,18 @@ class TestStructuredKnowledgeManager(unittest.TestCase):
         structure_id = "error_table"
         
         # Test batch operations on non-existent structure
-        result = server.structured_knowledge_manager.batch_add_rows(
+        result = cognitive_canvas_server.table_builder_manager.batch_add_rows(
             conversation_id, "nonexistent", [{"test": "data"}]
         )
         self.assertIn("does not exist", result)
         
         # Create structure for further tests
-        server.structured_knowledge_manager.create_structure(
+        cognitive_canvas_server.table_builder_manager.create_structure(
             conversation_id, structure_id, "simple_table"
         )
         
         # Test invalid update index
-        result = server.structured_knowledge_manager.batch_update_rows(
+        result = cognitive_canvas_server.table_builder_manager.batch_update_rows(
             conversation_id, structure_id, [{"index": 999, "data": {"test": "value"}}]
         )
         self.assertIn("out of range", result)

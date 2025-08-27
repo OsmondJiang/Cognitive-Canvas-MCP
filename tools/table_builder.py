@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
 import json
 
-class StructuredKnowledgeManager:
+class TableBuilder:
     def __init__(self):
         # conversation_id -> structure_id -> structure
         self.conversations: Dict[str, Dict[str, Dict]] = {}

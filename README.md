@@ -30,7 +30,7 @@ Think of it as giving AI agents a "second brain" - a workspace where they can or
 - Generate both structured relationship tables and readable text-based graphs
 - Visualize system architecture and process flows
 
-### 4. **Structured Knowledge Organization** (`structured_knowledge_tool`)
+### 4. **Table Builder** (`table_builder`)
 - Transform unstructured information into organized tables and lists
 - Support for various template types: simple tables, task lists, checklists, numbered/bulleted lists, voting tables, progress tables
 - Batch operations for adding and updating data efficiently
@@ -199,14 +199,14 @@ diagram_tool("project1", "add_node", {
 #### Structured Knowledge
 ```python
 # Create a progress tracking table
-structured_knowledge_tool("project1", "create", {
+table_builder("project1", "create", {
     "structure_id": "progress",
     "template_type": "progress_table",
     "title": "Project Progress"
 })
 
 # Add progress entries
-structured_knowledge_tool("project1", "add_row", {
+table_builder("project1", "add_row", {
     "structure_id": "progress",
     "row_data": {"task": "Database Design", "progress": 80, "status": "In Progress"}
 })
@@ -225,7 +225,7 @@ Cognitive-Canvas/
 │   ├── __init__.py
 │   ├── todo_tool.py              # Task management
 │   ├── diagram_tool.py           # Diagram creation
-│   ├── structured_knowledge_tool.py  # Knowledge organization
+│   ├── table_builder.py             # Table and list creation
 │   └── chat_fork.py              # Context management
 ├── tests/                        # Test suite
 │   ├── test_server.py

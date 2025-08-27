@@ -4,13 +4,13 @@ from pydantic import Field
 from tools import todo_tool
 from tools.chat_fork import ChatForkManager
 from tools.diagram_tool import DiagramManager
-from tools.structured_knowledge_tool import StructuredKnowledgeManager
+from tools.table_builder import TableBuilder
 
 chat_fork_manager = ChatForkManager()
 diagram_manager = DiagramManager()
-structured_knowledge_manager = StructuredKnowledgeManager()
+table_builder_manager = TableBuilder()
 
-mcp = FastMCP(name = "Cognitive Canvas", instructions="Use this MCP server to enhance your thinking and problem-solving capabilities through structured organization. This server helps you break down complex problems, visualize relationships, organize information systematically, and manage conversation contexts effectively. Choose the most appropriate tool for your specific need: TODO_COMMAND excels at task and project management with status tracking; DIAGRAM_TOOL is perfect for visualizing relationships, dependencies, and hierarchical structures; STRUCTURED_KNOWLEDGE_TOOL organizes data in tables and lists for analysis; CHAT_FORK manages conversation branches and contexts. While each tool has its specialty, you can combine them when tackling multi-faceted problems that require both planning and visualization.") 
+mcp = FastMCP(name = "Cognitive Canvas", instructions="Use this MCP server to enhance your thinking and problem-solving capabilities through structured organization. This server helps you break down complex problems, visualize relationships, organize information systematically, and manage conversation contexts effectively. Choose the most appropriate tool for your specific need: TODO_COMMAND excels at task and project management with status tracking; DIAGRAM_TOOL is perfect for visualizing relationships, dependencies, and hierarchical structures; TABLE_BUILDER creates and manages tables and lists for data organization; CHAT_FORK manages conversation branches and contexts. While each tool has its specialty, you can combine them when tackling multi-faceted problems that require both planning and visualization.") 
 
 
 @mcp.tool(name="todo_command", description="Use this tool specifically for task and project management - creating, tracking, and updating actionable work items with status tracking (pending, in_progress, completed, blocked). Best for breaking down complex projects into manageable tasks, monitoring progress, and ensuring nothing falls through the cracks. Use when you need to manage workflows, deadlines, or action items that require status updates over time.")
@@ -242,12 +242,12 @@ def diagram_command(
         return f"Unknown action: {action}. Valid actions: set_diagram_type, batch_add_nodes, batch_update_nodes, batch_add_edges, batch_update_edges, batch_operations, render"
     
 @mcp.tool(
-    name="structured_knowledge_tool",
+    name="table_builder",
     description="Use this tool for organizing and presenting structured data in tables, lists, and specialized formats. Create comparison tables, checklists, voting matrices, progress tables, or formatted lists when you need to organize information systematically. Best for data collection, comparison analysis, surveys, or any scenario where you need structured presentation of information rather than task management or relationship mapping."
 )
-def structured_knowledge_command(
+def table_builder_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")], 
-    action: Annotated[str, Field(description="The operation to perform on the structured knowledge", enum=["create", "batch_add_rows", "batch_update_rows", "batch_operations", "render", "metrics"])], 
+    action: Annotated[str, Field(description="The operation to perform on the table builder", enum=["create", "batch_add_rows", "batch_update_rows", "batch_operations", "render", "metrics"])], 
     # For all operations
     structure_id: Annotated[Optional[str], Field(description="Unique identifier for the structure. Required for all actions.", default=None)],
     # For create operation
@@ -259,7 +259,7 @@ def structured_knowledge_command(
     operations: Annotated[Optional[List[dict]], Field(description="Array of mixed operations for batch_operations. Each object should have 'action' and 'data' fields.", default=None)]
 ):
     """
-    Enhanced Structured Knowledge Tool with Batch Operations Only
+    Enhanced Table Builder Tool with Batch Operations Only
     
     Manages tables and lists with support for batch operations to reduce LLM tool calls.
 
@@ -274,43 +274,43 @@ def structured_knowledge_command(
     - operations (list): Array of mixed operations for batch_operations
 
     Usage Examples:
-    1. Create structure: structured_knowledge_command("conv1", "create", structure_id="tasks", template_type="task_list", columns=["Task", "Owner", "Status"])
-    2. Batch add rows: structured_knowledge_command("conv1", "batch_add_rows", structure_id="tasks", rows=[{"Task": "Review code", "Owner": "Alice", "Status": "Pending"}, {"Task": "Write tests", "Owner": "Bob", "Status": "In Progress"}])
-    3. Batch update rows: structured_knowledge_command("conv1", "batch_update_rows", structure_id="tasks", updates=[{"index": 0, "data": {"Status": "Completed"}}, {"index": 1, "data": {"Status": "Completed"}}])
-    4. Mixed operations: structured_knowledge_command("conv1", "batch_operations", structure_id="tasks", operations=[{"action": "add", "data": {"Task": "Deploy", "Owner": "Charlie", "Status": "Pending"}}, {"action": "update", "data": {"index": 0, "row_data": {"Status": "Done"}}}])
-    5. Render: structured_knowledge_command("conv1", "render", structure_id="tasks")
-    6. Metrics: structured_knowledge_command("conv1", "metrics", structure_id="tasks")
+    1. Create structure: table_builder_command("conv1", "create", structure_id="tasks", template_type="task_list", columns=["Task", "Owner", "Status"])
+    2. Batch add rows: table_builder_command("conv1", "batch_add_rows", structure_id="tasks", rows=[{"Task": "Review code", "Owner": "Alice", "Status": "Pending"}, {"Task": "Write tests", "Owner": "Bob", "Status": "In Progress"}])
+    3. Batch update rows: table_builder_command("conv1", "batch_update_rows", structure_id="tasks", updates=[{"index": 0, "data": {"Status": "Completed"}}, {"index": 1, "data": {"Status": "Completed"}}])
+    4. Mixed operations: table_builder_command("conv1", "batch_operations", structure_id="tasks", operations=[{"action": "add", "data": {"Task": "Deploy", "Owner": "Charlie", "Status": "Pending"}}, {"action": "update", "data": {"index": 0, "row_data": {"Status": "Done"}}}])
+    5. Render: table_builder_command("conv1", "render", structure_id="tasks")
+    6. Metrics: table_builder_command("conv1", "metrics", structure_id="tasks")
     """
     
     if action == "create":
         if not structure_id or not template_type:
             return "Error: structure_id and template_type are required for create action"
-        return structured_knowledge_manager.create_structure(conversation_id, structure_id, template_type, columns)
+        return table_builder_manager.create_structure(conversation_id, structure_id, template_type, columns)
     
     elif action == "batch_add_rows":
         if not structure_id or not rows:
             return "Error: structure_id and rows array are required for batch_add_rows action"
-        return structured_knowledge_manager.batch_add_rows(conversation_id, structure_id, rows)
+        return table_builder_manager.batch_add_rows(conversation_id, structure_id, rows)
     
     elif action == "batch_update_rows":
         if not structure_id or not updates:
             return "Error: structure_id and updates array are required for batch_update_rows action"
-        return structured_knowledge_manager.batch_update_rows(conversation_id, structure_id, updates)
+        return table_builder_manager.batch_update_rows(conversation_id, structure_id, updates)
     
     elif action == "batch_operations":
         if not structure_id or not operations:
             return "Error: structure_id and operations array are required for batch_operations action"
-        return structured_knowledge_manager.batch_operations(conversation_id, structure_id, operations)
+        return table_builder_manager.batch_operations(conversation_id, structure_id, operations)
     
     elif action == "render":
         if not structure_id:
             return "Error: structure_id is required for render action"
-        return structured_knowledge_manager.render(conversation_id, structure_id)
+        return table_builder_manager.render(conversation_id, structure_id)
     
     elif action == "metrics":
         if not structure_id:
             return "Error: structure_id is required for metrics action"
-        return structured_knowledge_manager.get_metrics(conversation_id, structure_id)
+        return table_builder_manager.get_metrics(conversation_id, structure_id)
     
     else:
         return f"Unknown action: {action}. Valid actions: create, batch_add_rows, batch_update_rows, batch_operations, render, metrics"
