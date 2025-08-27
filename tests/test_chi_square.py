@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
-Comprehensive Test Suite for Chi-Square Functionality in Statistical Evidence Tool
+Comprehensive Test Suite for Chi-Square Functionality in Statistical Analyzer Tool
 """
 import sys
 import os
@@ -9,11 +9,11 @@ import os
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parent_dir)
 
-from tools.statistical_evidence import StatisticalEvidenceTool
+from tools.statistical_analyzer import StatisticalAnalyzer
 
 def test_chi_square_edge_cases():
     """Test edge cases and error conditions"""
-    tool = StatisticalEvidenceTool()
+    tool = StatisticalAnalyzer()
     
     #!/usr/bin/env python3
 """
@@ -29,14 +29,14 @@ import math
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parent_dir)
 
-from tools.statistical_evidence import StatisticalEvidenceTool
+from tools.statistical_analyzer import StatisticalAnalyzer
 
 class TestChiSquareBasic(unittest.TestCase):
     """Test basic chi-square functionality"""
     
     def setUp(self):
         """Set up test fixtures"""
-        self.tool = StatisticalEvidenceTool()
+        self.tool = StatisticalAnalyzer()
     
     def test_chi_square_calculation_simple(self):
         """Test basic chi-square calculation with known result"""
@@ -95,7 +95,7 @@ class TestChiSquareEdgeCases(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures"""
-        self.tool = StatisticalEvidenceTool()
+        self.tool = StatisticalAnalyzer()
     
     def test_insufficient_data(self):
         """Test with insufficient data"""
@@ -142,7 +142,7 @@ class TestChiSquareContingencyTable(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures"""
-        self.tool = StatisticalEvidenceTool()
+        self.tool = StatisticalAnalyzer()
     
     def test_contingency_table_structure(self):
         """Test contingency table structure"""
@@ -182,7 +182,7 @@ class TestChiSquareIntegration(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures"""
-        self.tool = StatisticalEvidenceTool()
+        self.tool = StatisticalAnalyzer()
     
     def test_analyze_method_chi_square(self):
         """Test chi-square through main analyze method"""
@@ -245,7 +245,7 @@ class TestChiSquareStatisticalValidation(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures"""
-        self.tool = StatisticalEvidenceTool()
+        self.tool = StatisticalAnalyzer()
     
     def test_cramers_v_bounds(self):
         """Test Cramér's V is always between 0 and 1"""
@@ -299,7 +299,7 @@ class TestChiSquarePerformance(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures"""
-        self.tool = StatisticalEvidenceTool()
+        self.tool = StatisticalAnalyzer()
     
     def test_large_dataset_performance(self):
         """Test performance with larger dataset"""
@@ -332,7 +332,7 @@ class TestStringDataHandling(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures"""
-        self.tool = StatisticalEvidenceTool()
+        self.tool = StatisticalAnalyzer()
     
     def test_string_data_no_format_errors(self):
         """Test that string data doesn't cause formatting errors in reports"""
@@ -348,7 +348,7 @@ class TestStringDataHandling(unittest.TestCase):
     def test_unicode_string_handling(self):
         """Test handling of unicode strings in chi-square analysis"""
         var1 = ["优秀", "良好", "一般", "较差", "优秀", "良好"]
-        var2 = ["满意", "不满意", "中性", "满意", "不满意", "中性"]
+        var2 = ["满意", "不满意", "中等", "满意", "不满意", "中等"]
         
         result = self.tool._perform_chi_square_test(var1, var2, "评价", "满意度")
         self.assertNotIn("error", result)
@@ -395,7 +395,7 @@ class TestRenderReportStringBugFixes(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures"""
-        self.tool = StatisticalEvidenceTool()
+        self.tool = StatisticalAnalyzer()
         self.conv_id = "test_string_bugs"
     
     def test_render_report_categorical_data_display(self):
@@ -460,7 +460,7 @@ class TestAnalyzeMethodStringHandling(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures"""
-        self.tool = StatisticalEvidenceTool()
+        self.tool = StatisticalAnalyzer()
         self.conv_id = "test_analyze_strings"
     
     def test_analyze_auto_detection_with_strings(self):
@@ -534,17 +534,17 @@ def run_test_suite():
     print(f"Success rate: {((result.testsRun - len(result.failures) - len(result.errors)) / result.testsRun * 100):.1f}%")
     
     if result.failures:
-        print("\n❌ Failures:")
+        print("\n�Failures:")
         for test, traceback in result.failures:
-            print(f"  • {test}: {traceback.split('AssertionError: ')[-1].strip()}")
+            print(f"  �{test}: {traceback.split('AssertionError: ')[-1].strip()}")
     
     if result.errors:
         print("\n💥 Errors:")
         for test, traceback in result.errors:
-            print(f"  • {test}: {traceback.split('Exception: ')[-1].strip()}")
+            print(f"  �{test}: {traceback.split('Exception: ')[-1].strip()}")
     
     if not result.failures and not result.errors:
-        print("\n✅ All tests passed! Chi-square functionality is working correctly.")
+        print("\n�All tests passed! Chi-square functionality is working correctly.")
     
     return result.wasSuccessful()
 
@@ -566,7 +566,7 @@ if __name__ == "__main__":
     }
     print("📝 Test 1: Insufficient data (n=2)")
     result = tool.analyze("test_edge_1", small_data, analysis_type="chi_square_test")
-    print("✓ Should show frequency analysis only")
+    print("�Should show frequency analysis only")
     
     # Test 2: Single category in one variable
     single_cat_data = {
@@ -575,7 +575,7 @@ if __name__ == "__main__":
     }
     print("\n📝 Test 2: One variable has single category")
     result = tool.analyze("test_edge_2", single_cat_data, analysis_type="chi_square_test")
-    print("✓ Should handle gracefully")
+    print("�Should handle gracefully")
     
     # Test 3: Unequal length arrays
     print("\n📝 Test 3: Unequal length data")
@@ -589,7 +589,7 @@ if __name__ == "__main__":
 
 def test_chi_square_real_world_scenarios():
     """Test realistic business and research scenarios"""
-    tool = StatisticalEvidenceTool()
+    tool = StatisticalAnalyzer()
     
     print("\n🏢 Testing Real-World Business Scenarios")
     print("=" * 60)
@@ -621,13 +621,13 @@ def test_chi_square_real_world_scenarios():
         "conversion": ["Yes", "No", "Yes", "No", "Yes"] * 8
     }
     
-    print("� Scenario 2: Marketing Campaign vs Conversion")
+    print("�Scenario 2: Marketing Campaign vs Conversion")
     result = tool.analyze("business_2", marketing_data, analysis_type="chi_square_test")
     print(result)
 
 def test_chi_square_academic_scenarios():
     """Test academic research scenarios"""
-    tool = StatisticalEvidenceTool()
+    tool = StatisticalAnalyzer()
     
     print("\n🎓 Testing Academic Research Scenarios")
     print("=" * 60)
@@ -665,12 +665,12 @@ def test_chi_square_academic_scenarios():
 
 def test_chi_square_statistical_properties():
     """Test statistical properties and interpretation"""
-    tool = StatisticalEvidenceTool()
+    tool = StatisticalAnalyzer()
     
     print("\n📐 Testing Statistical Properties")
     print("=" * 60)
     
-    # Test 1: Perfect independence (expected chi-square ≈ 0)
+    # Test 1: Perfect independence (expected chi-square �0)
     independent_data = {
         "var1": ["A", "A", "A", "A", "B", "B", "B", "B"] * 3,
         "var2": ["X", "X", "Y", "Y", "X", "X", "Y", "Y"] * 3
@@ -693,7 +693,7 @@ def test_chi_square_statistical_properties():
 
 def test_chi_square_large_datasets():
     """Test with larger datasets"""
-    tool = StatisticalEvidenceTool()
+    tool = StatisticalAnalyzer()
     
     print("\n📊 Testing Large Dataset Performance")
     print("=" * 60)
@@ -725,7 +725,7 @@ def test_chi_square_large_datasets():
 
 def test_chi_square_auto_detection():
     """Test automatic detection of categorical data"""
-    tool = StatisticalEvidenceTool()
+    tool = StatisticalAnalyzer()
     
     print("\n🤖 Testing Auto-Detection Capabilities")
     print("=" * 60)
@@ -742,7 +742,7 @@ def test_chi_square_auto_detection():
 
 def test_chi_square_error_handling():
     """Test comprehensive error handling"""
-    tool = StatisticalEvidenceTool()
+    tool = StatisticalAnalyzer()
     
     print("\n⚠️  Testing Error Handling")
     print("=" * 60)
@@ -771,13 +771,13 @@ def test_chi_square_error_handling():
         try:
             result = tool.analyze(f"error_{case['name'].replace(' ', '_')}", 
                                 case["data"], analysis_type="chi_square_test")
-            print(f"✓ {case['expected']}")
+            print(f"�{case['expected']}")
         except Exception as e:
             print(f"Exception: {e}")
 
 def test_chi_square_debug():
     """Debug chi-square test execution"""
-    tool = StatisticalEvidenceTool()
+    tool = StatisticalAnalyzer()
     
     # Simple test data
     data = {
@@ -833,17 +833,17 @@ if __name__ == "__main__":
         test_chi_square_auto_detection()
         
         print("\n" + "="*80)
-        print("✅ All comprehensive chi-square tests completed successfully!")
+        print("�All comprehensive chi-square tests completed successfully!")
         print("🎯 Test Coverage:")
-        print("   • Edge cases and error conditions")
-        print("   • Real-world business scenarios")
-        print("   • Academic research applications")
-        print("   • Statistical properties validation")
-        print("   • Large dataset performance")
-        print("   • Auto-detection capabilities")
-        print("   • Comprehensive error handling")
+        print("   �Edge cases and error conditions")
+        print("   �Real-world business scenarios")
+        print("   �Academic research applications")
+        print("   �Statistical properties validation")
+        print("   �Large dataset performance")
+        print("   �Auto-detection capabilities")
+        print("   �Comprehensive error handling")
         
     except Exception as e:
-        print(f"\n❌ Test failed with error: {e}")
+        print(f"\n�Test failed with error: {e}")
         import traceback
         traceback.print_exc()

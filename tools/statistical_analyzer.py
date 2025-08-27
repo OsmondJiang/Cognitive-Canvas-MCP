@@ -2,10 +2,10 @@ import statistics
 import math
 from typing import Dict, List, Optional, Any, Union
 
-class StatisticalEvidenceTool:
+class StatisticalAnalyzer:
     """
-    Statistical Evidence Tool for analyzing data and generating evidence-based conclusions.
-    Provides automated statistical analysis with intelligent method selection.
+    Statistical Analyzer Tool for automated statistical analysis and data exploration.
+    Provides intelligent statistical method selection and comprehensive data analysis.
     """
     
     def __init__(self):

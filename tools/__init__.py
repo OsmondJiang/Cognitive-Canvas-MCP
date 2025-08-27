@@ -1,2 +1,2 @@
 # Tools module for Cognitive Canvas
-from .statistical_evidence import StatisticalEvidenceTool
+from .statistical_analyzer import StatisticalAnalyzer

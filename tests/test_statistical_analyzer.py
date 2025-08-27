@@ -7,11 +7,11 @@ import math
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parent_dir)
 
-from tools.statistical_evidence import StatisticalEvidenceTool
+from tools.statistical_analyzer import StatisticalAnalyzer
 
-class TestStatisticalEvidenceTool(unittest.TestCase):
+class TestStatisticalAnalyzer(unittest.TestCase):
     def setUp(self):
-        self.tool = StatisticalEvidenceTool()
+        self.tool = StatisticalAnalyzer()
         self.conv_id = "test_conversation"
         
         # Sample datasets for testing
@@ -464,7 +464,7 @@ class TestRenderReportFunctionality(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures"""
-        self.tool = StatisticalEvidenceTool()
+        self.tool = StatisticalAnalyzer()
         self.conv_id = "test_render_report"
     
     def test_render_report_empty_conversation(self):
@@ -581,7 +581,7 @@ class TestMixedDataTypeHandling(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures"""
-        self.tool = StatisticalEvidenceTool()
+        self.tool = StatisticalAnalyzer()
         self.conv_id = "test_mixed_data"
     
     def test_numerical_data_range_display(self):
@@ -625,7 +625,7 @@ class TestStringDataBugFixes(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures"""
-        self.tool = StatisticalEvidenceTool()
+        self.tool = StatisticalAnalyzer()
         self.conv_id = "test_string_bugs"
     
     def test_string_data_no_min_max_error(self):

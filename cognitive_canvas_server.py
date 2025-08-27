@@ -5,14 +5,14 @@ from tools import todo_tool
 from tools.chat_fork import ChatForkManager
 from tools.relationship_mapper import RelationshipMapper
 from tools.table_builder import TableBuilder
-from tools.statistical_evidence import StatisticalEvidenceTool
+from tools.statistical_analyzer import StatisticalAnalyzer
 
 chat_fork_manager = ChatForkManager()
 relationship_mapper_manager = RelationshipMapper()
 table_builder_manager = TableBuilder()
-statistical_evidence_manager = StatisticalEvidenceTool()
+statistical_analyzer_manager = StatisticalAnalyzer()
 
-mcp = FastMCP(name = "Cognitive Canvas", instructions="Use this MCP server to enhance your thinking and problem-solving capabilities through structured organization and evidence-based analysis. This server transforms AI into a research-grade cognitive workspace with five specialized tools: TODO_COMMAND for systematic task and project management with status tracking; RELATIONSHIP_MAPPER for visualizing complex dependencies, relationships, and system architectures; TABLE_BUILDER for organizing unstructured information into structured formats with automated metrics; CHAT_FORK for managing conversation branches and maintaining context across topic switches; STATISTICAL_EVIDENCE_TOOL for automated statistical analysis, hypothesis testing, categorical data analysis (chi-square tests), and data-driven evidence generation. Together, these tools enable systematic reasoning, persistent memory, evidence-based conclusions, and PhD-level analytical capabilities. Choose tools strategically: use TODO for planning, RELATIONSHIP_MAPPER for visualization, TABLE_BUILDER for organization, CHAT_FORK for context management, and STATISTICAL_EVIDENCE for both numerical and categorical data validation and proof.") 
+mcp = FastMCP(name = "Cognitive Canvas", instructions="Use this MCP server to enhance your thinking and problem-solving capabilities through structured organization and statistical analysis. This server transforms AI into a research-grade cognitive workspace with five specialized tools: TODO_COMMAND for systematic task and project management with status tracking; RELATIONSHIP_MAPPER for visualizing complex dependencies, relationships, and system architectures; TABLE_BUILDER for organizing unstructured information into structured formats with automated metrics; CHAT_FORK for managing conversation branches and maintaining context across topic switches; STATISTICAL_ANALYZER for automated statistical analysis, hypothesis testing, categorical data analysis (chi-square tests), and comprehensive data exploration. Together, these tools enable systematic reasoning, persistent memory, data-driven insights, and PhD-level analytical capabilities. Choose tools strategically: use TODO for planning, RELATIONSHIP_MAPPER for visualization, TABLE_BUILDER for organization, CHAT_FORK for context management, and STATISTICAL_ANALYZER for both numerical and categorical data analysis.") 
 
 
 @mcp.tool(name="todo_command", description="Use this tool specifically for task and project management - creating, tracking, and updating actionable work items with status tracking (pending, in_progress, completed, blocked). Best for breaking down complex projects into manageable tasks, monitoring progress, and ensuring nothing falls through the cracks. Use when you need to manage workflows, deadlines, or action items that require status updates over time.")
@@ -317,8 +317,8 @@ def table_builder_command(
     else:
         return f"Unknown action: {action}. Valid actions: create, batch_add_rows, batch_update_rows, batch_operations, render, metrics"
 
-@mcp.tool(name="statistical_evidence_tool", description="Use this tool for automated statistical analysis to support evidence-based arguments and decision making. Automatically selects appropriate statistical methods (t-tests, ANOVA, correlation analysis, chi-square tests) based on data structure. Supports both numerical data analysis (descriptive statistics, hypothesis testing) and categorical data analysis (frequency distributions, chi-square independence tests). Perfect for creating data-driven conclusions, comparing groups, validating hypotheses, analyzing categorical relationships, and generating statistical reports. Best for researchers, analysts, and anyone who needs to present convincing evidence with proper statistical backing.")
-def statistical_evidence_tool(
+@mcp.tool(name="statistical_analyzer", description="Use this tool for automated statistical analysis and data exploration. Automatically selects appropriate statistical methods (t-tests, ANOVA, correlation analysis, chi-square tests) based on data structure. Supports both numerical data analysis (descriptive statistics, hypothesis testing) and categorical data analysis (frequency distributions, chi-square independence tests). Perfect for data exploration, comparing groups, validating hypotheses, analyzing categorical relationships, and generating statistical reports. Best for researchers, analysts, and anyone who needs comprehensive statistical analysis.")
+def statistical_analyzer(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")],
     action: Annotated[str, Field(description="The operation to perform", enum=["analyze", "batch_analyze", "render_report"])],
     
@@ -353,28 +353,28 @@ def statistical_evidence_tool(
     - confidence_level (float): Confidence level for statistical tests (default: 0.95)
 
     Usage Examples:
-    1. Auto-detect analysis: statistical_evidence_tool("conv1", "analyze", data={"before": [70,72,68], "after": [78,80,76]})
-    2. Group comparison: statistical_evidence_tool("conv1", "analyze", groups={"React": [85,87,83], "Vue": [78,82,80], "Angular": [88,90,85]})
-    3. Paired comparison: statistical_evidence_tool("conv1", "analyze", data={"baseline": [70,72,68], "treatment": [78,80,76]}, analysis_type="paired_comparison")
-    4. Correlation analysis: statistical_evidence_tool("conv1", "analyze", data={"experience": [1,3,5,7], "performance": [65,75,85,95]}, analysis_type="correlation_analysis")
-    5. Chi-square test: statistical_evidence_tool("conv1", "analyze", data={"age_group": ["18-25", "26-35", "36-45"], "product_preference": ["Electronics", "Books", "Fashion"]}, analysis_type="chi_square_test")
-    6. Frequency analysis: statistical_evidence_tool("conv1", "analyze", data={"feedback": ["Excellent", "Good", "Average", "Poor"]}, analysis_type="frequency_analysis")
-    7. Batch analysis: statistical_evidence_tool("conv1", "batch_analyze", data={"scores": [85,92,78], "experience": [1,3,5]}, batch_analyses=[{"type": "descriptive", "variables": ["scores"]}, {"type": "correlation", "var1": "scores", "var2": "experience"}])
-    8. Generate summary: statistical_evidence_tool("conv1", "render_report")
+    1. Auto-detect analysis: statistical_analyzer("conv1", "analyze", data={"before": [70,72,68], "after": [78,80,76]})
+    2. Group comparison: statistical_analyzer("conv1", "analyze", groups={"React": [85,87,83], "Vue": [78,82,80], "Angular": [88,90,85]})
+    3. Paired comparison: statistical_analyzer("conv1", "analyze", data={"baseline": [70,72,68], "treatment": [78,80,76]}, analysis_type="paired_comparison")
+    4. Correlation analysis: statistical_analyzer("conv1", "analyze", data={"experience": [1,3,5,7], "performance": [65,75,85,95]}, analysis_type="correlation_analysis")
+    5. Chi-square test: statistical_analyzer("conv1", "analyze", data={"age_group": ["18-25", "26-35", "36-45"], "product_preference": ["Electronics", "Books", "Fashion"]}, analysis_type="chi_square_test")
+    6. Frequency analysis: statistical_analyzer("conv1", "analyze", data={"feedback": ["Excellent", "Good", "Average", "Poor"]}, analysis_type="frequency_analysis")
+    7. Batch analysis: statistical_analyzer("conv1", "batch_analyze", data={"scores": [85,92,78], "experience": [1,3,5]}, batch_analyses=[{"type": "descriptive", "variables": ["scores"]}, {"type": "correlation", "var1": "scores", "var2": "experience"}])
+    8. Generate summary: statistical_analyzer("conv1", "render_report")
     """
     
     if action == "analyze":
         if not data and not groups:
             return "Error: Either 'data' or 'groups' is required for analyze action"
-        return statistical_evidence_manager.analyze(conversation_id, data, groups, analysis_type, output_format)
+        return statistical_analyzer_manager.analyze(conversation_id, data, groups, analysis_type, output_format)
     
     elif action == "batch_analyze":
         if not data or not batch_analyses:
             return "Error: Both 'data' and 'batch_analyses' are required for batch_analyze action"
-        return statistical_evidence_manager.batch_analyze(conversation_id, data, batch_analyses, output_format)
+        return statistical_analyzer_manager.batch_analyze(conversation_id, data, batch_analyses, output_format)
     
     elif action == "render_report":
-        return statistical_evidence_manager.render_report(conversation_id, "summary")
+        return statistical_analyzer_manager.render_report(conversation_id, "summary")
     
     else:
         return f"Unknown action: {action}. Valid actions: analyze, batch_analyze, render_report"

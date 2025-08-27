@@ -1,16 +1,16 @@
-# Cognitive Canvas 🧠✨
+﻿# Cognitive Canvas 🧠✨
 
 > An MCP-powered cognitive workspace that enables AI agents to think, plan, and execute complex tasks with human-like organizational abilities.
 
-## What is Cognitive Canvas?
+## What is Cognitive Canvas
 
-Cognitive Canvas is a comprehensive Model Context Protocol (MCP) server that transforms AI agents, LLMs, and Copilot-style systems into research-grade cognitive workspaces. It provides advanced cognitive tools for systematic reasoning, evidence-based analysis, and persistent memory management.
+Cognitive Canvas is a comprehensive Model Context Protocol (MCP) server that transforms AI assistants, LLMs, and Copilot-style systems into research-grade cognitive workspaces. It provides advanced cognitive tools for systematic reasoning, evidence-based analysis, and persistent memory management.
 
 Think of it as giving AI agents a "research laboratory" - a complete workspace where they can organize complex thoughts, break down multi-step problems, visualize intricate relationships, maintain coherent reasoning across extended conversations, generate statistical evidence, and seamlessly switch between topics without losing context.
 
 **Core Philosophy**: Transform any AI from a simple chat assistant into a sophisticated research agent capable of PhD-level systematic thinking, evidence-based conclusions, and persistent knowledge building.
 
-## 🚀 What Can It Do?
+## 🚀 What Can It Do
 
 ### 1. **Task Management & Action Planning** (`todo_command`)
 - Break down complex problems into actionable tasks with batch operations
@@ -39,8 +39,8 @@ Think of it as giving AI agents a "research laboratory" - a complete workspace w
 - Automatic metrics calculation (completion rates, voting distributions, progress tracking)
 - JSON and Markdown export capabilities for structured presentation
 
-### 5. **Statistical Evidence Tool** (`statistical_evidence_tool`)
-- Automated statistical analysis to support evidence-based arguments and decision making
+### 5. **Statistical Analyzer** (`statistical_analyzer`)
+- Automated statistical analysis and comprehensive data exploration
 - Auto-detects appropriate statistical methods (t-tests, ANOVA, correlation analysis, chi-square tests) based on data structure
 - Supports both numerical data analysis (descriptive statistics, hypothesis testing) and categorical data analysis (frequency distributions, chi-square independence tests)
 - Advanced features: paired comparisons, group comparisons, correlation analysis, chi-square tests for categorical relationships
@@ -54,19 +54,19 @@ Cognitive Canvas transforms ordinary Copilot/Agent/AI into sophisticated **resea
 
 ### Key Transformations
 
-🧠 **From Simple Chat → Research Agent**
+🧠 **From Simple Chat Research Agent**
 - **Before**: AI gives quick answers and forgets context
 - **After**: AI builds knowledge systematically, maintains research state, and develops insights over time
 
-🔍 **From Linear Responses → Deep-Thinking Mode**
+🔍 **From Linear Responses Deep-Thinking Mode**
 - **Before**: AI provides immediate, surface-level responses  
 - **After**: AI breaks down complex problems, maps dependencies, validates hypotheses with statistical evidence, and reasons through multi-step solutions
 
-📊 **From Stateless → Persistent Intelligence**
+📊 **From Stateless Persistent Intelligence**
 - **Before**: Each conversation starts from scratch
 - **After**: AI accumulates knowledge, tracks progress, maintains statistical evidence, and builds upon previous work
 
-🎯 **From Opinion-Based → Evidence-Driven**
+🎯 **From Opinion-Based Evidence-Driven**
 - **Before**: AI provides subjective recommendations and gut feelings
 - **After**: AI generates statistical evidence, calculates significance levels, measures effect sizes, and provides data-backed conclusions
 
@@ -75,39 +75,39 @@ Cognitive Canvas transforms ordinary Copilot/Agent/AI into sophisticated **resea
 **Software Development**
 ```
 Normal AI: "Here's how to build an API..."
-Enhanced AI: Systematically plans project phases → tracks implementation progress → 
-             manages dependencies → maintains technical decisions context
+Enhanced AI: Systematically plans project phases -> tracks implementation progress -> 
+             manages dependencies -> maintains technical decisions context
 ```
 
 **Research & Analysis** 
 ```
 Normal AI: "Based on this paper..."
-Enhanced AI: Organizes literature systematically → builds concept maps → 
-             tracks hypothesis development → validates with statistical evidence → 
+Enhanced AI: Organizes literature systematically -> builds concept maps -> 
+             tracks hypothesis development -> validates with statistical evidence -> 
              synthesizes findings with confidence intervals
 ```
 
 **Business Planning**
 ```
 Normal AI: "You should consider these factors..."
-Enhanced AI: Breaks down strategic goals → maps resource dependencies → 
-             tracks milestone progress → validates decisions with A/B test analysis → 
+Enhanced AI: Breaks down strategic goals -> maps resource dependencies -> 
+             tracks milestone progress -> validates decisions with A/B test analysis -> 
              maintains decision rationale with statistical backing
 ```
 
 **Data-Driven Decision Making**
 ```
 Normal AI: "The data suggests..."
-Enhanced AI: Automatically detects analysis type → performs appropriate statistical tests → 
-             analyzes categorical relationships with chi-square tests → calculates effect sizes and significance → 
-             generates evidence-based conclusions → provides actionable insights with confidence levels
+Enhanced AI: Automatically detects analysis type -> performs appropriate statistical tests -> 
+             analyzes categorical relationships with chi-square tests -> calculates effect sizes and significance -> 
+             generates evidence-based conclusions -> provides actionable insights with confidence levels
 ```
 
 **Learning & Education**
 ```
 Normal AI: "This concept means..."
-Enhanced AI: Structures learning progression → tracks mastery → 
-             maps prerequisite relationships → adapts difficulty systematically
+Enhanced AI: Structures learning progression -> tracks mastery -> 
+             maps prerequisite relationships -> adapts difficulty systematically
 ```
 
 ### The Core Difference
@@ -240,12 +240,12 @@ table_builder("project1", "add_row", {
 #### Statistical Evidence Analysis
 ```python
 # Auto-detect analysis type for A/B testing
-statistical_evidence_tool("ab_test", "analyze", 
+statistical_analyzer("ab_test", "analyze", 
     data={"control_group": [6.1, 5.8, 6.2], "test_group": [7.8, 8.2, 7.5]}
 )
 
 # Compare multiple groups (ANOVA)
-statistical_evidence_tool("teaching_study", "analyze", 
+statistical_analyzer("teaching_study", "analyze", 
     groups={
         "traditional": [72, 74, 70, 73],
         "interactive": [78, 82, 76, 80], 
@@ -254,7 +254,7 @@ statistical_evidence_tool("teaching_study", "analyze",
 )
 
 # Chi-square test for categorical data analysis
-statistical_evidence_tool("customer_survey", "analyze",
+statistical_analyzer("customer_survey", "analyze",
     data={
         "age_group": ["18-25", "26-35", "36-45", "46-55", "18-25", "26-35"],
         "product_preference": ["Electronics", "Books", "Fashion", "Electronics", "Fashion", "Books"]
@@ -263,13 +263,13 @@ statistical_evidence_tool("customer_survey", "analyze",
 )
 
 # Frequency analysis for categorical distributions
-statistical_evidence_tool("feedback_analysis", "analyze",
+statistical_analyzer("feedback_analysis", "analyze",
     data={"feedback": ["Excellent", "Good", "Average", "Poor", "Excellent", "Good"]},
     analysis_type="frequency_analysis"
 )
 
 # Batch analysis for comprehensive insights
-statistical_evidence_tool("survey", "batch_analyze",
+statistical_analyzer("survey", "batch_analyze",
     data={"satisfaction": [7.2, 8.1, 6.8], "productivity": [85, 92, 78]},
     batch_analyses=[
         {"type": "descriptive", "variables": ["satisfaction", "productivity"]},
@@ -278,7 +278,7 @@ statistical_evidence_tool("survey", "batch_analyze",
 )
 
 # Generate comprehensive statistical report
-statistical_evidence_tool("survey", "render_report")
+statistical_analyzer("survey", "render_report")
 ```
 
 ## 🔧 Development Guide
@@ -288,19 +288,19 @@ statistical_evidence_tool("survey", "render_report")
 Cognitive-Canvas/
 ├── cognitive_canvas_server.py    # Main MCP server entry point
 ├── cognitive_canvas_mcp/         # Package directory
-│   ├── server.py                 # Core MCP server implementation
-│   └── __init__.py
+├──   ├── server.py                 # Core MCP server implementation
+├──   └── __init__.py
 ├── tools/                        # Core tool implementations
-│   ├── __init__.py
-│   ├── todo_tool.py              # Task management
-│   ├── relationship_mapper.py    # Relationship visualization
-│   ├── table_builder.py         # Table and list creation
-│   ├── chat_fork.py              # Context management
-│   └── statistical_evidence.py  # Statistical analysis and evidence generation
+├──   ├── __init__.py
+├──   ├── todo_tool.py              # Task management
+├──   ├── relationship_mapper.py    # Relationship visualization
+├──   ├── table_builder.py         # Table and list creation
+├──   ├── chat_fork.py              # Context management
+├──   └── statistical_evidence.py  # Statistical analysis and evidence generation
 ├── tests/                        # Test suite
-│   ├── test_server.py
-│   ├── test_todo_tool.py
-│   └── ...
+├──   ├── test_server.py
+├──   ├── test_todo_tool.py
+├──   └── ...
 ├── pyproject.toml                # Package configuration
 ├── requirements.txt              # Python dependencies
 └── publish.ps1                   # Publishing script
@@ -364,4 +364,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Ready to enhance your AI's cognitive abilities?** Start using Cognitive Canvas today and experience structured, organized, and effective AI reasoning!
+**Ready to enhance your AI's cognitive abilities** Start using Cognitive Canvas today and experience structured, organized, and effective AI reasoning!
