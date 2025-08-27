@@ -247,7 +247,7 @@ class TestTableBuilder(unittest.TestCase):
         self.assertIn("does not exist", result)
 
     def test_batch_add_rows(self):
-        """测试批量添加行功�?""
+        """测试批量添加行功"""
         # Create a structure first
         self.manager.create_structure(
             self.conv_id, 
@@ -282,7 +282,7 @@ class TestTableBuilder(unittest.TestCase):
         self.assertIn("does not exist", result)
 
     def test_batch_update_rows(self):
-        """测试批量更新行功�?""
+        """测试批量更新行功"""
         # Create structure and add initial rows
         self.manager.create_structure(
             self.conv_id, 
