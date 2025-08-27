@@ -1,10 +1,10 @@
 from fastmcp import FastMCP
 from typing import Annotated, Optional, List
 from pydantic import Field
-from tools import todo_tool
-from tools.chat_fork import ChatForkManager
-from tools.diagram_tool import DiagramManager
-from tools.structured_knowledge_tool import StructuredKnowledgeManager
+from .tools import todo_tool
+from .tools.chat_fork import ChatForkManager
+from .tools.diagram_tool import DiagramManager
+from .tools.structured_knowledge_tool import StructuredKnowledgeManager
 
 chat_fork_manager = ChatForkManager()
 diagram_manager = DiagramManager()
@@ -317,5 +317,11 @@ def structured_knowledge_command(
     else:
         return f"Unknown action: {action}. Valid actions: create, batch_add_rows, batch_update_rows, batch_operations, render, metrics"
 
+
+def main():
+    """Main entry point for the MCP server when installed via pip"""
+    mcp.run()
+
+
 if __name__ == "__main__":
-    mcp.run(transport='http',  host='127.0.0.1', port=8000, path='/mcp')  # Start MCP Server
+    main()

@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+include requirements.txt
+include cognitive_canvas_server.py
+recursive-include tools *.py
+global-exclude __pycache__
+global-exclude *.py[co]
