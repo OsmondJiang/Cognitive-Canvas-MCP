@@ -327,7 +327,7 @@ def statistical_evidence_tool(
     groups: Annotated[Optional[dict], Field(description="Multiple groups for comparison (e.g., {'group_a': [1,2,3], 'group_b': [4,5,6], 'group_c': [7,8,9]})", default=None)],
     
     # Analysis configuration
-    analysis_type: Annotated[str, Field(description="Type of analysis - 'auto' automatically detects based on data structure", enum=["auto", "descriptive", "paired_comparison", "two_group_comparison", "multi_group_comparison", "correlation_analysis"], default="auto")],
+    analysis_type: Annotated[str, Field(description="Type of analysis - 'auto' automatically detects based on data structure", enum=["auto", "descriptive", "comprehensive_descriptive", "paired_comparison", "two_group_comparison", "multi_group_comparison", "correlation_analysis", "frequency_analysis", "chi_square_test"], default="auto")],
     
     # Batch analysis support
     batch_analyses: Annotated[Optional[List[dict]], Field(description="Array of analysis configurations for batch processing. Each item should specify 'type' and relevant parameters", default=None)],

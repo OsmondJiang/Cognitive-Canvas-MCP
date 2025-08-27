@@ -106,6 +106,26 @@ class StatisticalEvidenceTool:
         
         return r, p_value
     
+    def _is_categorical_data(self, values: List) -> bool:
+        """Check if data appears to be categorical (non-numeric strings)"""
+        if not values:
+            return False
+        
+        # Check if all values are strings that don't represent numbers
+        for value in values:
+            if isinstance(value, (int, float)):
+                return False
+            if isinstance(value, str):
+                try:
+                    float(value)
+                    return False  # It's a numeric string
+                except ValueError:
+                    continue  # It's a non-numeric string, which is good for categorical
+            else:
+                return False  # Unknown type
+        
+        return True
+    
     def _detect_analysis_type(self, data: Dict, groups: Optional[Dict] = None) -> str:
         """Automatically detect the most appropriate analysis type based on data structure"""
         if groups:
@@ -118,14 +138,22 @@ class StatisticalEvidenceTool:
             if "before" in data and "after" in data:
                 return "paired_comparison"
             elif len(data) == 1:
-                return "descriptive_analysis"
+                # Single variable analysis - comprehensive descriptive analysis
+                return "comprehensive_descriptive"
+            elif len(data) == 2:
+                # Check if this might be categorical data for chi-square
+                data_values = list(data.values())
+                if self._is_categorical_data(data_values[0]) and self._is_categorical_data(data_values[1]):
+                    return "chi_square_test"
+                else:
+                    return "correlation_analysis"
             elif len(data) >= 2:
                 return "correlation_analysis"
         
-        return "descriptive_analysis"
+        return "comprehensive_descriptive"
     
     def _calculate_descriptive_stats(self, values: List[float]) -> Dict:
-        """Calculate descriptive statistics for a dataset"""
+        """Calculate comprehensive descriptive statistics for a dataset"""
         if not values:
             return {"error": "No data provided"}
         
@@ -133,24 +161,50 @@ class StatisticalEvidenceTool:
             values = [float(v) for v in values]
             n = len(values)
             mean = statistics.mean(values)
+            median = statistics.median(values)
+            std = statistics.stdev(values) if n > 1 else 0
             
             result = {
                 "n": n,
-                "mean": round(mean, 2),
-                "median": round(statistics.median(values), 2),
-                "std": round(statistics.stdev(values), 2) if n > 1 else 0,
-                "min": min(values),
-                "max": max(values)
+                "n_note": "Sample size (number of observations)",
+                "mean": round(mean, 3),
+                "mean_note": "Arithmetic mean (average value)",
+                "median": round(median, 3),
+                "median_note": "Middle value when data is sorted (50th percentile)",
+                "std": round(std, 3),
+                "std_note": "Standard deviation (measure of data spread)",
+                "variance": round(std**2, 3) if n > 1 else 0,
+                "variance_note": "Variance (squared standard deviation)",
+                "min": round(min(values), 3),
+                "min_note": "Minimum value in dataset",
+                "max": round(max(values), 3),
+                "max_note": "Maximum value in dataset",
+                "range": round(max(values) - min(values), 3),
+                "range_note": "Range (max - min)"
             }
             
+            # Calculate percentiles for comprehensive analysis
+            percentiles = [5, 10, 25, 50, 75, 90, 95, 99]
+            percentile_results = {}
+            for p in percentiles:
+                if n >= 2:  # Need at least 2 data points for meaningful percentiles
+                    pval = self._percentile(values, p)
+                    percentile_results[f"p{p}"] = round(pval, 3)
+            
+            result.update(percentile_results)
+            result["percentiles_note"] = "Percentiles: P5=5th percentile, P10=10th percentile, P25=25th percentile (Q1), P50=median, P75=75th percentile (Q3), P90=90th percentile, P95=95th percentile, P99=99th percentile"
+            
             if n >= 4:
-                q1 = self._percentile(values, 25)
-                q3 = self._percentile(values, 75)
+                q1 = percentile_results.get("p25", 0)
+                q3 = percentile_results.get("p75", 0)
                 iqr = q3 - q1
                 result.update({
-                    "q1": round(q1, 2),
-                    "q3": round(q3, 2),
-                    "iqr": round(iqr, 2)
+                    "q1": q1,
+                    "q1_note": "First quartile (25th percentile)",
+                    "q3": q3,
+                    "q3_note": "Third quartile (75th percentile)",
+                    "iqr": round(iqr, 3),
+                    "iqr_note": "Interquartile range (Q3 - Q1, contains middle 50% of data)"
                 })
                 
                 # Outlier detection using IQR method
@@ -158,7 +212,38 @@ class StatisticalEvidenceTool:
                 upper_bound = q3 + 1.5 * iqr
                 outliers = [v for v in values if v < lower_bound or v > upper_bound]
                 if outliers:
-                    result["outliers"] = outliers
+                    result["outliers"] = [round(o, 3) for o in outliers]
+                    result["outliers_note"] = f"Outliers detected using IQR method (values outside [{round(lower_bound, 3)}, {round(upper_bound, 3)}])"
+                else:
+                    result["outliers"] = []
+                    result["outliers_note"] = "No outliers detected using IQR method"
+            
+            # Calculate coefficient of variation
+            if mean != 0:
+                cv = (std / abs(mean)) * 100
+                result["coefficient_of_variation"] = round(cv, 2)
+                result["cv_note"] = "Coefficient of variation (CV = std/mean × 100%, measures relative variability)"
+            
+            # Calculate skewness (simplified)
+            if n >= 3 and std > 0:
+                skewness = sum((x - mean)**3 for x in values) / (n * std**3)
+                result["skewness"] = round(skewness, 3)
+                result["skewness_note"] = "Skewness (measure of asymmetry: 0=symmetric, >0=right-skewed, <0=left-skewed)"
+            
+            # Calculate confidence interval for the mean (95% by default)
+            if n > 1:
+                se_mean = std / math.sqrt(n)
+                t_critical = self._t_critical(n - 1, 0.05)
+                margin_error = t_critical * se_mean
+                ci_lower = mean - margin_error
+                ci_upper = mean + margin_error
+                result.update({
+                    "mean_se": round(se_mean, 3),
+                    "mean_se_note": "Standard error of the mean (std/√n)",
+                    "mean_ci_95_lower": round(ci_lower, 3),
+                    "mean_ci_95_upper": round(ci_upper, 3),
+                    "mean_ci_note": "95% confidence interval for the mean (we are 95% confident the true population mean lies within this range)"
+                })
             
             return result
         except Exception as e:
@@ -354,6 +439,377 @@ class StatisticalEvidenceTool:
         except Exception as e:
             return {"error": f"Error performing ANOVA: {str(e)}"}
     
+    def _perform_distribution_analysis(self, values: List[float], variable_name: str = "data") -> Dict:
+        """Perform comprehensive single-variable distribution analysis"""
+        try:
+            values = [float(v) for v in values]
+            n = len(values)
+            
+            if n < 2:
+                return {"error": "Need at least 2 data points for distribution analysis"}
+            
+            # Get basic descriptive stats
+            desc_stats = self._calculate_descriptive_stats(values)
+            if "error" in desc_stats:
+                return desc_stats
+            
+            # Additional distribution analysis
+            mean = desc_stats["mean"]
+            std = desc_stats["std"]
+            median = desc_stats["median"]
+            
+            result = {
+                "variable_name": variable_name,
+                "analysis_type": "Single Variable Distribution Analysis",
+                "descriptive_statistics": desc_stats
+            }
+            
+            # Distribution shape analysis
+            if std > 0 and n >= 3:
+                skewness = desc_stats.get("skewness", 0)
+                
+                # Shape interpretation
+                if abs(skewness) < 0.5:
+                    shape_desc = "Approximately symmetric"
+                elif skewness > 0.5:
+                    shape_desc = "Right-skewed (positive skew)"
+                else:
+                    shape_desc = "Left-skewed (negative skew)"
+                
+                result["distribution_shape"] = {
+                    "skewness": skewness,
+                    "shape_description": shape_desc,
+                    "skewness_note": "Skewness measures asymmetry: 0=symmetric, >0=right tail longer, <0=left tail longer"
+                }
+            
+            # Normality assessment (simplified)
+            if n >= 8:
+                # Simple normality checks
+                mean_median_diff = abs(mean - median)
+                relative_diff = (mean_median_diff / std) if std > 0 else 0
+                
+                # Check if data roughly follows 68-95-99.7 rule
+                within_1std = sum(1 for v in values if abs(v - mean) <= std) / n
+                within_2std = sum(1 for v in values if abs(v - mean) <= 2*std) / n
+                
+                result["normality_assessment"] = {
+                    "mean_median_difference": round(mean_median_diff, 3),
+                    "relative_difference": round(relative_diff, 3),
+                    "within_1_std_pct": round(within_1std * 100, 1),
+                    "within_2_std_pct": round(within_2std * 100, 1),
+                    "expected_1std_pct": 68.3,
+                    "expected_2std_pct": 95.4,
+                    "normality_note": "Normal distribution expectation: ~68% within 1 std, ~95% within 2 std. Small mean-median difference suggests symmetry."
+                }
+            
+            # Percentile-based analysis for performance metrics
+            if "p95" in desc_stats and "p50" in desc_stats:
+                p50 = desc_stats["p50"]  # median
+                p95 = desc_stats["p95"]
+                p99 = desc_stats.get("p99", 0)
+                
+                result["performance_metrics"] = {
+                    "p50_median": p50,
+                    "p95": p95,
+                    "p99": p99,
+                    "p95_p50_ratio": round(p95/p50, 2) if p50 > 0 else 0,
+                    "performance_note": "P50 (median): typical performance. P95: 95% of values are below this. P99: 99% of values are below this."
+                }
+            
+            # Data quality indicators
+            if desc_stats.get("outliers"):
+                outlier_pct = len(desc_stats["outliers"]) / n * 100
+                result["data_quality"] = {
+                    "outlier_count": len(desc_stats["outliers"]),
+                    "outlier_percentage": round(outlier_pct, 1),
+                    "outlier_values": desc_stats["outliers"],
+                    "quality_note": f"Outliers: {len(desc_stats['outliers'])} values ({outlier_pct:.1f}%) detected using IQR method"
+                }
+            else:
+                result["data_quality"] = {
+                    "outlier_count": 0,
+                    "outlier_percentage": 0.0,
+                    "quality_note": "No outliers detected using IQR method - data appears clean"
+                }
+            
+            # Variability analysis
+            cv = desc_stats.get("coefficient_of_variation", 0)
+            if cv is not None:
+                if cv < 10:
+                    variability_desc = "Low variability"
+                elif cv < 25:
+                    variability_desc = "Moderate variability" 
+                elif cv < 50:
+                    variability_desc = "High variability"
+                else:
+                    variability_desc = "Very high variability"
+                
+                result["variability_analysis"] = {
+                    "coefficient_of_variation": cv,
+                    "variability_category": variability_desc,
+                    "variability_note": "CV categories: Low (<10%), Moderate (10-25%), High (25-50%), Very High (>50%)"
+                }
+            
+            return result
+            
+        except Exception as e:
+            return {"error": f"Error performing distribution analysis: {str(e)}"}
+    
+    def _perform_chi_square_test(self, var1: List[str], var2: List[str], var1_name: str = "Variable1", var2_name: str = "Variable2") -> Dict:
+        """Perform chi-square test of independence for categorical variables"""
+        try:
+            if len(var1) != len(var2):
+                return {"error": "Variables must have equal length for chi-square test"}
+            
+            if len(var1) < 5:
+                return {"error": "Chi-square test requires at least 5 observations"}
+            
+            # Create contingency table
+            contingency_table, categories1, categories2 = self._create_contingency_table(var1, var2)
+            
+            # Calculate chi-square statistic
+            chi_square_result = self._calculate_chi_square_statistic(contingency_table)
+            
+            if "error" in chi_square_result:
+                return chi_square_result
+            
+            # Calculate degrees of freedom
+            df = (len(categories1) - 1) * (len(categories2) - 1)
+            
+            # Approximate p-value
+            chi_square_stat = chi_square_result["chi_square"]
+            p_value = self._chi_square_to_p(chi_square_stat, df)
+            
+            # Effect size (Cramér's V)
+            n = len(var1)
+            cramers_v = math.sqrt(chi_square_stat / (n * min(len(categories1) - 1, len(categories2) - 1)))
+            
+            # Effect size interpretation
+            if cramers_v < 0.1:
+                effect_interpretation = "Negligible association"
+            elif cramers_v < 0.3:
+                effect_interpretation = "Small association"
+            elif cramers_v < 0.5:
+                effect_interpretation = "Medium association"
+            else:
+                effect_interpretation = "Large association"
+            
+            # P-value display
+            if p_value < 0.001:
+                p_display = "p < 0.001"
+            elif p_value < 0.01:
+                p_display = "p < 0.01"
+            elif p_value < 0.05:
+                p_display = "p < 0.05"
+            else:
+                p_display = f"p = {p_value:.3f}"
+            
+            return {
+                "test_type": "Chi-square test of independence",
+                "test_note": "Tests whether two categorical variables are independent",
+                "variable_1": var1_name,
+                "variable_2": var2_name,
+                "chi_square_statistic": round(chi_square_stat, 3),
+                "chi_square_note": "Chi-square statistic: measures deviation from expected frequencies if variables were independent",
+                "degrees_of_freedom": df,
+                "df_note": f"Degrees of freedom: (rows-1) × (columns-1) = ({len(categories1)}-1) × ({len(categories2)}-1)",
+                "p_value": p_value,
+                "p_value_display": p_display,
+                "p_value_note": "p-value: probability of observing this association (or stronger) if variables were truly independent",
+                "cramers_v": round(cramers_v, 3),
+                "cramers_v_note": "Cramér's V: effect size measure for categorical associations (0 = no association, 1 = perfect association)",
+                "effect_size_category": effect_interpretation,
+                "effect_size_note": "Effect size categories: negligible (<0.1), small (0.1-0.3), medium (0.3-0.5), large (>0.5)",
+                "sample_size": n,
+                "contingency_table": contingency_table,
+                "categories_1": categories1,
+                "categories_2": categories2,
+                "contingency_note": "Contingency table shows observed frequencies for each combination of categories",
+                "expected_frequencies": chi_square_result.get("expected_frequencies", []),
+                "expected_note": "Expected frequencies assuming independence (calculated from marginal totals)"
+            }
+            
+        except Exception as e:
+            return {"error": f"Error performing chi-square test: {str(e)}"}
+    
+    def _create_contingency_table(self, var1: List[str], var2: List[str]) -> tuple:
+        """Create contingency table from two categorical variables"""
+        # Get unique categories
+        categories1 = sorted(list(set(var1)))
+        categories2 = sorted(list(set(var2)))
+        
+        # Initialize contingency table
+        table = []
+        for cat1 in categories1:
+            row = []
+            for cat2 in categories2:
+                count = sum(1 for i in range(len(var1)) if var1[i] == cat1 and var2[i] == cat2)
+                row.append(count)
+            table.append(row)
+        
+        return table, categories1, categories2
+    
+    def _calculate_chi_square_statistic(self, observed: List[List[int]]) -> Dict:
+        """Calculate chi-square statistic from contingency table"""
+        try:
+            rows = len(observed)
+            cols = len(observed[0])
+            n = sum(sum(row) for row in observed)
+            
+            if n == 0:
+                return {"error": "No observations in contingency table"}
+            
+            # Calculate row and column totals
+            row_totals = [sum(observed[i]) for i in range(rows)]
+            col_totals = [sum(observed[i][j] for i in range(rows)) for j in range(cols)]
+            
+            # Calculate expected frequencies
+            expected = []
+            for i in range(rows):
+                row = []
+                for j in range(cols):
+                    expected_freq = (row_totals[i] * col_totals[j]) / n
+                    row.append(expected_freq)
+                expected.append(row)
+            
+            # Check for low expected frequencies
+            low_expected = []
+            for i in range(rows):
+                for j in range(cols):
+                    if expected[i][j] < 5:
+                        low_expected.append(f"Cell({i+1},{j+1}): {expected[i][j]:.1f}")
+            
+            # Calculate chi-square statistic
+            chi_square = 0
+            for i in range(rows):
+                for j in range(cols):
+                    if expected[i][j] > 0:
+                        chi_square += (observed[i][j] - expected[i][j]) ** 2 / expected[i][j]
+            
+            result = {
+                "chi_square": chi_square,
+                "expected_frequencies": expected,
+                "row_totals": row_totals,
+                "col_totals": col_totals,
+                "total_n": n
+            }
+            
+            if low_expected:
+                result["warning"] = f"Some expected frequencies < 5: {', '.join(low_expected)}. Results may be unreliable."
+            
+            return result
+            
+        except Exception as e:
+            return {"error": f"Error calculating chi-square statistic: {str(e)}"}
+    
+    def _chi_square_to_p(self, chi_square: float, df: int) -> float:
+        """Approximate p-value from chi-square statistic (simplified)"""
+        # Very rough approximation for demonstration
+        # In practice, you'd use a proper chi-square distribution function
+        
+        if df == 1:
+            if chi_square > 10.83:
+                return 0.001
+            elif chi_square > 6.64:
+                return 0.01
+            elif chi_square > 3.84:
+                return 0.05
+            elif chi_square > 2.71:
+                return 0.1
+            else:
+                return 0.2
+        elif df == 2:
+            if chi_square > 13.82:
+                return 0.001
+            elif chi_square > 9.21:
+                return 0.01
+            elif chi_square > 5.99:
+                return 0.05
+            elif chi_square > 4.61:
+                return 0.1
+            else:
+                return 0.2
+        elif df == 3:
+            if chi_square > 16.27:
+                return 0.001
+            elif chi_square > 11.34:
+                return 0.01
+            elif chi_square > 7.81:
+                return 0.05
+            elif chi_square > 6.25:
+                return 0.1
+            else:
+                return 0.2
+        else:
+            # For higher df, use rough approximation
+            critical_005 = df + 2.32 * math.sqrt(2 * df)
+            critical_001 = df + 3.09 * math.sqrt(2 * df)
+            
+            if chi_square > critical_001:
+                return 0.001
+            elif chi_square > critical_005:
+                return 0.01
+            elif chi_square > df + 1.64 * math.sqrt(2 * df):
+                return 0.05
+            else:
+                return 0.1
+    
+    def _calculate_frequency_distribution(self, values: List[str], variable_name: str) -> Dict:
+        """Calculate frequency distribution for categorical variable"""
+        try:
+            # Count frequencies
+            frequency_dict = {}
+            for value in values:
+                frequency_dict[value] = frequency_dict.get(value, 0) + 1
+            
+            # Sort by frequency (descending)
+            sorted_frequencies = sorted(frequency_dict.items(), key=lambda x: x[1], reverse=True)
+            
+            total_count = len(values)
+            unique_categories = len(frequency_dict)
+            
+            # Calculate proportions
+            proportions = {}
+            for category, count in frequency_dict.items():
+                proportions[category] = count / total_count
+            
+            # Calculate mode (most frequent category)
+            mode_category = sorted_frequencies[0][0] if sorted_frequencies else None
+            mode_count = sorted_frequencies[0][1] if sorted_frequencies else 0
+            mode_proportion = mode_count / total_count if total_count > 0 else 0
+            
+            # Calculate entropy (measure of diversity)
+            entropy = 0
+            for count in frequency_dict.values():
+                if count > 0:
+                    p = count / total_count
+                    entropy -= p * math.log2(p)
+            
+            return {
+                "variable_name": variable_name,
+                "analysis_type": "Frequency Distribution Analysis",
+                "total_observations": total_count,
+                "total_note": "Total number of observations in the dataset",
+                "unique_categories": unique_categories,
+                "unique_note": "Number of distinct categories found",
+                "frequencies": dict(sorted_frequencies),
+                "frequencies_note": "Count of each category (sorted by frequency)",
+                "proportions": {k: round(v, 3) for k, v in proportions.items()},
+                "proportions_note": "Proportion of each category (frequency/total)",
+                "mode_category": mode_category,
+                "mode_count": mode_count,
+                "mode_proportion": round(mode_proportion, 3),
+                "mode_note": f"Most frequent category: '{mode_category}' appears {mode_count} times ({mode_proportion:.1%})",
+                "entropy": round(entropy, 3),
+                "entropy_note": "Shannon entropy: measure of category diversity (higher = more diverse)",
+                "max_entropy": round(math.log2(unique_categories), 3) if unique_categories > 1 else 0,
+                "entropy_ratio": round(entropy / math.log2(unique_categories), 3) if unique_categories > 1 else 0,
+                "diversity_note": "Entropy ratio: actual diversity / maximum possible diversity (1 = perfectly diverse)"
+            }
+            
+        except Exception as e:
+            return {"error": f"Error calculating frequency distribution: {str(e)}"}
+    
     def _calculate_correlation(self, var1: List[float], var2: List[float]) -> Dict:
         """Calculate correlation between two variables"""
         try:
@@ -425,6 +881,11 @@ class StatisticalEvidenceTool:
                 for key, values in data.items():
                     results[f"descriptive_{key}"] = self._calculate_descriptive_stats(values)
             
+            elif analysis_type == "comprehensive_descriptive" and data:
+                # Single variable comprehensive analysis
+                for key, values in data.items():
+                    results[f"distribution_{key}"] = self._perform_distribution_analysis(values, key)
+            
             elif analysis_type == "paired_comparison" and data:
                 if "before" in data and "after" in data:
                     results["descriptive_before"] = self._calculate_descriptive_stats(data["before"])
@@ -454,6 +915,19 @@ class StatisticalEvidenceTool:
                     var1_values = list(data.values())[0]
                     var2_values = list(data.values())[1]
                     results["correlation"] = self._calculate_correlation(var1_values, var2_values)
+            
+            elif analysis_type == "chi_square_test" and data:
+                data_keys = list(data.keys())
+                if len(data_keys) >= 2:
+                    var1_name, var2_name = data_keys[0], data_keys[1]
+                    var1_values, var2_values = data[var1_name], data[var2_name]
+                    
+                    # Frequency analysis for each variable
+                    results[f"frequency_{var1_name}"] = self._calculate_frequency_distribution(var1_values, var1_name)
+                    results[f"frequency_{var2_name}"] = self._calculate_frequency_distribution(var2_values, var2_name)
+                    
+                    # Chi-square test
+                    results["chi_square"] = self._perform_chi_square_test(var1_values, var2_values, var1_name, var2_name)
             
             # Store analysis in conversation history
             analysis_record = {
@@ -515,14 +989,27 @@ class StatisticalEvidenceTool:
                 var_name = key.replace("descriptive_", "")
                 if "error" not in stats:
                     output.append(f"\n📊 {var_name} Descriptive Statistics:")
-                    output.append(f"• Sample size: {stats['n']}")
-                    output.append(f"• Mean: {stats['mean']}")
-                    output.append(f"• Median: {stats['median']}")
-                    output.append(f"• Standard deviation: {stats['std']}")
-                    output.append(f"• Range: [{stats['min']}, {stats['max']}]")
+                    output.append(f"• Sample size: {stats.get('n', 'N/A')} ({stats.get('n_note', '')})")
+                    output.append(f"• Mean: {stats.get('mean', 'N/A')} ({stats.get('mean_note', '')})")
+                    output.append(f"• Median: {stats.get('median', 'N/A')} ({stats.get('median_note', '')})")
+                    output.append(f"• Standard deviation: {stats.get('std', 'N/A')} ({stats.get('std_note', '')})")
+                    output.append(f"• Range: {stats.get('range', 'N/A')} [{stats.get('min', 'N/A')} to {stats.get('max', 'N/A')}]")
                     
-                    if "outliers" in stats:
-                        output.append(f"• Outliers: {stats['outliers']}")
+                    # Show percentiles if available
+                    if stats.get('p25') is not None:
+                        output.append(f"• Q1 (25th percentile): {stats.get('p25', 'N/A')}")
+                        output.append(f"• Q3 (75th percentile): {stats.get('p75', 'N/A')}")
+                        output.append(f"• IQR: {stats.get('iqr', 'N/A')} ({stats.get('iqr_note', '')})")
+                    
+                    # Show confidence interval if available
+                    if stats.get('mean_ci_95_lower') is not None:
+                        output.append(f"• 95% CI for mean: [{stats['mean_ci_95_lower']}, {stats['mean_ci_95_upper']}]")
+                    
+                    # Show outliers if any
+                    if stats.get("outliers") and len(stats["outliers"]) > 0:
+                        output.append(f"• Outliers: {stats['outliers']} ({stats.get('outliers_note', '')})")
+                    elif stats.get("outliers_note"):
+                        output.append(f"• {stats.get('outliers_note', '')}")
         
         # Format t-test results
         if "t_test" in results:
@@ -552,6 +1039,79 @@ class StatisticalEvidenceTool:
                         p_status = f"p = {comp['p_value']:.3f}" if comp['p_value'] >= 0.05 else f"p < {comp['p_value']:.3f}"
                         output.append(f"  {comp['comparison']}: difference = {comp['mean_difference']:.3f}, {p_status}")
         
+        # Format distribution analysis results
+        for key, result in results.items():
+            if key.startswith("distribution_") and "error" not in result:
+                var_name = result.get("variable_name", key.replace("distribution_", ""))
+                output.append(f"\n📊 Distribution Analysis: {var_name}")
+                
+                # Basic descriptive statistics
+                desc_stats = result.get("descriptive_statistics", {})
+                if desc_stats and "error" not in desc_stats:
+                    output.append(f"\n📈 Descriptive Statistics:")
+                    output.append(f"• Sample size: {desc_stats.get('n', 'N/A')} ({desc_stats.get('n_note', '')})")
+                    output.append(f"• Mean: {desc_stats.get('mean', 'N/A')} ({desc_stats.get('mean_note', '')})")
+                    output.append(f"• Median: {desc_stats.get('median', 'N/A')} ({desc_stats.get('median_note', '')})")
+                    output.append(f"• Standard deviation: {desc_stats.get('std', 'N/A')} ({desc_stats.get('std_note', '')})")
+                    output.append(f"• Range: {desc_stats.get('range', 'N/A')} [{desc_stats.get('min', 'N/A')} to {desc_stats.get('max', 'N/A')}]")
+                    
+                    # Percentiles
+                    if desc_stats.get('p5') is not None:
+                        output.append(f"\n📊 Percentiles ({desc_stats.get('percentiles_note', '')}):")
+                        percentiles = ['p5', 'p10', 'p25', 'p50', 'p75', 'p90', 'p95', 'p99']
+                        for p in percentiles:
+                            if desc_stats.get(p) is not None:
+                                output.append(f"  {p.upper()}: {desc_stats[p]}")
+                    
+                    # Confidence interval
+                    if desc_stats.get('mean_ci_95_lower') is not None:
+                        output.append(f"\n🎯 95% Confidence Interval for Mean:")
+                        output.append(f"• [{desc_stats['mean_ci_95_lower']}, {desc_stats['mean_ci_95_upper']}]")
+                        output.append(f"• {desc_stats.get('mean_ci_note', '')}")
+                
+                # Distribution shape
+                if "distribution_shape" in result:
+                    shape = result["distribution_shape"]
+                    output.append(f"\n📐 Distribution Shape:")
+                    output.append(f"• Skewness: {shape.get('skewness', 'N/A')} ({shape.get('skewness_note', '')})")
+                    output.append(f"• Shape: {shape.get('shape_description', 'N/A')}")
+                
+                # Normality assessment
+                if "normality_assessment" in result:
+                    norm = result["normality_assessment"]
+                    output.append(f"\n🔍 Normality Assessment:")
+                    output.append(f"• Mean-median difference: {norm.get('mean_median_difference', 'N/A')}")
+                    output.append(f"• Within 1 std: {norm.get('within_1_std_pct', 'N/A')}% (expected: {norm.get('expected_1std_pct', 'N/A')}%)")
+                    output.append(f"• Within 2 std: {norm.get('within_2_std_pct', 'N/A')}% (expected: {norm.get('expected_2std_pct', 'N/A')}%)")
+                    output.append(f"• {norm.get('normality_note', '')}")
+                
+                # Performance metrics
+                if "performance_metrics" in result:
+                    perf = result["performance_metrics"]
+                    output.append(f"\n⚡ Performance Metrics:")
+                    output.append(f"• P50 (median): {perf.get('p50_median', 'N/A')}")
+                    output.append(f"• P95: {perf.get('p95', 'N/A')}")
+                    output.append(f"• P99: {perf.get('p99', 'N/A')}")
+                    output.append(f"• P95/P50 ratio: {perf.get('p95_p50_ratio', 'N/A')}")
+                    output.append(f"• {perf.get('performance_note', '')}")
+                
+                # Data quality
+                if "data_quality" in result:
+                    quality = result["data_quality"]
+                    output.append(f"\n🔍 Data Quality:")
+                    output.append(f"• Outliers: {quality.get('outlier_count', 'N/A')} ({quality.get('outlier_percentage', 'N/A')}%)")
+                    if quality.get("outlier_values") and len(quality["outlier_values"]) > 0:
+                        output.append(f"• Outlier values: {quality['outlier_values']}")
+                    output.append(f"• {quality.get('quality_note', '')}")
+                
+                # Variability
+                if "variability_analysis" in result:
+                    var_analysis = result["variability_analysis"]
+                    output.append(f"\n📊 Variability Analysis:")
+                    output.append(f"• Coefficient of variation: {var_analysis.get('coefficient_of_variation', 'N/A')}%")
+                    output.append(f"• Category: {var_analysis.get('variability_category', 'N/A')}")
+                    output.append(f"• {var_analysis.get('variability_note', '')}")
+        
         # Format correlation results
         if "correlation" in results:
             corr_result = results["correlation"]
@@ -563,6 +1123,64 @@ class StatisticalEvidenceTool:
                 output.append(f"• Strength category: {corr_result['strength_category']} ({corr_result['strength_note']})")
                 output.append(f"• R²: {corr_result['r_squared']} ({corr_result['r_squared_note']})")
                 output.append(f"• Sample size: {corr_result['sample_size']} ({corr_result['sample_size_note']})")
+        
+        # Format frequency distribution results
+        for key, result in results.items():
+            if key.startswith("frequency_") and "error" not in result:
+                var_name = result.get("variable_name", key.replace("frequency_", ""))
+                output.append(f"\n📊 Frequency Distribution: {var_name}")
+                output.append(f"• Total observations: {result.get('total_observations', 'N/A')} ({result.get('total_note', '')})")
+                output.append(f"• Unique categories: {result.get('unique_categories', 'N/A')} ({result.get('unique_note', '')})")
+                output.append(f"• Mode: {result.get('mode_category', 'N/A')} (count: {result.get('mode_count', 'N/A')}, {result.get('mode_proportion', 'N/A'):.1%})")
+                
+                # Show frequency table
+                frequencies = result.get('frequencies', {})
+                if frequencies:
+                    output.append(f"\n📈 Category Frequencies:")
+                    for category, count in list(frequencies.items())[:10]:  # Show top 10
+                        proportion = result.get('proportions', {}).get(category, 0)
+                        output.append(f"  {category}: {count} ({proportion:.1%})")
+                    if len(frequencies) > 10:
+                        output.append(f"  ... and {len(frequencies) - 10} more categories")
+                
+                # Diversity metrics
+                output.append(f"\n🎯 Diversity Metrics:")
+                output.append(f"• Shannon entropy: {result.get('entropy', 'N/A')} ({result.get('entropy_note', '')})")
+                output.append(f"• Maximum entropy: {result.get('max_entropy', 'N/A')}")
+                output.append(f"• Diversity ratio: {result.get('entropy_ratio', 'N/A')} ({result.get('diversity_note', '')})")
+        
+        # Format chi-square test results
+        if "chi_square" in results:
+            chi_result = results["chi_square"]
+            if "error" not in chi_result:
+                output.append(f"\n🔬 Chi-Square Test of Independence:")
+                output.append(f"• Test: {chi_result.get('test_type', 'N/A')} ({chi_result.get('test_note', '')})")
+                output.append(f"• Variables: {chi_result.get('variable_1', 'N/A')} vs {chi_result.get('variable_2', 'N/A')}")
+                output.append(f"• χ² statistic: {chi_result.get('chi_square_statistic', 'N/A')} ({chi_result.get('chi_square_note', '')})")
+                output.append(f"• Degrees of freedom: {chi_result.get('degrees_of_freedom', 'N/A')} ({chi_result.get('df_note', '')})")
+                output.append(f"• {chi_result.get('p_value_display', 'N/A')} ({chi_result.get('p_value_note', '')})")
+                output.append(f"• Effect size (Cramér's V): {chi_result.get('cramers_v', 'N/A')} ({chi_result.get('cramers_v_note', '')})")
+                output.append(f"• Association strength: {chi_result.get('effect_size_category', 'N/A')} ({chi_result.get('effect_size_note', '')})")
+                output.append(f"• Sample size: {chi_result.get('sample_size', 'N/A')}")
+                
+                # Show contingency table
+                contingency_table = chi_result.get('contingency_table', [])
+                categories1 = chi_result.get('categories_1', [])
+                categories2 = chi_result.get('categories_2', [])
+                
+                if contingency_table and categories1 and categories2:
+                    output.append(f"\n📋 Contingency Table ({chi_result.get('contingency_note', '')}):")
+                    # Header row
+                    header = "     " + " ".join(f"{cat:>8}" for cat in categories2)
+                    output.append(header)
+                    # Data rows
+                    for i, cat1 in enumerate(categories1):
+                        row_data = " ".join(f"{contingency_table[i][j]:>8}" for j in range(len(categories2)))
+                        output.append(f"{cat1:>4} {row_data}")
+                
+                # Warning about low expected frequencies
+                if chi_result.get('warning'):
+                    output.append(f"\n⚠️  Warning: {chi_result['warning']}")
         
         # Add interpretation based on output format
         if output_format == "business":

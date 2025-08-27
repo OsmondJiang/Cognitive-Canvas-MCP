@@ -234,7 +234,7 @@ class TestStatisticalEvidenceTool(unittest.TestCase):
         self.assertIn("Correlation Analysis", result)  # Updated to be less specific about variable names
         self.assertIn("satisfaction", result)  # Check for variable names in the analysis
         self.assertIn("productivity", result)
-        self.assertIn("Total analyses completed: 5", result)
+        self.assertIn("Total analyses completed: 6", result)
     
     def test_render_report_comprehensive(self):
         """Test comprehensive report generation"""
@@ -317,6 +317,138 @@ class TestStatisticalEvidenceTool(unittest.TestCase):
         simple = self.tool.analyze("conv4", groups=ab_data, output_format="simple")
         self.assertIn("Statistical Analysis Report", simple)
     
+    def test_single_variable_comprehensive_analysis(self):
+        """Test comprehensive single variable analysis"""
+        # Performance data with realistic distribution
+        response_times = [120, 135, 145, 150, 155, 160, 165, 170, 175, 180, 
+                         185, 190, 195, 200, 210, 220, 250, 300, 450, 600]
+        
+        result = self.tool.analyze(self.conv_id, data={"response_time": response_times}, 
+                                 analysis_type="comprehensive_descriptive")
+        
+        # Check that comprehensive analysis was performed
+        self.assertIn("Distribution Analysis", result)
+        self.assertIn("Descriptive Statistics", result)
+        self.assertIn("Percentiles", result)
+        self.assertIn("Performance Metrics", result)
+        self.assertIn("Data Quality", result)
+        self.assertIn("Variability Analysis", result)
+        
+        # Check for specific percentiles
+        self.assertIn("P95:", result)
+        self.assertIn("P99:", result)
+        
+    def test_single_variable_percentiles(self):
+        """Test percentile calculations for single variable"""
+        data = list(range(1, 101))  # 1 to 100
+        
+        result = self.tool._calculate_descriptive_stats(data)
+        
+        # Check percentiles
+        self.assertAlmostEqual(result['p50'], 50.5, places=1)  # median
+        self.assertAlmostEqual(result['p95'], 95.05, places=1)  # 95th percentile
+        self.assertAlmostEqual(result['p99'], 99.01, places=1)  # 99th percentile
+        
+    def test_confidence_interval_calculation(self):
+        """Test confidence interval calculation for mean"""
+        data = [10, 12, 14, 16, 18, 20, 22, 24, 26, 28]
+        
+        result = self.tool._calculate_descriptive_stats(data)
+        
+        self.assertIn('mean_ci_95_lower', result)
+        self.assertIn('mean_ci_95_upper', result)
+        self.assertIn('mean_se', result)
+        
+        # CI should contain the mean
+        mean = result['mean']
+        ci_lower = result['mean_ci_95_lower']
+        ci_upper = result['mean_ci_95_upper']
+        
+        self.assertLess(ci_lower, mean)
+        self.assertGreater(ci_upper, mean)
+        
+    def test_distribution_shape_analysis(self):
+        """Test distribution shape analysis"""
+        # Create skewed data
+        right_skewed = [1, 2, 3, 4, 5, 10, 15, 20, 50, 100]
+        
+        result = self.tool._perform_distribution_analysis(right_skewed, "test_var")
+        
+        self.assertEqual(result["variable_name"], "test_var")
+        self.assertEqual(result["analysis_type"], "Single Variable Distribution Analysis")
+        self.assertIn("distribution_shape", result)
+        
+        # Should detect right skew
+        shape = result["distribution_shape"]
+        self.assertGreater(shape["skewness"], 0)  # Positive skewness
+        self.assertIn("right-skewed", shape["shape_description"].lower())
+        
+    def test_performance_metrics_analysis(self):
+        """Test performance metrics (P50, P95, P99) analysis"""
+        # Simulated response time data
+        response_times = [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 
+                         100, 120, 150, 200, 300, 500, 800, 1000, 1200, 1500]
+        
+        result = self.tool._perform_distribution_analysis(response_times, "response_time")
+        
+        self.assertIn("performance_metrics", result)
+        perf = result["performance_metrics"]
+        
+        self.assertIn("p50_median", perf)
+        self.assertIn("p95", perf)
+        self.assertIn("p99", perf)
+        self.assertIn("p95_p50_ratio", perf)
+        
+        # P95 should be greater than P50
+        self.assertGreater(perf["p95"], perf["p50_median"])
+        
+    def test_data_quality_outlier_detection(self):
+        """Test outlier detection in data quality analysis"""
+        # Data with clear outliers
+        data_with_outliers = [10, 12, 14, 16, 18, 20, 22, 24, 26, 100, 200]
+        
+        result = self.tool._perform_distribution_analysis(data_with_outliers, "test_data")
+        
+        self.assertIn("data_quality", result)
+        quality = result["data_quality"]
+        
+        self.assertGreater(quality["outlier_count"], 0)
+        self.assertGreater(quality["outlier_percentage"], 0)
+        self.assertIn("outlier_values", quality)
+        
+    def test_variability_analysis(self):
+        """Test coefficient of variation and variability categorization"""
+        # Low variability data
+        low_var_data = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109]
+        
+        result = self.tool._perform_distribution_analysis(low_var_data, "low_var")
+        
+        self.assertIn("variability_analysis", result)
+        var_analysis = result["variability_analysis"]
+        
+        self.assertIn("coefficient_of_variation", var_analysis)
+        self.assertIn("variability_category", var_analysis)
+        
+        # Should be categorized as low variability
+        self.assertLess(var_analysis["coefficient_of_variation"], 10)
+        self.assertIn("Low", var_analysis["variability_category"])
+        
+    def test_normality_assessment(self):
+        """Test normality assessment functionality"""
+        # Approximately normal data
+        normal_data = [10, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 28, 30]
+        
+        result = self.tool._perform_distribution_analysis(normal_data, "normal_test")
+        
+        self.assertIn("normality_assessment", result)
+        norm = result["normality_assessment"]
+        
+        self.assertIn("mean_median_difference", norm)
+        self.assertIn("within_1_std_pct", norm)
+        self.assertIn("within_2_std_pct", norm)
+        self.assertIn("expected_1std_pct", norm)
+        self.assertIn("expected_2std_pct", norm)
+        
     def test_error_handling(self):
         """Test error handling for invalid inputs"""
         # Test empty data
