@@ -1,45 +1,121 @@
-﻿# Cognitive Canvas 🧠✨
+# Cognitive Canvas
 
-> An MCP-powered cognitive workspace that enables AI agents to think, plan, and execute complex tasks with human-like organizational abilities.
+A comprehensive Model Context Protocol (MCP) server that transforms AI assistants into research-grade cognitive workspaces with systematic reasoning, evidence-based analysis, and persistent memory management.
 
-## What is Cognitive Canvas
+## Overview
 
-Cognitive Canvas is a comprehensive Model Context Protocol (MCP) server that transforms AI assistants, LLMs, and Copilot-style systems into research-grade cognitive workspaces. It provides advanced cognitive tools for systematic reasoning, evidence-based analysis, and persistent memory management.
+Cognitive Canvas is an advanced MCP server that provides AI agents with human-like organizational abilities for complex problem-solving. It transforms simple chat assistants into sophisticated research agents capable of systematic thinking, statistical evidence generation, and persistent knowledge building.
 
-Think of it as giving AI agents a "research laboratory" - a complete workspace where they can organize complex thoughts, break down multi-step problems, visualize intricate relationships, maintain coherent reasoning across extended conversations, generate statistical evidence, and seamlessly switch between topics without losing context.
+**Core Philosophy**: Transform any AI from a basic chat interface into a comprehensive research laboratory with structured reasoning, dependency mapping, statistical validation, and context management capabilities.
 
-**Core Philosophy**: Transform any AI from a simple chat assistant into a sophisticated research agent capable of PhD-level systematic thinking, evidence-based conclusions, and persistent knowledge building.
+### Key Transformations
 
-## 🚀 What Can It Do
+**From Simple Chat to Research Agent**
+- Before: AI gives quick answers and forgets context
+- After: AI builds knowledge systematically, maintains research state, and develops insights over time
 
-### 1. **Task Management & Action Planning** (`todo_command`)
+**From Linear Responses to Deep-Thinking Mode**
+- Before: AI provides immediate, surface-level responses
+- After: AI breaks down complex problems, maps dependencies, validates hypotheses with statistical evidence
+
+**From Stateless to Persistent Intelligence**
+- Before: Each conversation starts from scratch
+- After: AI accumulates knowledge, tracks progress, maintains statistical evidence, and builds upon previous work
+
+**From Opinion-Based to Evidence-Driven**
+- Before: AI provides subjective recommendations
+- After: AI generates statistical evidence, calculates significance levels, and provides data-backed conclusions
+
+## Example Prompts
+
+Your AI assistant will automatically use these tools when you include the trigger phrase **"use cognitive canvas"** along with specific cognitive requests. To ensure optimal tool usage, always include **"use cognitive canvas"** followed by specific actions like **task management**, **statistical analysis**, **relationship mapping**, **structured data**, or **context switching**.
+
+### Strategic Planning and Task Management
+"I need to build a machine learning pipeline for customer segmentation. **Use cognitive canvas** to break this down into actionable tasks and track progress systematically."
+
+"Can you **use cognitive canvas** to organize the steps for launching a SaaS product and help me track dependencies between different phases?"
+
+"Let's systematically plan our Q4 product roadmap. **Use cognitive canvas** for task management and dependency visualization."
+
+### Research and Evidence-Based Analysis
+"I collected survey data on employee satisfaction vs productivity. **Use cognitive canvas** to analyze with statistical evidence - are these factors significantly related?"
+
+"Help me analyze this A/B test data. **Use cognitive canvas** to calculate statistical significance and effect size of our new feature."
+
+"I have customer feedback data across different age groups and product preferences. **Use cognitive canvas** for systematic statistical analysis and pattern detection."
+
+### Data-Driven Decision Making
+"We tested three teaching methods with student performance data. **Use cognitive canvas** to generate statistical evidence and determine which approach works best."
+
+"I need comprehensive analysis of our user engagement metrics. **Use cognitive canvas** to calculate confidence intervals and significance levels."
+
+"Does our new onboarding process significantly improve user retention rates? **Use cognitive canvas** for evidence-based statistical conclusions."
+
+### Complex Problem Mapping and Visualization
+"**Use cognitive canvas** to map the relationships between our microservices architecture. I need to visualize dependencies and potential bottlenecks."
+
+"Help me organize our technical debt reduction strategy. **Use cognitive canvas** for relationship mapping and decision tree visualization."
+
+"**Use cognitive canvas** to create a systematic diagram showing how our marketing funnel stages connect and influence each other."
+
+### Context Management and Multi-Topic Reasoning
+"I'm working on database optimization but need to switch topics to handle a production incident. **Use cognitive canvas** to preserve context and manage topic switching."
+
+"**Use cognitive canvas** to track multiple conversation threads - I want to discuss API design while keeping my ML model training discussion accessible."
+
+"**Use cognitive canvas** to organize my research topics into manageable branches so I can seamlessly switch between different projects."
+
+### Structured Knowledge Building
+"**Use cognitive canvas** to transform this information into an organized comparison table of cloud providers with automatic progress tracking."
+
+"Help me structure my market research findings. **Use cognitive canvas** to create categorized lists with completion metrics and voting tables."
+
+"**Use cognitive canvas** to build a comprehensive table tracking our experiment results with automatic statistical summaries."
+
+### Comprehensive Project Analysis
+"Systematic project review needed: **Use cognitive canvas** to analyze our development workflow, track task completion, map dependencies, and provide statistical insights on team performance."
+
+"**Use cognitive canvas** for deep organizational analysis: Break down our customer onboarding process, create relationship maps, track success metrics, and generate evidence-based improvement recommendations."
+
+"**Use cognitive canvas** for full cognitive workspace approach: Help me plan, execute, and analyze our product launch strategy with integrated task management, dependency mapping, and statistical validation."
+
+### Academic and Research Excellence
+"**Use cognitive canvas** for research-grade analysis of my thesis data: systematic breakdown, statistical evidence generation, relationship mapping, and comprehensive reporting."
+
+"PhD-level systematic thinking needed for my literature review. **Use cognitive canvas** to organize findings, track research progress, map concept relationships, and validate hypotheses statistically."
+
+"**Use cognitive canvas** for evidence-driven research planning: Structure my experiment design, track methodology steps, analyze results with statistical rigor, and organize findings systematically."
+
+## Key Features
+
+### Task Management and Action Planning
 - Break down complex problems into actionable tasks with batch operations
 - Track progress with status tracking (pending, in_progress, completed, blocked)
 - Add, update, delete, and organize tasks efficiently
 - List and retrieve specific tasks for project management
 
-### 2. **Conversation Context Management** (`chat_fork`)
+### Conversation Context Management
 - Create conversation branches for handling interruptions and topic switches
 - Pause current discussions and seamlessly switch to new topics
 - Resume previous conversations with full context restoration
 - Search and visualize conversation trees with bookmark functionality
 - Support for nested drilling and parallel topic switching
 
-### 3. **Dependency & Relationship Mapping** (`relationship_mapper`)
+### Dependency and Relationship Mapping
 - Create visual diagrams of task dependencies and relationships
 - Support for multiple diagram types: flowcharts, sequence diagrams, mindmaps, org charts, and trees
 - Batch operations for adding nodes and edges efficiently
 - Generate both structured relationship tables and readable text-based graphs
 - Visualize system architecture and process flows
 
-### 4. **Table Builder** (`table_builder`)
+### Structured Knowledge Building
 - Transform unstructured information into organized tables and lists
 - Support for various template types: simple tables, task lists, checklists, numbered/bulleted lists, voting tables, progress tables
 - Batch operations for adding and updating data efficiently
 - Automatic metrics calculation (completion rates, voting distributions, progress tracking)
 - JSON and Markdown export capabilities for structured presentation
 
-### 5. **Statistical Analyzer** (`statistical_analyzer`)
+### Statistical Analysis and Evidence Generation
 - Automated statistical analysis and comprehensive data exploration
 - Auto-detects appropriate statistical methods (t-tests, ANOVA, correlation analysis, chi-square tests) based on data structure
 - Supports both numerical data analysis (descriptive statistics, hypothesis testing) and categorical data analysis (frequency distributions, chi-square independence tests)
@@ -48,90 +124,52 @@ Think of it as giving AI agents a "research laboratory" - a complete workspace w
 - Batch analysis capabilities for processing multiple statistical questions efficiently
 - Multiple output formats: business summaries, academic reports, comprehensive analysis with statistical interpretations
 
-## 🎯 Transform Any AI into a Deep-Thinking Research Agent
+## Package Information
 
-Cognitive Canvas transforms ordinary Copilot/Agent/AI into sophisticated **research-agent** and **deep-thinking mode** capabilities, enabling systematic reasoning and persistent memory.
-
-### Key Transformations
-
-🧠 **From Simple Chat Research Agent**
-- **Before**: AI gives quick answers and forgets context
-- **After**: AI builds knowledge systematically, maintains research state, and develops insights over time
-
-🔍 **From Linear Responses Deep-Thinking Mode**
-- **Before**: AI provides immediate, surface-level responses  
-- **After**: AI breaks down complex problems, maps dependencies, validates hypotheses with statistical evidence, and reasons through multi-step solutions
-
-📊 **From Stateless Persistent Intelligence**
-- **Before**: Each conversation starts from scratch
-- **After**: AI accumulates knowledge, tracks progress, maintains statistical evidence, and builds upon previous work
-
-🎯 **From Opinion-Based Evidence-Driven**
-- **Before**: AI provides subjective recommendations and gut feelings
-- **After**: AI generates statistical evidence, calculates significance levels, measures effect sizes, and provides data-backed conclusions
-
-### Real-World Impact Examples
-
-**Software Development**
-```
-Normal AI: "Here's how to build an API..."
-Enhanced AI: Systematically plans project phases -> tracks implementation progress -> 
-             manages dependencies -> maintains technical decisions context
-```
-
-**Research & Analysis** 
-```
-Normal AI: "Based on this paper..."
-Enhanced AI: Organizes literature systematically -> builds concept maps -> 
-             tracks hypothesis development -> validates with statistical evidence -> 
-             synthesizes findings with confidence intervals
-```
-
-**Business Planning**
-```
-Normal AI: "You should consider these factors..."
-Enhanced AI: Breaks down strategic goals -> maps resource dependencies -> 
-             tracks milestone progress -> validates decisions with A/B test analysis -> 
-             maintains decision rationale with statistical backing
-```
-
-**Data-Driven Decision Making**
-```
-Normal AI: "The data suggests..."
-Enhanced AI: Automatically detects analysis type -> performs appropriate statistical tests -> 
-             analyzes categorical relationships with chi-square tests -> calculates effect sizes and significance -> 
-             generates evidence-based conclusions -> provides actionable insights with confidence levels
-```
-
-**Learning & Education**
-```
-Normal AI: "This concept means..."
-Enhanced AI: Structures learning progression -> tracks mastery -> 
-             maps prerequisite relationships -> adapts difficulty systematically
-```
-
-### The Core Difference
-
-**Without Cognitive Canvas**: AI = Smart autocomplete with no memory, systematic thinking, or evidence validation
-**With Cognitive Canvas**: AI = Research assistant with structured reasoning, persistent memory, statistical validation, and evidence-based conclusions
-
-**Result**: Any AI system becomes capable of PhD-level systematic thinking, research methodology, and data-driven analysis with statistical rigor.
-
-## 🛠 How to Use It
-
-### Prerequisites
-- Python 3.7+
-- MCP-compatible AI system (like Claude Desktop, VS Code Copilot, etc.)
-
-### Installation
-
-#### Install from PyPI (Easy)
+**PyPI Package**: [cognitive-canvas-mcp](https://pypi.org/project/cognitive-canvas-mcp/)
 
 ```bash
 pip install cognitive-canvas-mcp
 ```
 
-Then add to your `claude_desktop_config.json`:
+Built on the FastMCP framework with modular design, conversation scoping, and full type safety.
+
+## Installation and Getting Started
+
+### Prerequisites
+- Python 3.7+
+- MCP-compatible AI system (Claude Desktop, VS Code Copilot, or other MCP Hosts)
+
+### Quick Installation
+
+#### Install from PyPI (Recommended)
+
+```bash
+pip install cognitive-canvas-mcp
+```
+
+#### Development Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/OsmondJiang/Cognitive-Canvas.git
+cd Cognitive-Canvas
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Run the MCP server:
+```bash
+python cognitive_canvas_server.py
+```
+
+### MCP Host Configuration
+
+**Standard Configuration** (works for Claude Desktop, Continue.dev, Cline, Zed Editor, and most MCP clients):
+
 ```json
 {
   "mcpServers": {
@@ -142,7 +180,8 @@ Then add to your `claude_desktop_config.json`:
 }
 ```
 
-**Note**: If you get "command not recognized" error, add your Python Scripts folder to PATH or use:
+**Alternative Configuration** (if "command not recognized" error occurs):
+
 ```json
 {
   "mcpServers": {
@@ -154,27 +193,7 @@ Then add to your `claude_desktop_config.json`:
 }
 ```
 
-#### Development Installation
-
-1. **Clone the repository:**
-```bash
-git clone https://github.com/OsmondJiang/Cognitive-Canvas.git
-cd Cognitive-Canvas
-```
-
-2. **Install dependencies:**
-```bash
-pip install -r requirements.txt
-```
-
-3. **Run the MCP server:**
-```bash
-python cognitive_canvas_server.py
-```
-
-### Configuration
-
-Add Cognitive Canvas to your MCP client configuration. For Claude Desktop, add to your `claude_desktop_config.json`:
+**Development Setup** (for local development):
 
 ```json
 {
@@ -185,6 +204,15 @@ Add Cognitive Canvas to your MCP client configuration. For Claude Desktop, add t
     }
   }
 }
+```
+
+**Configuration Files**:
+- **Claude Desktop**: `claude_desktop_config.json`
+- **Continue.dev**: Continue.dev config file
+- **Cline**: Cline settings
+- **Zed Editor**: Zed MCP configuration
+- **VS Code**: VS Code MCP configuration
+- **Other MCP Clients**: Follow the standard MCP configuration pattern
 ```
 
 ### Usage Examples
@@ -261,60 +289,87 @@ statistical_analyzer("customer_survey", "analyze",
     },
     analysis_type="chi_square_test"
 )
-
-# Frequency analysis for categorical distributions
-statistical_analyzer("feedback_analysis", "analyze",
-    data={"feedback": ["Excellent", "Good", "Average", "Poor", "Excellent", "Good"]},
-    analysis_type="frequency_analysis"
-)
-
-# Batch analysis for comprehensive insights
-statistical_analyzer("survey", "batch_analyze",
-    data={"satisfaction": [7.2, 8.1, 6.8], "productivity": [85, 92, 78]},
-    batch_analyses=[
-        {"type": "descriptive", "variables": ["satisfaction", "productivity"]},
-        {"type": "correlation", "var1": "satisfaction", "var2": "productivity"}
-    ]
-)
-
-# Generate comprehensive statistical report
-statistical_analyzer("survey", "render_report")
 ```
 
-## 🔧 Development Guide
+## Troubleshooting
 
-### Project Structure
-```
-Cognitive-Canvas/
-├── cognitive_canvas_server.py    # Main MCP server entry point
-├── cognitive_canvas_mcp/         # Package directory
-├──   ├── server.py                 # Core MCP server implementation
-├──   └── __init__.py
-├── tools/                        # Core tool implementations
-├──   ├── __init__.py
-├──   ├── todo_tool.py              # Task management
-├──   ├── relationship_mapper.py    # Relationship visualization
-├──   ├── table_builder.py         # Table and list creation
-├──   ├── chat_fork.py              # Context management
-├──   └── statistical_evidence.py  # Statistical analysis and evidence generation
-├── tests/                        # Test suite
-├──   ├── test_server.py
-├──   ├── test_todo_tool.py
-├──   └── ...
-├── pyproject.toml                # Package configuration
-├── requirements.txt              # Python dependencies
-└── publish.ps1                   # Publishing script
-```
+### Common Installation Issues
 
-### Adding New Features
+#### Command Not Found Error
+If you get "cognitive-canvas-mcp command not found":
 
-1. **Create a new tool module** in the `tools/` directory
-2. **Implement the core functionality** following existing patterns
-3. **Add MCP endpoint** in `cognitive_canvas_mcp/server.py`
-4. **Write tests** in the `tests/` directory
-5. **Update documentation**
+1. **Check Python Scripts Path**: Ensure your Python Scripts folder is in PATH
+2. **Use Alternative Configuration**:
+   ```json
+   {
+     "mcpServers": {
+       "cognitive-canvas": {
+         "command": "python",
+         "args": ["-m", "cognitive_canvas_server"]
+       }
+     }
+   }
+   ```
 
-### Running Tests
+#### Import Errors
+If you encounter import errors:
+
+1. **Verify Installation**: Run `pip list | grep cognitive-canvas`
+2. **Reinstall Package**: `pip uninstall cognitive-canvas-mcp && pip install cognitive-canvas-mcp`
+3. **Check Python Version**: Ensure Python 3.7+ is installed
+
+#### MCP Server Connection Issues
+If the MCP server fails to connect:
+
+1. **Check Configuration File**: Verify JSON syntax in your MCP client config
+2. **Test Server Manually**: Run `python cognitive_canvas_server.py` directly
+3. **Check Logs**: Look for error messages in your MCP client logs
+4. **Verify Dependencies**: Run `pip install -r requirements.txt`
+
+### Performance Issues
+
+#### Memory Usage
+If experiencing high memory usage:
+- Cognitive Canvas stores data in memory for fast access
+- Data is conversation-scoped and automatically cleaned up
+- For large datasets, consider breaking analysis into smaller chunks
+
+#### Response Time
+If tools respond slowly:
+- Statistical analysis can be compute-intensive for large datasets
+- Consider using batch operations for multiple analyses
+- Complex diagrams with many nodes may take longer to render
+
+### Tool-Specific Issues
+
+#### Statistical Analyzer
+- **Error: "Insufficient data"**: Ensure you have enough data points for the chosen analysis
+- **Error: "Invalid data format"**: Check that your data is properly formatted (arrays for numerical, proper categories for categorical)
+- **Unexpected results**: Verify your data doesn't contain missing values or outliers
+
+#### Relationship Mapper
+- **Diagram not rendering**: Check that all referenced nodes exist before adding edges
+- **Complex diagrams unclear**: Consider breaking large diagrams into smaller, focused sub-diagrams
+
+#### Task Management
+- **Tasks not updating**: Ensure you're using the correct conversation_id and task_id
+- **Batch operations failing**: Verify the task list format matches the expected structure
+
+### Getting Help
+
+#### Documentation
+- Check the example prompts section for proper usage patterns
+- Review the API documentation in the source code
+- Look at test files for additional usage examples
+
+#### Community Support
+- Create an issue on GitHub: https://github.com/OsmondJiang/Cognitive-Canvas/issues
+- Include error messages, configuration details, and reproduction steps
+- Check existing issues for similar problems and solutions
+
+#### Development and Contributing
+
+#### Running Tests
 ```bash
 # Run all tests
 python tests/run_all_tests.py
@@ -326,13 +381,13 @@ python -m unittest tests.test_todo_tool
 python tests/run_all_tests.py -v
 ```
 
-### Code Style
+#### Code Style
 - Follow PEP 8 guidelines
 - Use type hints for all function parameters
 - Include comprehensive docstrings
 - Maintain consistent error handling patterns
 
-### Contributing
+#### Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -340,23 +395,11 @@ python tests/run_all_tests.py -v
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📊 Architecture
-
-Cognitive Canvas is built on the FastMCP framework, providing:
-
-- **Modular Design**: Each cognitive tool is independently implemented in the `tools/` directory
-- **Package Structure**: Clean separation with `cognitive_canvas_mcp` package for distribution
-- **Conversation Scoping**: All data is organized by conversation ID
-- **Memory Management**: In-memory storage for fast access during sessions
-- **Extensible Framework**: Easy to add new cognitive tools
-- **Type Safety**: Full type hints and validation using Pydantic
-- **PyPI Distribution**: Simple installation via `pip install cognitive-canvas-mcp`
-
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Built with [FastMCP](https://github.com/jlowin/fastmcp) framework
 - Inspired by human cognitive processes and knowledge management systems
@@ -364,4 +407,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Ready to enhance your AI's cognitive abilities** Start using Cognitive Canvas today and experience structured, organized, and effective AI reasoning!
+**Ready to enhance your AI's cognitive abilities?** Start using Cognitive Canvas today and experience structured, organized, and effective AI reasoning!
