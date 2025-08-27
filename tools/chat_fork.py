@@ -443,10 +443,10 @@ class ChatForkManager:
         path.reverse()
         return path
 
-    def render_conversation_tree(self, conversation_id: str, search_query: str = "", 
+    def search_conversation_tree(self, conversation_id: str, search_query: str = "", 
                                 search_scope: str = "all", max_results: int = 10) -> str:
         """
-        Render the conversation tree as a text-based tree structure.
+        Search and display the conversation tree as a text-based tree structure.
         Shows all topics in a hierarchical view with the current topic marked.
         
         If search_query is provided, filters the tree to show only matching nodes

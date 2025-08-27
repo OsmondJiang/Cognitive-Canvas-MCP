@@ -152,7 +152,7 @@ class TestChatForkBookmark(unittest.TestCase):
         )
         
         # Test render shows all bookmarks
-        tree_output = self.manager.render_conversation_tree(self.conv_id)
+        tree_output = self.manager.search_conversation_tree(self.conv_id)
         
         # Check that all bookmarks are shown
         self.assertIn("🔖[project_start]", tree_output)
@@ -284,7 +284,7 @@ class TestChatForkBookmark(unittest.TestCase):
         node_none = self.manager._find_bookmark(self.conv_id, "nonexistent")
         self.assertIsNone(node_none)
     
-    def test_render_with_bookmarks(self):
+    def test_search_with_bookmarks(self):
         """Test that render properly shows bookmark information"""
         # Create conversation with mixed bookmarked and non-bookmarked topics
         self.manager.pause_topic(
@@ -312,7 +312,7 @@ class TestChatForkBookmark(unittest.TestCase):
             bookmark="critical_decision"
         )
         
-        tree_output = self.manager.render_conversation_tree(self.conv_id)
+        tree_output = self.manager.search_conversation_tree(self.conv_id)
         
         # Should show bookmark indicators
         self.assertIn("🔖[main_phase]", tree_output)

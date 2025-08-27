@@ -262,8 +262,8 @@ class TestChatForkManager(unittest.TestCase):
         self.assertEqual(bug_node.summary, "Urgent Bug Fix")
         self.assertEqual(bug_node.details, "Bug fixed")
 
-    def test_render_conversation_tree(self):
-        """Test the render_conversation_tree functionality with enhanced context"""
+    def test_search_conversation_tree(self):
+        """Test the search_conversation_tree functionality with enhanced context"""
         # Build a complex conversation tree with rich context
         self.manager.pause_topic(
             self.conv_id, 
@@ -303,8 +303,8 @@ class TestChatForkManager(unittest.TestCase):
             pause_type="nested"
         )
         
-        # Render the tree
-        tree = self.manager.render_conversation_tree(self.conv_id)
+        # Search the tree
+        tree = self.manager.search_conversation_tree(self.conv_id)
         
         # Should return a string with the tree
         self.assertIsInstance(tree, str)
@@ -330,7 +330,7 @@ class TestChatForkManager(unittest.TestCase):
         
         # Check tree structure indicators
         print("\n" + "="*50)
-        print("RENDERED CONVERSATION TREE:")
+        print("SEARCHED CONVERSATION TREE:")
         print("="*50)
         print(tree)
         print("="*50)
@@ -341,20 +341,20 @@ class TestChatForkManager(unittest.TestCase):
         
         # Test tree after moving back
         self.manager.resume_topic(self.conv_id, "Auth system implemented", resume_type="auto")
-        tree2 = self.manager.render_conversation_tree(self.conv_id)
+        tree2 = self.manager.search_conversation_tree(self.conv_id)
         
         self.assertIn("API Design", tree2)
         self.assertIn("👈 [HERE]", tree2)
 
-    def test_render_empty_conversation(self):
-        """Test render with non-existent conversation"""
-        result = self.manager.render_conversation_tree("non_existent")
+    def test_search_empty_conversation(self):
+        """Test search with non-existent conversation"""
+        result = self.manager.search_conversation_tree("non_existent")
         
         self.assertIsInstance(result, str)
         self.assertIn("Error", result)
 
-    def test_render_single_topic(self):
-        """Test render with only root topic with rich context"""
+    def test_search_single_topic(self):
+        """Test search with only root topic with rich context"""
         # Create a simple conversation with rich context
         self.manager.pause_topic(
             self.conv_id, 
@@ -364,7 +364,7 @@ class TestChatForkManager(unittest.TestCase):
             next_steps="Continue working on this topic and add more features"
         )
         
-        tree = self.manager.render_conversation_tree(self.conv_id)
+        tree = self.manager.search_conversation_tree(self.conv_id)
         
         self.assertIsInstance(tree, str)
         self.assertIn("👈 [HERE]", tree)
@@ -426,8 +426,8 @@ class TestChatForkManager(unittest.TestCase):
         self.assertEqual(restored_context["progress_status"], "We have made significant progress on this topic")
         self.assertEqual(restored_context["next_steps"], "Need to implement the remaining features and run tests")
         
-        # Test render shows all context information
-        tree = self.manager.render_conversation_tree(self.conv_id)
+        # Test search shows all context information
+        tree = self.manager.search_conversation_tree(self.conv_id)
         self.assertIn("detailed context about what we're discussing", tree)
         self.assertIn("significant progress", tree)
         self.assertIn("remaining features", tree)

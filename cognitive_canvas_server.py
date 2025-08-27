@@ -76,10 +76,10 @@ def todo_command(
         return f"Unknown action: {action}. Valid actions: add-batch, update, delete, get, list"
     
 
-@mcp.tool(name='chat_fork', description="The Chat Fork Tool manages conversation branches with pause/resume actions and visualization. Use 'pause_topic' to save current state and switch topics, 'resume_topic' to return to paused discussions, and 'render' to visualize the entire conversation tree with current position marked. Perfect for managing complex multi-topic conversations with natural flow control.")
+@mcp.tool(name='chat_fork', description="The Chat Fork Tool manages conversation branches with pause/resume actions and search functionality. Use 'pause_topic' to save current state and switch topics, 'resume_topic' to return to paused discussions, and 'search' to search and visualize the conversation tree with current position marked. Perfect for managing complex multi-topic conversations with natural flow control.")
 def chat_fork_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")], 
-    action: Annotated[str, Field(description="The operation to perform on conversation branches", enum=["pause_topic", "resume_topic", "render"])], 
+    action: Annotated[str, Field(description="The operation to perform on conversation branches", enum=["pause_topic", "resume_topic", "search"])], 
     new_topic: Annotated[Optional[str], Field(description="The new topic to switch to. Required for 'pause_topic' action.", default=None)],
     current_context: Annotated[Optional[str], Field(description="Current discussion context and details. Optional for 'pause_topic' action.", default="")],
     progress_status: Annotated[Optional[str], Field(description="Current progress and status. Optional for 'pause_topic' action.", default="")],
@@ -89,9 +89,9 @@ def chat_fork_command(
     resume_type: Annotated[Optional[str], Field(description="How to resume: 'auto' (smart resume based on pause type), 'parent' (to parent topic), 'root' (to main topic), 'bookmark' (to specific bookmark). Optional for 'resume_topic' action.", enum=["auto", "parent", "root", "bookmark"], default="auto")],
     completed_summary: Annotated[Optional[str], Field(description="Summary of the completed topic when resuming. Optional for 'resume_topic' action.", default="")],
     # Render with optional search parameters
-    search_query: Annotated[Optional[str], Field(description="Search query string for filtering render results. Optional for 'render' action.", default="")],
-    search_scope: Annotated[Optional[str], Field(description="Search scope for filtering: 'all' (all content), 'topics' (topic names), 'context' (context info), 'bookmarks' (bookmarked topics), 'current_branch' (current branch only). Optional for 'render' action.", enum=["all", "topics", "context", "bookmarks", "current_branch"], default="all")],
-    max_results: Annotated[Optional[int], Field(description="Maximum number of matching nodes to show in filtered render. Optional for 'render' action.", default=10)]
+    search_query: Annotated[Optional[str], Field(description="Search query string for filtering search results. Optional for 'search' action.", default="")],
+    search_scope: Annotated[Optional[str], Field(description="Search scope for filtering: 'all' (all content), 'topics' (topic names), 'context' (context info), 'bookmarks' (bookmarked topics), 'current_branch' (current branch only). Optional for 'search' action.", enum=["all", "topics", "context", "bookmarks", "current_branch"], default="all")],
+    max_results: Annotated[Optional[int], Field(description="Maximum number of matching nodes to show in filtered search. Optional for 'search' action.", default=10)]
 ):
     """
     Chat Fork Tool - Intuitive Pause/Resume Interface
@@ -101,11 +101,11 @@ def chat_fork_command(
     Core Actions:
     - pause_topic: Pause current discussion and switch to a new topic (automatically saves state)
     - resume_topic: Complete current topic and resume the previously paused discussion
-    - render: Visualize the entire conversation tree structure with current position marked, optionally filtered by search
+    - search: Search and visualize the conversation tree structure with current position marked, optionally filtered by search
 
     Parameters:
     - conversation_id (str, required): Unique identifier of the conversation
-    - action (str, required): One of ["pause_topic", "resume_topic", "render"]
+    - action (str, required): One of ["pause_topic", "resume_topic", "search"]
     
     For pause_topic:
     - new_topic (str, required): The new topic to switch to
@@ -120,7 +120,7 @@ def chat_fork_command(
     - resume_type (str, optional): "auto" for smart resume, "parent" for parent topic, "root" for main topic, "bookmark" for specific bookmark
     - bookmark (str, optional): Name of bookmark to resume to (when resume_type="bookmark" or as direct target)
     
-    For render:
+    For search:
     - search_query (str, optional): Search query to filter the tree display
     - search_scope (str, optional): "all", "topics", "context", "bookmarks", or "current_branch"  
     - max_results (int, optional): Maximum number of matching nodes to show (default: 10)
@@ -131,10 +131,10 @@ def chat_fork_command(
     3. Auto resume: chat_fork_command("conv1", "resume_topic", completed_summary="Security implementation completed")
     4. Resume to bookmark: chat_fork_command("conv1", "resume_topic", bookmark="auth_design", completed_summary="Meeting done")
     5. Resume to specific level: chat_fork_command("conv1", "resume_topic", completed_summary="Meeting done", resume_type="root")
-    6. Visualize conversation tree: chat_fork_command("conv1", "render")
-    7. Filtered tree display: chat_fork_command("conv1", "render", search_query="database design")
-    8. Search in bookmarks: chat_fork_command("conv1", "render", search_query="authentication", search_scope="bookmarks")
-    9. Search current branch: chat_fork_command("conv1", "render", search_query="API", search_scope="current_branch", max_results=5)
+    6. Visualize conversation tree: chat_fork_command("conv1", "search")
+    7. Filtered tree display: chat_fork_command("conv1", "search", search_query="database design")
+    8. Search in bookmarks: chat_fork_command("conv1", "search", search_query="authentication", search_scope="bookmarks")
+    9. Search current branch: chat_fork_command("conv1", "search", search_query="API", search_scope="current_branch", max_results=5)
     """
     
     if action == "pause_topic":
@@ -158,19 +158,17 @@ def chat_fork_command(
             bookmark or ""
         )
     
-    elif action == "render":
-        # Unified render action with optional search capability
-        return {
-            "tree": chat_fork_manager.render_conversation_tree(
-                conversation_id=conversation_id, 
-                search_query=search_query or "",
-                search_scope=search_scope or "all",
-                max_results=max_results or 10
-            )
-        }
+    elif action == "search":
+        # Return only the search result as a string, not wrapped in a dictionary
+        return chat_fork_manager.search_conversation_tree(
+            conversation_id=conversation_id, 
+            search_query=search_query or "",
+            search_scope=search_scope or "all",
+            max_results=max_results or 10
+        )
 
     else:
-        return f"Unknown action: {action}. Valid actions: pause_topic, resume_topic, render"
+        return f"Unknown action: {action}. Valid actions: pause_topic, resume_topic, search"
     
 
 @mcp.tool(name="diagram_tool", description="Use this tool for visualizing relationships, dependencies, and hierarchical structures between entities. Create flowcharts for processes, organizational charts for hierarchies, mind maps for concept exploration, or dependency trees for system architecture. Best for showing how things connect, flow, or depend on each other. Use when you need to map relationships, visualize system architecture, or show process flows rather than just listing items.")

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Comprehensive Test Suite for Chat Fork Search and Render Functionality
+Comprehensive Test Suite for Chat Fork Search and Search Functionality
 
-This test file provides complete coverage of all render and search features,
-including unified render interface, search scopes, match details integration,
+This test file provides complete coverage of all search and search features,
+including unified search interface, search scopes, match details integration,
 edge cases, and error handling.
 """
 
@@ -77,12 +77,12 @@ class TestChatForkSearchUnified(unittest.TestCase):
         )
 
     # =============================================================================
-    # BASIC RENDER FUNCTIONALITY TESTS
+    # BASIC SEARCH FUNCTIONALITY TESTS
     # =============================================================================
     
-    def test_render_complete_tree_without_search(self):
-        """Test rendering complete conversation tree without any search filters"""
-        result = self.manager.render_conversation_tree(self.conv_id)
+    def test_SEARCH_complete_tree_without_search(self):
+        """Test SEARCHing complete conversation tree without any search filters"""
+        result = self.manager.search_conversation_tree(self.conv_id)
         
         # Should show all topics in the tree
         self.assertIn("E-commerce Platform Development", result)
@@ -105,9 +105,9 @@ class TestChatForkSearchUnified(unittest.TestCase):
         self.assertNotIn("🔍 Search Results", result)
         self.assertNotIn("🎯", result)
     
-    def test_render_tree_structure_hierarchy(self):
+    def test_SEARCH_tree_structure_hierarchy(self):
         """Test that the tree structure shows proper hierarchy"""
-        result = self.manager.render_conversation_tree(self.conv_id)
+        result = self.manager.search_conversation_tree(self.conv_id)
         
         # Should show proper tree structure with indentation
         self.assertIn("Main conversation", result)
@@ -118,9 +118,9 @@ class TestChatForkSearchUnified(unittest.TestCase):
         self.assertIn("[N]", result)  # Nested indicators
         self.assertIn("[P]", result)  # Parallel indicators
     
-    def test_render_context_information_display(self):
+    def test_SEARCH_context_information_display(self):
         """Test that context information is properly displayed"""
-        result = self.manager.render_conversation_tree(self.conv_id)
+        result = self.manager.search_conversation_tree(self.conv_id)
         
         # Should show context information for nodes
         self.assertIn("Context:", result)
@@ -136,8 +136,8 @@ class TestChatForkSearchUnified(unittest.TestCase):
     # =============================================================================
     
     def test_basic_search_functionality(self):
-        """Test basic search functionality through render method"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="React")
+        """Test basic search functionality through SEARCH method"""
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="React")
         
         # Should show search results header
         self.assertIn("🔍 Search Results for: 'React'", result)
@@ -154,9 +154,9 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_case_insensitive(self):
         """Test that search is case insensitive"""
-        result1 = self.manager.render_conversation_tree(self.conv_id, search_query="JWT")
-        result2 = self.manager.render_conversation_tree(self.conv_id, search_query="jwt")
-        result3 = self.manager.render_conversation_tree(self.conv_id, search_query="Jwt")
+        result1 = self.manager.search_conversation_tree(self.conv_id, search_query="JWT")
+        result2 = self.manager.search_conversation_tree(self.conv_id, search_query="jwt")
+        result3 = self.manager.search_conversation_tree(self.conv_id, search_query="Jwt")
         
         # All variations should find results
         for result in [result1, result2, result3]:
@@ -166,7 +166,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_partial_matches(self):
         """Test that search finds partial word matches"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="auth")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="auth")
         
         # Should find "authentication" related content
         if "No matches found" not in result:
@@ -175,7 +175,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_multiple_word_query(self):
         """Test search with multiple words"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="JWT authentication")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="JWT authentication")
         
         # Should find content containing these terms
         if "No matches found" not in result:
@@ -187,7 +187,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_scope_all(self):
         """Test search scope 'all' - searches entire conversation"""
-        result = self.manager.render_conversation_tree(
+        result = self.manager.search_conversation_tree(
             self.conv_id, 
             search_query="database", 
             search_scope="all"
@@ -199,7 +199,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_scope_topics(self):
         """Test search scope 'topics' - searches only topic names"""
-        result = self.manager.render_conversation_tree(
+        result = self.manager.search_conversation_tree(
             self.conv_id,
             search_query="Development",
             search_scope="topics"
@@ -211,7 +211,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_scope_context(self):
         """Test search scope 'context' - searches only context information"""
-        result = self.manager.render_conversation_tree(
+        result = self.manager.search_conversation_tree(
             self.conv_id,
             search_query="PostgreSQL",
             search_scope="context"
@@ -223,7 +223,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_scope_bookmarks(self):
         """Test search scope 'bookmarks' - searches only bookmarked topics"""
-        result = self.manager.render_conversation_tree(
+        result = self.manager.search_conversation_tree(
             self.conv_id,
             search_query="backend",
             search_scope="bookmarks"
@@ -235,7 +235,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_scope_current_branch(self):
         """Test search scope 'current_branch' - searches only current branch"""
-        result = self.manager.render_conversation_tree(
+        result = self.manager.search_conversation_tree(
             self.conv_id,
             search_query="React",
             search_scope="current_branch"
@@ -245,10 +245,10 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_scope_comparison(self):
         """Test that different scopes produce different results"""
-        all_result = self.manager.render_conversation_tree(
+        all_result = self.manager.search_conversation_tree(
             self.conv_id, search_query="API", search_scope="all"
         )
-        topics_result = self.manager.render_conversation_tree(
+        topics_result = self.manager.search_conversation_tree(
             self.conv_id, search_query="API", search_scope="topics"
         )
         
@@ -261,7 +261,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_match_details_integrated_in_tree_nodes(self):
         """Test that match details are integrated directly in tree nodes"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="authentication")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="authentication")
         
         lines = result.split('\n')
         
@@ -275,7 +275,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_match_details_show_field_types(self):
         """Test that match details show which fields matched"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="JWT")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="JWT")
         
         if "No matches found" not in result:
             # Should show different field types that matched
@@ -299,7 +299,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_no_separate_match_details_section(self):
         """Test that match details are NOT shown in a separate section"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="React")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="React")
         
         # Should NOT have separate match details section
         self.assertNotIn("🎯 Match Details:", result)
@@ -307,7 +307,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_match_score_format(self):
         """Test that match scores are displayed in correct format"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="authentication")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="authentication")
         
         if "No matches found" not in result:
             lines = result.split('\n')
@@ -323,7 +323,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_max_results_parameter(self):
         """Test that max_results parameter limits search results"""
-        result = self.manager.render_conversation_tree(
+        result = self.manager.search_conversation_tree(
             self.conv_id,
             search_query="e",  # Common letter to get multiple matches
             max_results=2
@@ -335,7 +335,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_max_results_zero_means_unlimited(self):
         """Test that max_results=0 means unlimited results"""
-        result = self.manager.render_conversation_tree(
+        result = self.manager.search_conversation_tree(
             self.conv_id,
             search_query="development",
             max_results=0
@@ -351,19 +351,19 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_nonexistent_conversation(self):
         """Test searching in non-existent conversation"""
-        result = self.manager.render_conversation_tree("nonexistent", search_query="test")
+        result = self.manager.search_conversation_tree("nonexistent", search_query="test")
         
         self.assertEqual(result, "Error: Conversation not found")
     
-    def test_render_nonexistent_conversation(self):
-        """Test rendering non-existent conversation without search"""
-        result = self.manager.render_conversation_tree("nonexistent")
+    def test_SEARCH_nonexistent_conversation(self):
+        """Test SEARCHing non-existent conversation without search"""
+        result = self.manager.search_conversation_tree("nonexistent")
         
         self.assertEqual(result, "Error: Conversation not found")
     
     def test_search_empty_query(self):
         """Test search with empty query returns complete tree"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="")
         
         # Empty query should return complete tree
         self.assertNotIn("🔍 Search Results", result)
@@ -372,20 +372,20 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_whitespace_only_query(self):
         """Test search with whitespace-only query"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="   ")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="   ")
         
         # Whitespace query should be treated as actual search
         self.assertIn("No matches found for '   '", result)
     
     def test_search_no_results(self):
         """Test search query that returns no matches"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="blockchain")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="blockchain")
         
         self.assertIn("No matches found for 'blockchain'", result)
     
     def test_search_special_characters(self):
         """Test search with special characters"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="e-commerce")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="e-commerce")
         
         # Should handle hyphenated terms
         if "No matches found" not in result:
@@ -393,7 +393,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_unicode_characters(self):
         """Test search with unicode characters"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="café")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="café")
         
         # Should handle unicode without errors
         self.assertIn("No matches found for 'café'", result)
@@ -404,7 +404,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_all_parameters_combined(self):
         """Test search with all parameters specified"""
-        result = self.manager.render_conversation_tree(
+        result = self.manager.search_conversation_tree(
             self.conv_id,
             search_query="development",
             search_scope="all",
@@ -418,7 +418,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_bookmark_integration(self):
         """Test that bookmark information is preserved in search results"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="backend")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="backend")
         
         if "No matches found" not in result:
             # Should show bookmark indicators for bookmarked nodes
@@ -426,7 +426,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_current_location_marker(self):
         """Test that current location is marked in search results"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="React")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="React")
         
         if "No matches found" not in result:
             # Should show current location marker if current node matches
@@ -436,16 +436,16 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_preserves_tree_structure(self):
         """Test that search results preserve tree hierarchy"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="API")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="API")
         
         if "No matches found" not in result:
             # Should show tree structure even in filtered results
             self.assertIn("└──", result)  # Tree structure characters
     
-    def test_render_performance_with_complex_tree(self):
-        """Test render performance with complex conversation tree"""
-        # This test ensures the render method works with existing complex structure
-        result = self.manager.render_conversation_tree(self.conv_id)
+    def test_SEARCH_performance_with_complex_tree(self):
+        """Test SEARCH performance with complex conversation tree"""
+        # This test ensures the SEARCH method works with existing complex structure
+        result = self.manager.search_conversation_tree(self.conv_id)
         
         # Should complete without errors and show all expected content
         self.assertIsInstance(result, str)
@@ -453,7 +453,7 @@ class TestChatForkSearchUnified(unittest.TestCase):
     
     def test_search_relevance_scoring(self):
         """Test that search results show relevance scores"""
-        result = self.manager.render_conversation_tree(self.conv_id, search_query="JWT")
+        result = self.manager.search_conversation_tree(self.conv_id, search_query="JWT")
         
         if "No matches found" not in result:
             # Should show match scores
