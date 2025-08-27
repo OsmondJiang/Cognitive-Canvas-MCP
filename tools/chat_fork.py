@@ -1,4 +1,5 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
+import re
 
 class ChatNode:
     def __init__(self, summary: str, details: str = "", parent: Optional['ChatNode'] = None):
@@ -319,13 +320,191 @@ class ChatForkManager:
         for child in node.children:
             self._list_bookmarks_recursive(child, bookmarks)
 
-    def render_conversation_tree(self, conversation_id: str) -> str:
+    def search_conversation(self, conversation_id: str, query: str, 
+                           search_scope: str = "all", max_results: int = 10) -> dict:
+        """
+        Search for content across the conversation tree.
+        
+        Args:
+            conversation_id: Conversation ID
+            query: Search query string
+            search_scope: Search scope
+                - "all": Search all content
+                - "topics": Search only topic summaries
+                - "context": Search only context information
+                - "bookmarks": Search only bookmarked topics
+                - "current_branch": Search only current branch
+            max_results: Maximum number of results to return
+            
+        Returns:
+            Dictionary containing search results with relevance scores
+        """
+        if conversation_id not in self.conversations:
+            return {
+                "status": "error",
+                "message": "Conversation not found",
+                "results": []
+            }
+        
+        current_node = self.conversations[conversation_id]
+        root_node = self._find_root(current_node)
+        
+        # Collect all search results
+        results = []
+        self._search_recursive(root_node, query, search_scope, results, current_node)
+        
+        # Sort by relevance score (highest first)
+        results.sort(key=lambda x: x['relevance_score'], reverse=True)
+        
+        # Limit results
+        if max_results > 0:
+            results = results[:max_results]
+        
+        return {
+            "status": "success",
+            "query": query,
+            "search_scope": search_scope,
+            "total_results": len(results),
+            "results": results
+        }
+    
+    def _search_recursive(self, node: ChatNode, query: str, search_scope: str, 
+                         results: List[dict], current_node: ChatNode) -> None:
+        """Recursively search through the conversation tree"""
+        
+        # Determine if this node should be searched based on scope
+        should_search = self._should_search_node(node, search_scope, current_node)
+        
+        if should_search:
+            match_info = self._calculate_node_relevance(node, query)
+            
+            if match_info['total_score'] > 0:
+                # Calculate path to this node
+                path = self._get_node_path(node)
+                
+                results.append({
+                    'node_summary': node.summary,
+                    'path': path,
+                    'relevance_score': match_info['total_score'],
+                    'match_details': match_info['matches'],
+                    'context': {
+                        'current_context': node.current_context,
+                        'progress_status': node.progress_status,
+                        'next_steps': node.next_steps,
+                        'details': node.details
+                    },
+                    'is_bookmarked': node.is_bookmarked,
+                    'bookmark_name': node.bookmark_name if node.is_bookmarked else None,
+                    'is_current': node == current_node
+                })
+        
+        # Search children
+        for child in node.children:
+            self._search_recursive(child, query, search_scope, results, current_node)
+    
+    def _should_search_node(self, node: ChatNode, search_scope: str, current_node: ChatNode) -> bool:
+        """Determine if a node should be included in search based on scope"""
+        if search_scope == "all":
+            return True
+        elif search_scope == "bookmarks":
+            return node.is_bookmarked
+        elif search_scope == "current_branch":
+            return self._is_in_current_branch(node, current_node)
+        else:
+            return True
+    
+    def _is_in_current_branch(self, node: ChatNode, current_node: ChatNode) -> bool:
+        """Check if a node is in the current branch (from root to current)"""
+        # Get path from root to current node
+        current_path = []
+        temp = current_node
+        while temp is not None:
+            current_path.append(temp)
+            temp = temp.parent
+        current_path.reverse()
+        
+        # Check if the node is in this path
+        return node in current_path
+    
+    def _calculate_node_relevance(self, node: ChatNode, query: str) -> dict:
+        """Calculate relevance score for a node based on query matches"""
+        query_lower = query.lower()
+        matches = []
+        total_score = 0
+        
+        # Search in different fields with different weights
+        search_fields = [
+            ('summary', node.summary, 3.0),  # Topic summary has highest weight
+            ('bookmark_name', node.bookmark_name, 2.5),  # Bookmark names are important
+            ('current_context', node.current_context, 2.0),
+            ('progress_status', node.progress_status, 1.5),
+            ('next_steps', node.next_steps, 1.5),
+            ('details', node.details, 1.0)
+        ]
+        
+        for field_name, field_value, weight in search_fields:
+            if field_value and query_lower in field_value.lower():
+                # Calculate match strength
+                match_strength = self._calculate_match_strength(query_lower, field_value.lower())
+                score = match_strength * weight
+                total_score += score
+                
+                matches.append({
+                    'field': field_name,
+                    'value': field_value,
+                    'match_strength': match_strength,
+                    'weighted_score': score
+                })
+        
+        return {
+            'total_score': total_score,
+            'matches': matches
+        }
+    
+    def _calculate_match_strength(self, query: str, text: str) -> float:
+        """Calculate how strong the match is (0.0 to 1.0)"""
+        if not query or not text:
+            return 0.0
+        
+        # Exact match gets highest score
+        if query == text:
+            return 1.0
+        
+        # Word boundary match gets high score
+        if re.search(r'\b' + re.escape(query) + r'\b', text):
+            return 0.8
+        
+        # Simple substring match
+        if query in text:
+            # Score based on the proportion of the query in the text
+            return min(0.6, len(query) / len(text))
+        
+        return 0.0
+    
+    def _get_node_path(self, node: ChatNode) -> List[str]:
+        """Get the path from root to this node"""
+        path = []
+        current = node
+        while current is not None:
+            path.append(current.summary)
+            current = current.parent
+        path.reverse()
+        return path
+
+    def render_conversation_tree(self, conversation_id: str, search_query: str = "", 
+                                search_scope: str = "all", max_results: int = 10) -> str:
         """
         Render the conversation tree as a text-based tree structure.
         Shows all topics in a hierarchical view with the current topic marked.
         
+        If search_query is provided, filters the tree to show only matching nodes
+        and their paths, creating a focused view of relevant content.
+        
         Args:
             conversation_id: Conversation ID
+            search_query: Optional search query to filter the tree
+            search_scope: Search scope when filtering ("all", "topics", "context", "bookmarks", "current_branch")
+            max_results: Maximum number of matching nodes to show
             
         Returns:
             String containing the rendered tree text
@@ -336,6 +515,15 @@ class ChatForkManager:
         current_node = self.conversations[conversation_id]
         root_node = self._find_root(current_node)
         
+        if search_query:
+            # Search mode: filter tree to show only matching nodes and their paths
+            return self._render_filtered_tree(root_node, current_node, search_query, search_scope, max_results)
+        else:
+            # Normal mode: show complete tree
+            return self._render_complete_tree(root_node, current_node)
+    
+    def _render_complete_tree(self, root_node: ChatNode, current_node: ChatNode) -> str:
+        """Render the complete conversation tree"""
         # Build the tree representation
         tree_lines = []
         self._render_node(root_node, current_node, tree_lines, "", True, True)  # Mark as root
@@ -353,6 +541,153 @@ class ChatForkManager:
                 result += f"  🔖 {bookmark['name']}: {bookmark['topic']}\n"
         
         return result
+    
+    def _render_filtered_tree(self, root_node: ChatNode, current_node: ChatNode, 
+                             search_query: str, search_scope: str, max_results: int) -> str:
+        """Render a filtered tree showing only matching nodes and their paths"""
+        
+        # First, find all matching nodes
+        results = []
+        self._search_recursive(root_node, search_query, search_scope, results, current_node)
+        
+        # Sort by relevance and limit results
+        results.sort(key=lambda x: x['relevance_score'], reverse=True)
+        if max_results > 0:
+            results = results[:max_results]
+        
+        if not results:
+            return f"🔍 No matches found for '{search_query}'"
+        
+        # Collect all nodes that should be visible (matching nodes + their paths)
+        visible_nodes = set()
+        matching_nodes = {}  # Store match info for each node
+        
+        for result in results:
+            # Find the actual node object for this result
+            matching_node = self._find_node_by_summary_and_path(root_node, result['node_summary'], result['path'])
+            if matching_node:
+                matching_nodes[matching_node] = result
+                
+                # Add this node and its entire path to root
+                current = matching_node
+                while current is not None:
+                    visible_nodes.add(current)
+                    current = current.parent
+        
+        # Render the filtered tree
+        tree_lines = []
+        tree_lines.append(f"🔍 Search Results for: '{search_query}' (Scope: {search_scope})")
+        tree_lines.append(f"📊 Found {len(results)} matching node(s)")
+        tree_lines.append("")
+        
+        self._render_filtered_node(root_node, current_node, tree_lines, "", True, True, 
+                                  visible_nodes, matching_nodes)
+        
+        return "\n".join(tree_lines)
+    
+    def _find_node_by_summary_and_path(self, root_node: ChatNode, summary: str, path: list) -> Optional[ChatNode]:
+        """Find a node by its summary and path"""
+        if len(path) == 1 and root_node.summary == summary:
+            return root_node
+        
+        return self._find_node_recursive(root_node, summary, path, 0)
+    
+    def _find_node_recursive(self, node: ChatNode, target_summary: str, path: list, depth: int) -> Optional[ChatNode]:
+        """Recursively find a node by following the path"""
+        if depth >= len(path):
+            return None
+        
+        if node.summary != path[depth]:
+            return None
+        
+        if depth == len(path) - 1:
+            # We've reached the end of the path
+            return node if node.summary == target_summary else None
+        
+        # Continue searching in children
+        for child in node.children:
+            result = self._find_node_recursive(child, target_summary, path, depth + 1)
+            if result:
+                return result
+        
+        return None
+    
+    def _render_filtered_node(self, node: ChatNode, current_node: ChatNode, tree_lines: list, 
+                             prefix: str, is_last: bool, is_root: bool, 
+                             visible_nodes: set, matching_nodes: dict) -> None:
+        """Render a node in filtered mode (only if it's visible)"""
+        
+        if node not in visible_nodes:
+            return
+        
+        # Determine the marker for current position
+        current_marker = " 👈 [HERE]" if node == current_node else ""
+        
+        # Add pause type and bookmark indicators
+        pause_type = getattr(node, '_pause_type', '')
+        type_indicator = ""
+        if pause_type:
+            type_indicator = " [N]" if pause_type == "nested" else " [P]" if pause_type == "parallel" else ""
+        
+        # Add bookmark indicator
+        bookmark_indicator = f" 🔖[{node.bookmark_name}]" if node.is_bookmarked else ""
+        
+        # Add match indicator if this node has matches
+        match_indicator = ""
+        if node in matching_nodes:
+            score = matching_nodes[node]['relevance_score']
+            match_indicator = f" 🎯({score:.1f})"
+        
+        # Main topic line
+        if is_root:
+            line = f"{node.summary}{type_indicator}{bookmark_indicator}{match_indicator}{current_marker}"
+        else:
+            connector = "└── " if is_last else "├── "
+            line = f"{prefix}{connector}{node.summary}{type_indicator}{bookmark_indicator}{match_indicator}{current_marker}"
+        
+        tree_lines.append(line)
+        
+        # Add context details and match details for relevant nodes
+        show_context = node.is_bookmarked or node == current_node
+        show_matches = node in matching_nodes
+        
+        if (show_context or show_matches) and not is_root:
+            detail_prefix = prefix + ("    " if is_last else "│   ")
+        elif (show_context or show_matches) and is_root:
+            detail_prefix = ""
+        else:
+            detail_prefix = None
+        
+        if detail_prefix is not None:
+            # Show regular context for bookmarked or current nodes
+            if show_context and node.current_context:
+                context_line = f"{detail_prefix}    └─ Context: {node.current_context[:60]}..."
+                tree_lines.append(context_line)
+            
+            # Show match details directly in the tree for matching nodes
+            if show_matches:
+                matches = matching_nodes[node]['match_details']
+                for i, match in enumerate(matches[:3]):  # Show top 3 matches
+                    match_prefix = "🎯" if i == 0 else "  "
+                    # Truncate long match values
+                    match_value = match['value'][:50] + "..." if len(match['value']) > 50 else match['value']
+                    match_line = f"{detail_prefix}    └─ {match_prefix} {match['field']}: {match_value}"
+                    tree_lines.append(match_line)
+        
+        # Render visible children
+        visible_children = [child for child in node.children if child in visible_nodes]
+        
+        if len(visible_children) > 0:
+            for i, child in enumerate(visible_children):
+                is_last_child = (i == len(visible_children) - 1)
+                
+                if is_root:
+                    child_prefix = ""
+                else:
+                    child_prefix = prefix + ("    " if is_last else "│   ")
+                
+                self._render_filtered_node(child, current_node, tree_lines, child_prefix, 
+                                          is_last_child, False, visible_nodes, matching_nodes)
     
     def _render_node(self, node: ChatNode, current_node: ChatNode, tree_lines: List[str], 
                      prefix: str, is_last: bool, is_root: bool = False) -> None:
