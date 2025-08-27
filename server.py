@@ -76,49 +76,55 @@ def todo_command(
         return f"Unknown action: {action}. Valid actions: add-batch, update, delete, get, list"
     
 
-@mcp.tool(name='chat_fork', description="The Chat Fork Tool is used to manage conversation branches when the discussion shifts into a new topic or subtopic. Instead of updating context after every message, the LLM should call this tool only at key decision points. When the conversation diverges, the LLM can create a new branch to capture a summarized snapshot of the current context, and when the user finishes with that branch, the LLM can return to the parent branch to resume the previous discussion. This allows the conversation to be managed as a tree of nodes, making it easier to preserve reasoning state, backtrack, and switch topics smoothly.")
+@mcp.tool(name='chat_fork', description="The Chat Fork Tool manages conversation branches with intuitive pause/resume actions. When you detect a topic shift, use 'pause_topic' to automatically save current state and switch to the new topic. When the side topic is complete, use 'resume_topic' to return to the previously paused discussion with full context restoration. This creates a natural conversation flow like yield/return patterns in programming.")
 def chat_fork_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")], 
-    action: Annotated[str, Field(description="The operation to perform on conversation branches", enum=["fork_topic", "return_to_previous_context", "get_current_context", "list_subtopics"])], 
-    summary: Annotated[Optional[str], Field(description="Summary description of the current topic/branch. Required only for 'fork_topic' action.", default=None)],
-    details: Annotated[Optional[str], Field(description="Detailed information about the current topic/branch for future reference. Optional for 'fork_topic' action.", default="")],
-    include_details: Annotated[Optional[bool], Field(description="Whether to include detailed information when listing subtopics. Optional for 'list_subtopics' action.", default=False)]
+    action: Annotated[str, Field(description="The operation to perform on conversation branches", enum=["pause_topic", "resume_topic"])], 
+    new_topic: Annotated[Optional[str], Field(description="The new topic to switch to. Required for 'pause_topic' action.", default=None)],
+    state_update: Annotated[Optional[str], Field(description="Update to current conversation state when pausing. Optional for 'pause_topic' action.", default="")],
+    pause_type: Annotated[Optional[str], Field(description="Type of pause: 'nested' (dive deeper into current topic) or 'parallel' (switch to different topic). Optional for 'pause_topic' action.", enum=["nested", "parallel"], default="nested")],
+    resume_type: Annotated[Optional[str], Field(description="How to resume: 'auto' (smart resume based on pause type), 'parent' (to parent topic), 'root' (to main topic). Optional for 'resume_topic' action.", enum=["auto", "parent", "root"], default="auto")],
+    completed_summary: Annotated[Optional[str], Field(description="Summary of the completed topic when resuming. Optional for 'resume_topic' action.", default="")]
 ):
     """
-    Chat Fork Tool with Simple Parameter Interface
+    Chat Fork Tool - Intuitive Pause/Resume Interface
     
-    Manages conversation topic branches with clear, direct parameters.
+    Manages conversation topic branches with natural pause/resume actions.
+
+    Core Actions:
+    - pause_topic: Pause current discussion and switch to a new topic (automatically saves state)
+    - resume_topic: Complete current topic and resume the previously paused discussion
 
     Parameters:
     - conversation_id (str, required): Unique identifier of the conversation
-    - action (str, required): Must be one of ["fork_topic", "return_to_previous_context", "get_current_context", "list_subtopics"]
-    - summary (str): Topic summary (required only for "fork_topic" action)
-    - details (str): Detailed information for future reference (optional for "fork_topic" action)
-    - include_details (bool): Whether to include details when listing subtopics (optional for "list_subtopics" action)
+    - action (str, required): One of ["pause_topic", "resume_topic"]
+    
+    For pause_topic:
+    - new_topic (str, required): The new topic to switch to
+    - state_update (str, optional): Update or description of current conversation state
+    - pause_type (str, optional): "nested" for diving deeper, "parallel" for switching topics
+    
+    For resume_topic:
+    - completed_summary (str, optional): Summary of what was completed in the current topic
+    - resume_type (str, optional): "auto" for smart resume, "parent" for parent topic, "root" for main topic
 
     Usage Examples:
-    1. Fork new topic: chat_fork_command("conv1", "fork_topic", summary="Discussing authentication implementation", details="Exploring JWT vs OAuth2 options, security considerations, and implementation timeline")
-    2. Return to previous context: chat_fork_command("conv1", "return_to_previous_context") 
-    3. Get current context: chat_fork_command("conv1", "get_current_context")
-    4. List subtopics: chat_fork_command("conv1", "list_subtopics")
-    5. List subtopics with details: chat_fork_command("conv1", "list_subtopics", include_details=True)
+    1. Nested pause (dive deeper): chat_fork_command("conv1", "pause_topic", new_topic="API security details", state_update="Designing user authentication", pause_type="nested")
+    2. Parallel pause (switch topics): chat_fork_command("conv1", "pause_topic", new_topic="Team meeting discussion", state_update="Working on database design", pause_type="parallel")  
+    3. Auto resume: chat_fork_command("conv1", "resume_topic", completed_summary="Security implementation completed")
+    4. Resume to specific level: chat_fork_command("conv1", "resume_topic", completed_summary="Meeting done", resume_type="root")
     """
-    if action == "fork_topic":
-        if not summary:
-            return "Error: summary is required for fork_topic action"
-        return chat_fork_manager.fork_topic(conversation_id, summary, details or "")
-
-    elif action == "return_to_previous_context":
-        return str(chat_fork_manager.return_to_previous_context(conversation_id))
-
-    elif action == "get_current_context":
-        return str(chat_fork_manager.get_current_context(conversation_id))
-
-    elif action == "list_subtopics":
-        return chat_fork_manager.list_subtopics(conversation_id, include_details or False)
+    
+    if action == "pause_topic":
+        if not new_topic:
+            return "Error: new_topic is required for pause_topic action"
+        return chat_fork_manager.pause_topic(conversation_id, new_topic, state_update or "", pause_type or "nested")
+    
+    elif action == "resume_topic":
+        return chat_fork_manager.resume_topic(conversation_id, completed_summary or "", resume_type or "auto")
 
     else:
-        return f"Unknown action: {action}. Valid actions: fork_topic, return_to_previous_context, get_current_context, list_subtopics"
+        return f"Unknown action: {action}. Valid actions: pause_topic, resume_topic"
     
 
 @mcp.tool(name="diagram_tool", description="Use this tool for visualizing relationships, dependencies, and hierarchical structures between entities. Create flowcharts for processes, organizational charts for hierarchies, mind maps for concept exploration, or dependency trees for system architecture. Best for showing how things connect, flow, or depend on each other. Use when you need to map relationships, visualize system architecture, or show process flows rather than just listing items.")
@@ -266,4 +272,4 @@ def structured_knowledge_command(
         return f"Unknown action: {action}. Valid actions: create, batch_add_rows, batch_update_rows, batch_operations, render, metrics"
 
 if __name__ == "__main__":
-    mcp.run(transport='http',  host='127.0.0.1', port=8000, path='/mcp')  # 启动 MCP Server
+    mcp.run(transport='http',  host='127.0.0.1', port=8000, path='/mcp')  # Start MCP Server

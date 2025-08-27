@@ -5,208 +5,197 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tools.chat_fork import ChatForkManager, ChatNode
 
-class TestChatForkManager(unittest.TestCase):
+class TestChatForkEnglish(unittest.TestCase):
     def setUp(self):
         self.manager = ChatForkManager()
         self.conv_id = "test_conversation"
+    
+    def test_pause_topic_basic(self):
+        """Test basic pause_topic functionality"""
+        result = self.manager.pause_topic(self.conv_id, "Database Design", "Starting e-commerce project")
         
-    def test_chat_node_class(self):
-        # Test creating a ChatNode
-        node = ChatNode("Root Node")
-        self.assertEqual(node.summary, "Root Node")
-        self.assertEqual(node.details, "")
-        self.assertIsNone(node.parent)
-        self.assertEqual(node.children, [])
-        
-        # Test creating a ChatNode with details
-        node_with_details = ChatNode("Detailed Node", "This is detailed information")
-        self.assertEqual(node_with_details.summary, "Detailed Node")
-        self.assertEqual(node_with_details.details, "This is detailed information")
-        
-        # Test creating a child node
-        parent_node = ChatNode("Parent Node")
-        child_node = ChatNode("Child Node", "Child details", parent=parent_node)
-        self.assertEqual(child_node.summary, "Child Node")
-        self.assertEqual(child_node.details, "Child details")
-        self.assertEqual(child_node.parent, parent_node)
-        
-    def test_fork_topic(self):
-        # Test forking a topic in a new conversation
-        result = self.manager.fork_topic(self.conv_id, "First Topic")
-        self.assertEqual(result, "Forked new topic: First Topic")
-        
-        # Test forking a topic with details
-        result = self.manager.fork_topic(self.conv_id, "Detailed Topic", "This topic has detailed information")
-        self.assertEqual(result, "Forked new topic: Detailed Topic")
-        
-        # Verify the conversation structure in detail
-        self.assertIn(self.conv_id, self.manager.conversations)
-        current_node = self.manager.conversations[self.conv_id]
-        
-        # Check current node properties
-        self.assertEqual(current_node.summary, "Detailed Topic")
-        self.assertEqual(current_node.details, "This topic has detailed information")
-        self.assertIsNotNone(current_node.parent)
-        self.assertEqual(current_node.parent.summary, "First Topic")
-        self.assertEqual(len(current_node.children), 0)  # No children yet
-        
-        # Check parent node properties
-        parent_node = current_node.parent
-        self.assertEqual(parent_node.summary, "First Topic")
-        self.assertEqual(parent_node.details, "")  # No details for first topic
-        self.assertIsNotNone(parent_node.parent)  # Has grandparent (root)
-        self.assertEqual(len(parent_node.children), 1)  # One child (Detailed Topic)
-        
-        # Check root node properties
-        root_node = parent_node.parent
-        self.assertEqual(root_node.summary, "Conversation Root")
-        self.assertIsNone(root_node.parent)  # Root has no parent
-        self.assertEqual(len(root_node.children), 1)  # One child (First Topic)
-        
-        # Test forking another topic
-        result = self.manager.fork_topic(self.conv_id, "Second Topic")
-        self.assertEqual(result, "Forked new topic: Second Topic")
-        
-        # Verify updated structure
-        current_node = self.manager.conversations[self.conv_id]
-        self.assertEqual(current_node.summary, "Second Topic")
-        
-        # Verify parent-child relationship
-        parent_node = current_node.parent
-        self.assertEqual(parent_node.summary, "Detailed Topic")
-        self.assertEqual(len(parent_node.children), 1)
-        self.assertEqual(parent_node.children[0], current_node)
-        
-        # Verify grandparent relationship
-        grandparent = parent_node.parent
-        self.assertEqual(grandparent.summary, "First Topic")
-        
-        # Create a complex conversation tree
-        self.manager.return_to_previous_context(self.conv_id)  # Back to Detailed Topic
-        self.manager.fork_topic(self.conv_id, "Branch A")
-        self.manager.return_to_previous_context(self.conv_id)  # Back to Detailed Topic
-        self.manager.fork_topic(self.conv_id, "Branch B")
-        
-        # Verify tree structure
-        current_node = self.manager.conversations[self.conv_id]
-        self.assertEqual(current_node.summary, "Branch B")
-        parent = current_node.parent
-        self.assertEqual(parent.summary, "Detailed Topic")
-        self.assertEqual(len(parent.children), 3)  # Second Topic, Branch A, Branch B
-        
-        # Verify sibling summaries
-        sibling_summaries = [child.summary for child in parent.children]
-        self.assertIn("Second Topic", sibling_summaries)
-        self.assertIn("Branch A", sibling_summaries)
-        self.assertIn("Branch B", sibling_summaries)
-        
-    def test_return_to_previous_context(self):
-        # Create a conversation with multiple levels
-        self.manager.fork_topic(self.conv_id, "Level 1")
-        self.manager.fork_topic(self.conv_id, "Level 2", "Details for level 2")
-        self.manager.fork_topic(self.conv_id, "Level 3")
-        
-        # Test returning to previous context
-        result = self.manager.return_to_previous_context(self.conv_id)
-        self.assertIsInstance(result, dict)
         self.assertEqual(result["status"], "success")
-        self.assertIn("Returned to previous context: Level 2", result["message"])
-        self.assertEqual(result["summary"], "Level 2")
-        self.assertEqual(result["details"], "Details for level 2")
-        self.assertTrue(result["has_details"])
+        self.assertEqual(result["current_topic"], "Database Design")
+        self.assertEqual(result["paused_topic"], "Main conversation")
+        self.assertEqual(result["action"], "topic_paused")
+    
+    def test_resume_topic_basic(self):
+        """Test basic resume_topic functionality"""
+        # Pause first
+        self.manager.pause_topic(self.conv_id, "API Design", "Database planning done")
         
-        current_node = self.manager.conversations[self.conv_id]
-        self.assertEqual(current_node.summary, "Level 2")
+        # Resume
+        result = self.manager.resume_topic(self.conv_id, "API design completed")
         
-        # Return to previous context again
-        result = self.manager.return_to_previous_context(self.conv_id)
         self.assertEqual(result["status"], "success")
-        self.assertIn("Returned to previous context: Level 1", result["message"])
-        self.assertEqual(result["summary"], "Level 1")
-        self.assertEqual(result["details"], "")
-        self.assertFalse(result["has_details"])
+        self.assertEqual(result["resumed_topic"], "Main conversation")
+        self.assertEqual(result["completed_topic"], "API Design")
+    
+    def test_nested_vs_parallel_pause(self):
+        """Test difference between nested and parallel pause"""
+        # Start with a topic
+        self.manager.pause_topic(self.conv_id, "Project Planning", "Initial setup")
         
-        # Return to root
-        result = self.manager.return_to_previous_context(self.conv_id)
-        self.assertEqual(result["status"], "success")
-        self.assertIn("Returned to previous context: Conversation Root", result["message"])
+        # Nested pause - should create child under Project Planning
+        result1 = self.manager.pause_topic(
+            self.conv_id, 
+            "Technical Stack", 
+            "Planning phase complete", 
+            pause_type="nested"
+        )
+        self.assertEqual(result1["pause_type"], "nested")
         
-        # Try to return past root
-        result = self.manager.return_to_previous_context(self.conv_id)
-        self.assertEqual(result["status"], "error")
-        self.assertIn("Already at root context", result["message"])
+        # Parallel pause - should create sibling under same parent
+        result2 = self.manager.pause_topic(
+            self.conv_id,
+            "Team Meeting",
+            "Tech stack discussion in progress", 
+            pause_type="parallel"
+        )
+        self.assertEqual(result2["pause_type"], "parallel")
         
-        # Test returning in a non-existent conversation
-        result = self.manager.return_to_previous_context("nonexistent")
-        self.assertIn("error", result)
-        self.assertIn("Conversation not found", result["error"])
+        # Verify structure
+        current_node = self.manager.conversations[self.conv_id]  # Team Meeting
+        self.assertEqual(current_node.summary, "Team Meeting")
         
-    def test_get_current_context(self):
-        # Test getting context for a non-existent conversation
-        result = self.manager.get_current_context("nonexistent")
-        self.assertIn("error", result)
-        self.assertIn("Conversation not found", result["error"])
+        # Team Meeting should be sibling of Technical Stack under Project Planning
+        project_node = current_node.parent
+        self.assertEqual(project_node.summary, "Project Planning")
         
-        # Create a conversation and test
-        self.manager.fork_topic(self.conv_id, "Test Topic")
-        result = self.manager.get_current_context(self.conv_id)
-        self.assertEqual(result["summary"], "Test Topic")
-        self.assertEqual(result["details"], "")
-        self.assertFalse(result["has_details"])
+        # Verify both children exist under Project Planning
+        children_names = [child.summary for child in project_node.children]
+        self.assertIn("Technical Stack", children_names)
+        self.assertIn("Team Meeting", children_names)
+    
+    def test_fixed_parallel_logic(self):
+        """Test that parallel pause creates siblings correctly (not uncles)"""
+        # Create nested structure: Root -> A -> B -> C
+        self.manager.pause_topic(self.conv_id, "Topic A", "Root context")
+        self.manager.pause_topic(self.conv_id, "Topic B", "A progress", pause_type="nested")
+        self.manager.pause_topic(self.conv_id, "Topic C", "B progress", pause_type="nested")
         
-        # Fork again with details and test
-        self.manager.fork_topic(self.conv_id, "Subtopic", "Detailed information about subtopic")
-        result = self.manager.get_current_context(self.conv_id)
-        self.assertEqual(result["summary"], "Subtopic")
-        self.assertEqual(result["details"], "Detailed information about subtopic")
-        self.assertTrue(result["has_details"])
+        # Parallel pause from C should create D as sibling of C under B
+        result = self.manager.pause_topic(self.conv_id, "Topic D", "C context", pause_type="parallel")
         
-    def test_list_subtopics(self):
-        # Test listing subtopics for a non-existent conversation
-        result = self.manager.list_subtopics("nonexistent")
-        self.assertEqual(result, [])
+        topic_d = self.manager.conversations[self.conv_id]
+        self.assertEqual(topic_d.summary, "Topic D")
         
-        # Create a conversation root
-        self.manager.fork_topic(self.conv_id, "Root Topic")
+        # D should be sibling of C, so parent should be B
+        self.assertEqual(topic_d.parent.summary, "Topic B")
         
-        # Initially, there should be no subtopics
-        result = self.manager.list_subtopics(self.conv_id)
-        self.assertEqual(result, [])
+        # Verify B has both C and D as children
+        topic_b = topic_d.parent
+        children_names = [child.summary for child in topic_b.children]
+        self.assertIn("Topic C", children_names)
+        self.assertIn("Topic D", children_names)
+    
+    def test_auto_resume_behavior(self):
+        """Test automatic resume behavior based on pause type"""
+        # Create nested structure
+        self.manager.pause_topic(self.conv_id, "Main Topic", "Starting discussion")
+        self.manager.pause_topic(self.conv_id, "Sub Topic", "Main progress", pause_type="nested")
         
-        # Go back to root and add multiple subtopics
-        self.manager.return_to_previous_context(self.conv_id)
-        self.manager.fork_topic(self.conv_id, "Subtopic 1", "Details for subtopic 1")
-        self.manager.return_to_previous_context(self.conv_id)
-        self.manager.fork_topic(self.conv_id, "Subtopic 2")
-        self.manager.return_to_previous_context(self.conv_id)
+        # Resume from nested should go to parent
+        result1 = self.manager.resume_topic(self.conv_id, "Sub completed", resume_type="auto")
+        self.assertEqual(result1["resumed_topic"], "Main Topic")
+        self.assertEqual(result1["actual_resume_type"], "nested")
         
-        # Test listing subtopics from the root without details
-        result = self.manager.list_subtopics(self.conv_id)
-        self.assertEqual(len(result), 3)  # Root Topic, Subtopic 1, Subtopic 2
-        self.assertIn("Root Topic", result)
-        self.assertIn("Subtopic 1", result)
-        self.assertIn("Subtopic 2", result)
+        # Create parallel structure
+        self.manager.pause_topic(self.conv_id, "Side Topic", "Main continues", pause_type="parallel")
         
-        # Test listing subtopics with details
-        result = self.manager.list_subtopics(self.conv_id, include_details=True)
-        self.assertEqual(len(result), 3)
-        # Check that details are included in the output
-        subtopic_1_found = False
-        subtopic_2_found = False
-        for item in result:
-            if "Subtopic 1" in item:
-                self.assertIn("Details for subtopic 1", item)
-                subtopic_1_found = True
-            elif "Subtopic 2" in item:
-                self.assertIn("No details", item)
-                subtopic_2_found = True
-        self.assertTrue(subtopic_1_found)
-        self.assertTrue(subtopic_2_found)
+        # Resume from parallel should go back to original paused location
+        result2 = self.manager.resume_topic(self.conv_id, "Side completed", resume_type="auto")
+        self.assertEqual(result2["resumed_topic"], "Main Topic")
+        self.assertEqual(result2["actual_resume_type"], "parallel")
+    
+    def test_deep_nesting_workflow(self):
+        """Test deep nesting and resuming workflow"""
+        # Create deep nested structure
+        self.manager.pause_topic(self.conv_id, "Layer1", "Base context")
+        self.manager.pause_topic(self.conv_id, "Layer2", "L1 progress", pause_type="nested")
+        self.manager.pause_topic(self.conv_id, "Layer3", "L2 progress", pause_type="nested")
         
-        # Test listing subtopics from a leaf node
-        self.manager.fork_topic(self.conv_id, "Subtopic 3")
-        result = self.manager.list_subtopics(self.conv_id)
-        self.assertEqual(result, [])  # Leaf node has no children
+        # Resume layer by layer
+        result1 = self.manager.resume_topic(self.conv_id, "L3 done")
+        self.assertEqual(result1["resumed_topic"], "Layer2")
+        
+        result2 = self.manager.resume_topic(self.conv_id, "L2 done")
+        self.assertEqual(result2["resumed_topic"], "Layer1")
+        
+        result3 = self.manager.resume_topic(self.conv_id, "L1 done")
+        self.assertEqual(result3["resumed_topic"], "Main conversation")
+    
+    def test_mixed_pause_types(self):
+        """Test mixing nested and parallel pauses"""
+        # Start main discussion
+        self.manager.pause_topic(self.conv_id, "System Design", "Architecture planning")
+        
+        # Nested: dive into database
+        self.manager.pause_topic(self.conv_id, "Database", "System design ongoing", pause_type="nested")
+        
+        # Parallel: switch to urgent meeting (sibling of Database under System Design)
+        self.manager.pause_topic(self.conv_id, "Urgent Meeting", "DB design halfway", pause_type="parallel")
+        
+        # Resume should go back to Database (the paused location)
+        result = self.manager.resume_topic(self.conv_id, "Meeting done", resume_type="auto")
+        self.assertEqual(result["resumed_topic"], "Database")
+        
+        # Complete Database, should go back to System Design
+        result2 = self.manager.resume_topic(self.conv_id, "DB design done", resume_type="auto")
+        self.assertEqual(result2["resumed_topic"], "System Design")
+    
+    def test_mixed_pause_types_workflow_fixed(self):
+        """Test complete workflow mixing nested and parallel pauses"""
+        # Start main discussion
+        self.manager.pause_topic(self.conv_id, "System Architecture", "Starting overall design")
+        
+        # Nested: dive into database discussion
+        self.manager.pause_topic(self.conv_id, "Database Design", "Architecture design in progress", pause_type="nested")
+        
+        # Nested again: dive into table structure
+        self.manager.pause_topic(self.conv_id, "Table Structure Design", "Database selection completed", pause_type="nested")
+        
+        # Parallel switch: temporarily discuss urgent issue (should be sibling of Table Structure under Database Design)
+        self.manager.pause_topic(self.conv_id, "Urgent Bug Fix", "Table structure design halfway", pause_type="parallel")
+        
+        # Complete urgent issue, auto resume to table structure design
+        result1 = self.manager.resume_topic(self.conv_id, "Bug fixed", resume_type="auto")
+        self.assertEqual(result1["resumed_topic"], "Table Structure Design")
+        
+        # Complete table structure, resume to database design
+        result2 = self.manager.resume_topic(self.conv_id, "Table structure design completed", resume_type="auto")
+        self.assertEqual(result2["resumed_topic"], "Database Design")
+        
+        # Complete database design, resume to system architecture
+        result3 = self.manager.resume_topic(self.conv_id, "Database design completed", resume_type="auto")
+        self.assertEqual(result3["resumed_topic"], "System Architecture")
+        
+        # Verify the entire discussion tree structure and content are correctly saved
+        root = self.manager.conversations[self.conv_id]  # System Architecture
+        self.assertEqual(root.summary, "System Architecture")
+        
+        # Navigate the tree structure
+        arch_node = root  # We're currently at System Architecture
+        
+        # System Architecture should have Database Design as child
+        self.assertEqual(len(arch_node.children), 1)
+        db_node = arch_node.children[0]
+        self.assertEqual(db_node.summary, "Database Design")
+        self.assertEqual(db_node.details, "Database design completed")
+        
+        # Database Design should have both Table Structure and Bug Fix as children (siblings)
+        self.assertEqual(len(db_node.children), 2)
+        
+        # Find the children by name
+        children_by_name = {child.summary: child for child in db_node.children}
+        
+        table_node = children_by_name["Table Structure Design"]
+        bug_node = children_by_name["Urgent Bug Fix"]
+        
+        self.assertEqual(table_node.summary, "Table Structure Design")
+        self.assertEqual(table_node.details, "Table structure design completed")
+        self.assertEqual(bug_node.summary, "Urgent Bug Fix")
+        self.assertEqual(bug_node.details, "Bug fixed")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
