@@ -929,6 +929,13 @@ class StatisticalEvidenceTool:
                     # Chi-square test
                     results["chi_square"] = self._perform_chi_square_test(var1_values, var2_values, var1_name, var2_name)
             
+            elif analysis_type == "frequency_analysis" and data:
+                # Handle frequency analysis for one or more categorical variables
+                for var_name, var_values in data.items():
+                    if isinstance(var_values, list):
+                        results[f"frequency"] = self._calculate_frequency_distribution(var_values, var_name)
+                        break  # Only analyze the first variable for frequency_analysis
+            
             # Store analysis in conversation history
             analysis_record = {
                 "analysis_type": analysis_type,
@@ -1314,6 +1321,7 @@ class StatisticalEvidenceTool:
         statistical_findings = []
         correlations_found = []
         group_comparisons = []
+        categorical_analyses = []
         
         for i, analysis in enumerate(analyses, 1):
             results = analysis.get('results', {})
@@ -1347,9 +1355,31 @@ class StatisticalEvidenceTool:
                 correlations_found.append(
                     f"Analysis #{i}: r = {r_value:.3f}, p = {p_value:.3f}, {direction.lower()} {strength.lower()}"
                 )
+            
+            # Add chi-square test results
+            if 'chi_square' in results and 'error' not in results['chi_square']:
+                chi_result = results['chi_square']
+                chi_stat = chi_result.get('chi_square_statistic', 0)
+                p_value = chi_result.get('p_value', 1.0)
+                cramers_v = chi_result.get('cramers_v', 0)
+                effect_size = chi_result.get('effect_size_category', 'unknown')
+                categorical_analyses.append(
+                    f"Analysis #{i}: Chi-square χ² = {chi_stat:.3f}, p = {p_value:.3f}, Cramér's V = {cramers_v:.3f}, {effect_size.lower()}"
+                )
+            
+            # Add frequency analysis results
+            if 'frequency' in results and 'error' not in results['frequency']:
+                freq_result = results['frequency']
+                total_obs = freq_result.get('total_observations', 0)
+                unique_cats = freq_result.get('unique_categories', 0)
+                entropy = freq_result.get('shannon_entropy', 0)
+                diversity_ratio = freq_result.get('diversity_ratio', 0)
+                categorical_analyses.append(
+                    f"Analysis #{i}: Frequency analysis n = {total_obs}, categories = {unique_cats}, entropy = {entropy:.3f}, diversity = {diversity_ratio:.3f}"
+                )
         
         # Display statistical summary without conclusions
-        if statistical_findings or correlations_found or group_comparisons:
+        if statistical_findings or correlations_found or group_comparisons or categorical_analyses:
             if statistical_findings:
                 output.append("� T-test Results:")
                 for finding in statistical_findings:
@@ -1364,6 +1394,11 @@ class StatisticalEvidenceTool:
                 output.append("👥 Group Comparison Results:")
                 for comparison in group_comparisons:
                     output.append(f"  • {comparison}")
+            
+            if categorical_analyses:
+                output.append("📊 Categorical Analysis Results:")
+                for categorical in categorical_analyses:
+                    output.append(f"  • {categorical}")
         else:
             output.append("• No statistical tests were performed across all analyses")
         
@@ -1383,7 +1418,21 @@ class StatisticalEvidenceTool:
                 for var in data_vars:
                     var_data = analysis['data'][var]
                     if isinstance(var_data, list):
-                        output.append(f"   • {var}: n = {len(var_data)}, range = [{min(var_data):.2f}, {max(var_data):.2f}]")
+                        # Check if data is numerical or categorical
+                        try:
+                            # Try to convert to float to check if numerical
+                            numeric_data = [float(x) for x in var_data if x is not None]
+                            if len(numeric_data) == len(var_data):
+                                # All data is numerical
+                                output.append(f"   • {var}: n = {len(var_data)}, range = [{min(numeric_data):.2f}, {max(numeric_data):.2f}]")
+                            else:
+                                # Mixed or categorical data
+                                unique_values = len(set(var_data))
+                                output.append(f"   • {var}: n = {len(var_data)}, unique values = {unique_values}")
+                        except (ValueError, TypeError):
+                            # Categorical data
+                            unique_values = len(set(var_data))
+                            output.append(f"   • {var}: n = {len(var_data)}, unique values = {unique_values}")
             
             if analysis.get('groups'):
                 group_names = list(analysis['groups'].keys())
@@ -1393,7 +1442,18 @@ class StatisticalEvidenceTool:
                 for group in group_names:
                     group_data = analysis['groups'][group]
                     if isinstance(group_data, list):
-                        output.append(f"   • {group}: n = {len(group_data)}, mean = {sum(group_data)/len(group_data):.2f}")
+                        try:
+                            # Try to calculate mean for numerical data
+                            numeric_data = [float(x) for x in group_data if x is not None]
+                            if len(numeric_data) == len(group_data):
+                                output.append(f"   • {group}: n = {len(group_data)}, mean = {sum(numeric_data)/len(numeric_data):.2f}")
+                            else:
+                                unique_values = len(set(group_data))
+                                output.append(f"   • {group}: n = {len(group_data)}, unique values = {unique_values}")
+                        except (ValueError, TypeError, ZeroDivisionError):
+                            # Categorical data or empty group
+                            unique_values = len(set(group_data)) if group_data else 0
+                            output.append(f"   • {group}: n = {len(group_data)}, unique values = {unique_values}")
             
             # Show key statistical results
             results = analysis.get('results', {})
@@ -1420,12 +1480,34 @@ class StatisticalEvidenceTool:
                 output.append(f"   📈 Relationship: {corr_result.get('direction', 'N/A')}, {corr_result.get('strength_category', 'N/A')}")
                 output.append(f"   📏 Variance explained: R² = {corr_result.get('r_squared', 'N/A')} ({corr_result.get('r_squared', 0)*100:.1f}%)")
                 output.append(f"   📋 Sample size: {corr_result.get('sample_size', 'N/A')}")
+            
+            # Add chi-square test details
+            if 'chi_square' in results and 'error' not in results['chi_square']:
+                chi_result = results['chi_square']
+                output.append(f"   📊 Results: χ² = {chi_result.get('chi_square_statistic', 'N/A')}, df = {chi_result.get('degrees_of_freedom', 'N/A')}")
+                output.append(f"   📈 {chi_result.get('p_value_display', 'p = N/A')}")
+                output.append(f"   📏 Effect size: {chi_result.get('effect_size_category', 'N/A')} (Cramér's V = {chi_result.get('cramers_v', 'N/A')})")
+                output.append(f"   📋 Sample size: {chi_result.get('sample_size', 'N/A')}")
+                
+                # Show contingency table dimensions if available
+                if 'contingency_table' in chi_result:
+                    rows = len(chi_result['contingency_table'])
+                    cols = len(chi_result['contingency_table'][0]) if rows > 0 else 0
+                    output.append(f"   📋 Contingency table: {rows} × {cols}")
+            
+            # Add frequency analysis details
+            if 'frequency' in results and 'error' not in results['frequency']:
+                freq_result = results['frequency']
+                output.append(f"   📊 Results: {freq_result.get('unique_categories', 'N/A')} categories, {freq_result.get('total_observations', 'N/A')} observations")
+                output.append(f"   📈 Mode: {freq_result.get('mode', 'N/A')} (count: {freq_result.get('mode_count', 'N/A')})")
+                output.append(f"   📏 Diversity: Shannon entropy = {freq_result.get('shannon_entropy', 'N/A')}")
+                output.append(f"   📋 Diversity ratio: {freq_result.get('diversity_ratio', 'N/A')} (1.0 = perfectly diverse)")
         
         # Section 3: Statistical Summary
         output.append("\n📈 STATISTICAL SUMMARY")
         output.append("─" * 25)
         
-        total_tests = len(statistical_findings) + len(correlations_found) + len(group_comparisons)
+        total_tests = len(statistical_findings) + len(correlations_found) + len(group_comparisons) + len(categorical_analyses)
         
         # Objective statistical facts only
         output.append(f"📊 Total analyses: {len(analyses)}")
@@ -1437,6 +1519,8 @@ class StatisticalEvidenceTool:
             output.append(f"🔗 Correlations calculated: {len(correlations_found)}")
         if group_comparisons:
             output.append(f"👥 Group comparisons performed: {len(group_comparisons)}")
+        if categorical_analyses:
+            output.append(f"📊 Categorical analyses performed: {len(categorical_analyses)}")
             
         # Effect size summary (without interpretation)
         effect_sizes_reported = 0
@@ -1445,6 +1529,8 @@ class StatisticalEvidenceTool:
             if 't_test' in results and 'cohens_d' in results.get('t_test', {}):
                 effect_sizes_reported += 1
             if 'anova' in results and 'eta_squared' in results.get('anova', {}):
+                effect_sizes_reported += 1
+            if 'chi_square' in results and 'cramers_v' in results.get('chi_square', {}):
                 effect_sizes_reported += 1
                     
         if effect_sizes_reported > 0:

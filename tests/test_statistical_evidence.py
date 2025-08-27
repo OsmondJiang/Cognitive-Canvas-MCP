@@ -459,5 +459,220 @@ class TestStatisticalEvidenceTool(unittest.TestCase):
         result = self.tool._calculate_correlation([1, 2, 3], [1, 2])
         self.assertIn("error", result)
 
+class TestRenderReportFunctionality(unittest.TestCase):
+    """Test render_report functionality with various analysis types"""
+    
+    def setUp(self):
+        """Set up test fixtures"""
+        self.tool = StatisticalEvidenceTool()
+        self.conv_id = "test_render_report"
+    
+    def test_render_report_empty_conversation(self):
+        """Test render_report with no analyses"""
+        result = self.tool.render_report("nonexistent_conv")
+        self.assertIn("No analyses found", result)
+    
+    def test_render_report_single_numerical_analysis(self):
+        """Test render_report with single numerical analysis"""
+        # Perform a t-test
+        data = {"before": [70, 72, 68], "after": [78, 80, 76]}
+        self.tool.analyze(self.conv_id, data, None, "paired_comparison")
+        
+        # Generate report
+        report = self.tool.render_report(self.conv_id)
+        
+        # Check report structure
+        self.assertIn("Comprehensive Statistical Analysis Report", report)
+        self.assertIn("STATISTICAL SUMMARY", report)
+        self.assertIn("T-test Results", report)
+        self.assertIn("DETAILED ANALYSIS RESULTS", report)
+        self.assertIn("Total analyses: 1", report)
+        self.assertIn("Statistical tests performed: 1", report)
+    
+    def test_render_report_categorical_analysis(self):
+        """Test render_report with categorical analysis (chi-square)"""
+        # Perform chi-square test
+        data = {
+            "device": ["Mobile", "Desktop", "Tablet", "Mobile", "Desktop"],
+            "conversion": ["Yes", "No", "Yes", "Yes", "No"]
+        }
+        self.tool.analyze(self.conv_id, data, None, "chi_square_test")
+        
+        # Generate report
+        report = self.tool.render_report(self.conv_id)
+        
+        # Check categorical analysis section
+        self.assertIn("Categorical Analysis Results", report)
+        self.assertIn("Chi-square", report)
+        self.assertIn("Cramér's V", report)
+        self.assertIn("unique values", report)  # Should show categorical data info
+        self.assertIn("Categorical analyses performed: 1", report)
+    
+    def test_render_report_frequency_analysis(self):
+        """Test render_report with frequency analysis"""
+        # Perform frequency analysis
+        data = {"feedback": ["Excellent", "Good", "Average", "Poor", "Excellent", "Good"]}
+        self.tool.analyze(self.conv_id, data, None, "frequency_analysis")
+        
+        # Generate report
+        report = self.tool.render_report(self.conv_id)
+        
+        # Check frequency analysis results
+        self.assertIn("Categorical Analysis Results", report)
+        self.assertIn("Frequency analysis", report)
+        self.assertIn("categories", report)
+        self.assertIn("observations", report)
+    
+    def test_render_report_mixed_analysis_types(self):
+        """Test render_report with mixed numerical and categorical analyses"""
+        # Numerical analysis (t-test)
+        numerical_data = {"before": [70, 72, 68], "after": [78, 80, 76]}
+        self.tool.analyze(self.conv_id, numerical_data, None, "paired_comparison")
+        
+        # Categorical analysis (chi-square) - need at least 5 observations
+        categorical_data = {
+            "age_group": ["18-25", "26-35", "36-45", "18-25", "26-35"],
+            "product": ["A", "B", "C", "A", "B"]
+        }
+        self.tool.analyze(self.conv_id, categorical_data, None, "chi_square_test")
+        
+        # Correlation analysis
+        correlation_data = {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]}
+        self.tool.analyze(self.conv_id, correlation_data, None, "correlation_analysis")
+        
+        # Generate report
+        report = self.tool.render_report(self.conv_id)
+        
+        # Check all analysis types are present
+        self.assertIn("T-test Results", report)
+        self.assertIn("Categorical Analysis Results", report) 
+        self.assertIn("Correlation Results", report)
+        self.assertIn("Total analyses: 3", report)
+        self.assertIn("Statistical tests performed: 3", report)
+        
+        # Check detailed sections
+        self.assertIn("Paired Comparison", report)
+        self.assertIn("Chi Square Test", report)
+        self.assertIn("Correlation Analysis", report)
+    
+    def test_render_report_effect_sizes_counting(self):
+        """Test that effect sizes are properly counted in report"""
+        # Analysis with Cohen's d
+        data = {"before": [70, 72, 68], "after": [78, 80, 76]}
+        self.tool.analyze(self.conv_id, data, None, "paired_comparison")
+        
+        # Analysis with Cramér's V - need at least 5 observations
+        categorical_data = {
+            "device": ["Mobile", "Desktop", "Tablet", "Mobile", "Desktop"],
+            "conversion": ["Yes", "No", "Yes", "Yes", "No"]
+        }
+        self.tool.analyze(self.conv_id, categorical_data, None, "chi_square_test")
+        
+        # Generate report
+        report = self.tool.render_report(self.conv_id)
+        
+        # Should count both effect sizes
+        self.assertIn("Effect sizes calculated: 2", report)
+        self.assertIn("Cohen's d", report)
+        self.assertIn("Cramér's V", report)
+
+class TestMixedDataTypeHandling(unittest.TestCase):
+    """Test handling of mixed numerical and categorical data types"""
+    
+    def setUp(self):
+        """Set up test fixtures"""
+        self.tool = StatisticalEvidenceTool()
+        self.conv_id = "test_mixed_data"
+    
+    def test_numerical_data_range_display(self):
+        """Test that numerical data shows range in reports"""
+        data = {"scores": [85, 92, 78, 88, 91]}
+        result = self.tool.analyze(self.conv_id, data, None, "descriptive")
+        
+        # Should not error with numerical data
+        self.assertIsInstance(result, str)
+        self.assertNotIn("error", result.lower())
+    
+    def test_categorical_data_unique_values_display(self):
+        """Test that categorical data shows unique values count"""
+        data = {"category": ["A", "B", "C", "A", "B", "A"]}
+        result = self.tool.analyze(self.conv_id, data, None, "frequency_analysis")
+        
+        # Should handle categorical data without trying to calculate min/max
+        self.assertIsInstance(result, str)
+        self.assertNotIn("error", result.lower())
+    
+    def test_mixed_numerical_categorical_in_render_report(self):
+        """Test render_report handles mixed data types correctly"""
+        # Add numerical analysis
+        numerical_data = {"values": [10, 15, 12, 18, 14]}
+        self.tool.analyze(self.conv_id, numerical_data, None, "descriptive")
+        
+        # Add categorical analysis  
+        categorical_data = {"categories": ["Red", "Blue", "Green", "Red", "Blue"]}
+        self.tool.analyze(self.conv_id, categorical_data, None, "frequency_analysis")
+        
+        # Generate report - should not crash on mixed data types
+        report = self.tool.render_report(self.conv_id)
+        
+        # Should handle both data types
+        self.assertIn("range =", report)  # Numerical data should show range
+        self.assertIn("unique values =", report)  # Categorical data should show unique count
+        self.assertNotIn("Unknown format code", report)  # Should not have format errors
+
+class TestStringDataBugFixes(unittest.TestCase):
+    """Test fixes for string data handling bugs"""
+    
+    def setUp(self):
+        """Set up test fixtures"""
+        self.tool = StatisticalEvidenceTool()
+        self.conv_id = "test_string_bugs"
+    
+    def test_string_data_no_min_max_error(self):
+        """Test that string data doesn't cause min/max errors"""
+        # String data that would cause min/max errors if not handled
+        string_data = {
+            "categories": ["High", "Medium", "Low", "High", "Low"],
+            "responses": ["Agree", "Disagree", "Neutral", "Agree", "Strongly Agree"]
+        }
+        
+        # Should not raise ValueError for string min/max
+        try:
+            result = self.tool.analyze(self.conv_id, string_data, None, "chi_square_test")
+            self.assertIsInstance(result, str)
+        except ValueError as e:
+            if "Unknown format code" in str(e):
+                self.fail(f"String formatting error not fixed: {e}")
+    
+    def test_unicode_string_handling(self):
+        """Test handling of unicode strings"""
+        unicode_data = {
+            "feedback": ["优秀", "良好", "一般", "较差", "优秀"],
+            "region": ["北京", "上海", "广州", "深圳", "北京"]
+        }
+        
+        # Should handle unicode strings without errors
+        try:
+            result = self.tool.analyze(self.conv_id, unicode_data, None, "chi_square_test")
+            self.assertIsInstance(result, str)
+            self.assertIn("Chi-Square Test", result)
+        except (UnicodeError, ValueError) as e:
+            self.fail(f"Unicode handling error: {e}")
+    
+    def test_mixed_string_numeric_data_safety(self):
+        """Test safety with mixed string and numeric data"""
+        # Use purely categorical data to ensure chi-square test
+        categorical_data = {
+            "grades": ["A", "B", "C", "A", "B"],        # Letter strings
+            "performance": ["High", "Low", "Medium", "High", "Low"]  # Performance strings
+        }
+        
+        # Should detect and handle appropriately
+        result = self.tool.analyze(self.conv_id, categorical_data, None, "chi_square_test")
+        self.assertIsInstance(result, str)
+        
+        # Should perform chi-square test for categorical data
+        self.assertIn("Chi-Square Test", result)
+
 if __name__ == "__main__":
     unittest.main()
