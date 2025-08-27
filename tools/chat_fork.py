@@ -319,54 +319,6 @@ class ChatForkManager:
         
         for child in node.children:
             self._list_bookmarks_recursive(child, bookmarks)
-
-    def search_conversation(self, conversation_id: str, query: str, 
-                           search_scope: str = "all", max_results: int = 10) -> dict:
-        """
-        Search for content across the conversation tree.
-        
-        Args:
-            conversation_id: Conversation ID
-            query: Search query string
-            search_scope: Search scope
-                - "all": Search all content
-                - "topics": Search only topic summaries
-                - "context": Search only context information
-                - "bookmarks": Search only bookmarked topics
-                - "current_branch": Search only current branch
-            max_results: Maximum number of results to return
-            
-        Returns:
-            Dictionary containing search results with relevance scores
-        """
-        if conversation_id not in self.conversations:
-            return {
-                "status": "error",
-                "message": "Conversation not found",
-                "results": []
-            }
-        
-        current_node = self.conversations[conversation_id]
-        root_node = self._find_root(current_node)
-        
-        # Collect all search results
-        results = []
-        self._search_recursive(root_node, query, search_scope, results, current_node)
-        
-        # Sort by relevance score (highest first)
-        results.sort(key=lambda x: x['relevance_score'], reverse=True)
-        
-        # Limit results
-        if max_results > 0:
-            results = results[:max_results]
-        
-        return {
-            "status": "success",
-            "query": query,
-            "search_scope": search_scope,
-            "total_results": len(results),
-            "results": results
-        }
     
     def _search_recursive(self, node: ChatNode, query: str, search_scope: str, 
                          results: List[dict], current_node: ChatNode) -> None:
