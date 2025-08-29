@@ -65,8 +65,9 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
         # Validate t-test structure
         t_test = results["t_test"]
         self.assertIn("test_type", t_test)
-        self.assertIn("statistical_results", t_test)
-        self.assertIn("effect_size", t_test)
+        self.assertIn("t_statistic", t_test)
+        self.assertIn("p_value", t_test)
+        self.assertIn("cohens_d", t_test)
     
     def test_two_group_comparison_json(self):
         """Test independent t-test JSON output"""
@@ -102,14 +103,14 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
         self.assertIn("correlation", results)
         
         correlation = results["correlation"]
-        self.assertIn("statistical_results", correlation)
-        self.assertIn("relationship_properties", correlation)
+        self.assertIn("correlation_coefficient", correlation)
+        self.assertIn("p_value", correlation)
+        self.assertIn("r_squared", correlation)
         
         # Check specific correlation metrics
-        stats = correlation["statistical_results"]
-        self.assertIn("pearson_r", stats)
-        self.assertIn("p_value", stats)
-        self.assertIn("r_squared", stats)
+        self.assertIn("correlation_coefficient", correlation)
+        self.assertIn("p_value", correlation)
+        self.assertIn("r_squared", correlation)
     
     def test_chi_square_test_json(self):
         """Test chi-square test JSON output"""
@@ -126,15 +127,17 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
         self.assertIn("chi_square", results)
         
         chi_square = results["chi_square"]
-        self.assertIn("statistical_results", chi_square)
-        self.assertIn("effect_size", chi_square)
+        self.assertIn("test_type", chi_square)
+        self.assertIn("chi_square_statistic", chi_square)
+        self.assertIn("p_value", chi_square)
+        self.assertIn("degrees_of_freedom", chi_square)
+        self.assertIn("cramers_v", chi_square)
         self.assertIn("contingency_table", chi_square)
         
         # Check specific chi-square metrics
-        stats = chi_square["statistical_results"]
-        self.assertIn("chi_square_statistic", stats)
-        self.assertIn("p_value", stats)
-        self.assertIn("degrees_of_freedom", stats)
+        self.assertIn("chi_square_statistic", chi_square)
+        self.assertIn("p_value", chi_square)
+        self.assertIn("degrees_of_freedom", chi_square)
     
     def test_frequency_analysis_json(self):
         """Test frequency analysis JSON output"""
@@ -149,15 +152,16 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
         self.assertTrue(len(freq_keys) > 0, "Should have frequency analysis results")
         
         freq_result = results[freq_keys[0]]
-        self.assertIn("summary_statistics", freq_result)
-        self.assertIn("frequency_distribution", freq_result)
-        self.assertIn("diversity_metrics", freq_result)
+        self.assertIn("variable_name", freq_result)
+        self.assertIn("total_observations", freq_result)
+        self.assertIn("unique_categories", freq_result)
+        self.assertIn("frequencies", freq_result)
+        self.assertIn("mode_category", freq_result)
         
         # Check specific frequency metrics
-        summary = freq_result["summary_statistics"]
-        self.assertIn("total_observations", summary)
-        self.assertIn("unique_categories", summary)
-        self.assertIn("mode", summary)
+        self.assertIn("total_observations", freq_result)
+        self.assertIn("unique_categories", freq_result)
+        self.assertIn("mode_category", freq_result)
     
     def test_auto_detection_numerical_single(self):
         """Test auto detection for single numerical variable"""

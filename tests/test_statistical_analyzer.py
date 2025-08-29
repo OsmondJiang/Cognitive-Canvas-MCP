@@ -192,8 +192,8 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         results = parsed_result["analysis_report"]["results"]
         self.assertIn("t_test", results)
         self.assertEqual(results["t_test"]["test_type"], "Independent t-test")
-        self.assertIn("t_statistic", results["t_test"]["statistical_results"])
-        self.assertIn("p_value", results["t_test"]["statistical_results"])
+        self.assertIn("t_statistic", results["t_test"])
+        self.assertIn("p_value", results["t_test"])
         
         # Test educational intervention
         edu_groups = {
@@ -208,8 +208,8 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         anova_results = anova_parsed["analysis_report"]["results"]
         self.assertIn("anova", anova_results)
         self.assertEqual(anova_results["anova"]["test_type"], "One-way ANOVA")
-        self.assertIn("f_statistic", anova_results["anova"]["statistical_results"])
-        self.assertIn("posthoc_analysis", anova_results["anova"])
+        self.assertIn("f_statistic", anova_results["anova"])
+        self.assertIn("posthoc_comparisons", anova_results["anova"])
         
         # Test correlation analysis
         corr_data = {"study_hours": self.study_hours, "test_scores": self.test_scores}
@@ -219,7 +219,7 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         corr_parsed = json.loads(corr_result)
         corr_results = corr_parsed["analysis_report"]["results"]
         self.assertIn("correlation", corr_results)
-        self.assertIn("pearson_r", corr_results["correlation"]["statistical_results"])
+        self.assertIn("correlation_coefficient", corr_results["correlation"])
         
         # Test paired comparison
         paired_data = {"before": self.before_training, "after": self.after_training}

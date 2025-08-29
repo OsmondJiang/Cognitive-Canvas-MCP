@@ -51,21 +51,23 @@ class TestChiSquareBasic(unittest.TestCase):
         self.assertIn("chi_square", results)
         
         chi_square = results["chi_square"]
-        self.assertIn("statistical_results", chi_square)
-        self.assertIn("effect_size", chi_square)
+        self.assertIn("test_type", chi_square)
+        self.assertIn("chi_square_statistic", chi_square)
+        self.assertIn("p_value", chi_square)
+        self.assertIn("degrees_of_freedom", chi_square)
+        self.assertIn("cramers_v", chi_square)
         self.assertIn("contingency_table", chi_square)
         
         # Check specific metrics
-        stats = chi_square["statistical_results"]
-        self.assertIn("chi_square_statistic", stats)
-        self.assertIn("p_value", stats)
-        self.assertIn("degrees_of_freedom", stats)
+        self.assertIn("chi_square_statistic", chi_square)
+        self.assertIn("p_value", chi_square)
+        self.assertIn("degrees_of_freedom", chi_square)
         
         # Value validation
-        self.assertEqual(stats["degrees_of_freedom"]["value"], 1)  # (2-1) * (2-1)
-        self.assertGreaterEqual(stats["chi_square_statistic"]["value"], 0)
-        self.assertGreaterEqual(stats["p_value"]["value"], 0)
-        self.assertLessEqual(stats["p_value"]["value"], 1)
+        self.assertEqual(chi_square["degrees_of_freedom"], 1)  # (2-1) * (2-1)
+        self.assertGreaterEqual(chi_square["chi_square_statistic"], 0)
+        self.assertGreaterEqual(chi_square["p_value"], 0)
+        self.assertLessEqual(chi_square["p_value"], 1)
     
     def test_chi_square_perfect_independence(self):
         """Test chi-square with perfectly independent variables"""
@@ -80,8 +82,8 @@ class TestChiSquareBasic(unittest.TestCase):
         
         # Check chi-square should be close to 0 for perfect independence
         chi_square = result_data["analysis_report"]["results"]["chi_square"]
-        chi_stat = chi_square["statistical_results"]["chi_square_statistic"]["value"]
-        cramers_v = chi_square["effect_size"]["cramers_v"]["value"]
+        chi_stat = chi_square["chi_square_statistic"]
+        cramers_v = chi_square["cramers_v"]
         
         self.assertAlmostEqual(chi_stat, 0, places=3)
         self.assertAlmostEqual(cramers_v, 0, places=3)
@@ -98,9 +100,9 @@ class TestChiSquareBasic(unittest.TestCase):
         result_data = self._validate_json_structure(result, "Strong Association")
         
         chi_square = result_data["analysis_report"]["results"]["chi_square"]
-        chi_stat = chi_square["statistical_results"]["chi_square_statistic"]["value"]
-        cramers_v = chi_square["effect_size"]["cramers_v"]["value"]
-        association_strength = chi_square["effect_size"]["association_strength"]
+        chi_stat = chi_square["chi_square_statistic"]
+        cramers_v = chi_square["cramers_v"]
+        association_strength = chi_square["effect_size_category"]
         
         # Chi-square should be high for perfect association
         self.assertGreater(chi_stat, 10)
@@ -159,9 +161,9 @@ class TestChiSquareEdgeCases(unittest.TestCase):
                 # Should have an error due to division by zero with single category
                 if "error" in chi_square:
                     self.assertIn("division by zero", chi_square["error"])
-                elif "statistical_results" in chi_square:
+                else:
                     # If it did compute, degrees of freedom should be 0
-                    df = chi_square["statistical_results"]["degrees_of_freedom"]["value"]
+                    df = chi_square["degrees_of_freedom"]
                     self.assertEqual(df, 0)
 
 class TestChiSquareContingencyTable(unittest.TestCase):
@@ -195,15 +197,14 @@ class TestChiSquareContingencyTable(unittest.TestCase):
         contingency = chi_square["contingency_table"]
         
         # Validate contingency table structure
-        self.assertIn("table_data", contingency)
-        self.assertIn("categories_1", contingency)
-        self.assertIn("categories_2", contingency)
-        self.assertIn("note", contingency)
+        self.assertIsInstance(contingency, list)
+        self.assertIn("categories_1", chi_square)
+        self.assertIn("categories_2", chi_square)
         
         # Check table dimensions
-        table_data = contingency["table_data"]
-        categories_1 = contingency["categories_1"]
-        categories_2 = contingency["categories_2"]
+        table_data = contingency
+        categories_1 = chi_square["categories_1"]
+        categories_2 = chi_square["categories_2"]
         
         self.assertEqual(len(table_data), len(categories_1))
         for row in table_data:
@@ -219,8 +220,8 @@ class TestChiSquareContingencyTable(unittest.TestCase):
         result = self.tool.analyze("test_contingency_values", data=data, analysis_type="chi_square_test")
         result_data = self._validate_json_structure(result, "Contingency Values")
         
-        contingency = result_data["analysis_report"]["results"]["chi_square"]["contingency_table"]
-        table_data = contingency["table_data"]
+        chi_square = result_data["analysis_report"]["results"]["chi_square"]
+        table_data = chi_square["contingency_table"]
         
         # Verify the total count matches the data length
         total_count = sum(sum(row) for row in table_data)
@@ -271,9 +272,10 @@ class TestChiSquareIntegration(unittest.TestCase):
         self.assertIn("chi_square", results)
         
         chi_square = results["chi_square"]
-        self.assertIn("test_information", chi_square)
-        self.assertIn("statistical_results", chi_square)
-        self.assertIn("effect_size", chi_square)
+        self.assertIn("test_type", chi_square)
+        self.assertIn("chi_square_statistic", chi_square)
+        self.assertIn("p_value", chi_square)
+        self.assertIn("cramers_v", chi_square)
         self.assertIn("contingency_table", chi_square)
     
     def test_auto_detection_categorical(self):
@@ -324,14 +326,16 @@ class TestChiSquareFrequencyAnalysis(unittest.TestCase):
         
         # Check frequency analysis structure
         freq_device = results["frequency_analysis_device_type"]
-        self.assertIn("summary_statistics", freq_device)
-        self.assertIn("frequency_distribution", freq_device)
-        self.assertIn("diversity_metrics", freq_device)
+        self.assertIn("variable_name", freq_device)
+        self.assertIn("total_observations", freq_device)
+        self.assertIn("unique_categories", freq_device)
+        self.assertIn("frequencies", freq_device)
         
         freq_action = results["frequency_analysis_user_action"]
-        self.assertIn("summary_statistics", freq_action)
-        self.assertIn("frequency_distribution", freq_action)
-        self.assertIn("diversity_metrics", freq_action)
+        self.assertIn("variable_name", freq_action)
+        self.assertIn("total_observations", freq_action)
+        self.assertIn("unique_categories", freq_action)
+        self.assertIn("frequencies", freq_action)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -170,21 +170,13 @@ class StatisticalAnalyzer:
             
             result = {
                 "n": n,
-                "n_note": "Sample size (number of observations)",
                 "mean": round(mean, 3),
-                "mean_note": "Arithmetic mean (average value)",
                 "median": round(median, 3),
-                "median_note": "Middle value when data is sorted (50th percentile)",
                 "std": round(std, 3),
-                "std_note": "Standard deviation (measure of data spread)",
                 "variance": round(std**2, 3) if n > 1 else 0,
-                "variance_note": "Variance (squared standard deviation)",
                 "min": round(min(values), 3),
-                "min_note": "Minimum value in dataset",
                 "max": round(max(values), 3),
-                "max_note": "Maximum value in dataset",
-                "range": round(max(values) - min(values), 3),
-                "range_note": "Range (max - min)"
+                "range": round(max(values) - min(values), 3)
             }
             
             # Calculate percentiles for comprehensive analysis
@@ -196,7 +188,6 @@ class StatisticalAnalyzer:
                     percentile_results[f"p{p}"] = round(pval, 3)
             
             result.update(percentile_results)
-            result["percentiles_note"] = "Percentiles: P5=5th percentile, P10=10th percentile, P25=25th percentile (Q1), P50=median, P75=75th percentile (Q3), P90=90th percentile, P95=95th percentile, P99=99th percentile"
             
             if n >= 4:
                 q1 = percentile_results.get("p25", 0)
@@ -204,11 +195,8 @@ class StatisticalAnalyzer:
                 iqr = q3 - q1
                 result.update({
                     "q1": q1,
-                    "q1_note": "First quartile (25th percentile)",
                     "q3": q3,
-                    "q3_note": "Third quartile (75th percentile)",
-                    "iqr": round(iqr, 3),
-                    "iqr_note": "Interquartile range (Q3 - Q1, contains middle 50% of data)"
+                    "iqr": round(iqr, 3)
                 })
                 
                 # Outlier detection using IQR method
@@ -217,22 +205,18 @@ class StatisticalAnalyzer:
                 outliers = [v for v in values if v < lower_bound or v > upper_bound]
                 if outliers:
                     result["outliers"] = [round(o, 3) for o in outliers]
-                    result["outliers_note"] = f"Outliers detected using IQR method (values outside [{round(lower_bound, 3)}, {round(upper_bound, 3)}])"
                 else:
                     result["outliers"] = []
-                    result["outliers_note"] = "No outliers detected using IQR method"
             
             # Calculate coefficient of variation
             if mean != 0:
                 cv = (std / abs(mean)) * 100
                 result["coefficient_of_variation"] = round(cv, 2)
-                result["cv_note"] = "Coefficient of variation (CV = std/mean × 100%, measures relative variability)"
             
             # Calculate skewness (simplified)
             if n >= 3 and std > 0:
                 skewness = sum((x - mean)**3 for x in values) / (n * std**3)
                 result["skewness"] = round(skewness, 3)
-                result["skewness_note"] = "Skewness (measure of asymmetry: 0=symmetric, >0=right-skewed, <0=left-skewed)"
             
             # Calculate confidence interval for the mean (95% by default)
             if n > 1:
@@ -243,10 +227,8 @@ class StatisticalAnalyzer:
                 ci_upper = mean + margin_error
                 result.update({
                     "mean_se": round(se_mean, 3),
-                    "mean_se_note": "Standard error of the mean (std/√n)",
                     "mean_ci_95_lower": round(ci_lower, 3),
-                    "mean_ci_95_upper": round(ci_upper, 3),
-                    "mean_ci_note": "95% confidence interval for the mean (we are 95% confident the true population mean lies within this range)"
+                    "mean_ci_95_upper": round(ci_upper, 3)
                 })
             
             return result
@@ -313,7 +295,6 @@ class StatisticalAnalyzer:
                 effect_interpretation = "Very large effect"
             
             # Statistical indicators without interpretation
-            p_value_note = "p-value: probability of observing this result if null hypothesis is true"
             if p_value < 0.001:
                 p_display = "p < 0.001"
             elif p_value < 0.01:
@@ -328,14 +309,10 @@ class StatisticalAnalyzer:
                 "t_statistic": round(t_stat, 3),
                 "p_value": p_value,
                 "p_value_display": p_display,
-                "p_value_note": p_value_note,
                 "degrees_of_freedom": df,
                 "cohens_d": round(cohens_d, 3),
-                "cohens_d_note": "Cohen's d: standardized effect size measure",
                 "effect_size_category": effect_interpretation,
-                "effect_size_note": "Effect size categories: small (<0.2), medium (0.2-0.8), large (>0.8)",
-                "mean_difference": round(statistics.mean(group1) - statistics.mean(group2), 3),
-                "mean_difference_note": "Raw difference between group means"
+                "mean_difference": round(statistics.mean(group1) - statistics.mean(group2), 3)
             }
         except Exception as e:
             return {"error": f"Error performing t-test: {str(e)}"}
@@ -382,7 +359,6 @@ class StatisticalAnalyzer:
                 p_value = 0.1
             
             # Statistical indicators without conclusions
-            f_p_note = "F-test p-value: probability of observing this F-statistic if all groups have equal means"
             if p_value < 0.001:
                 f_p_display = "p < 0.001"
             elif p_value < 0.01:
@@ -426,19 +402,13 @@ class StatisticalAnalyzer:
             return {
                 "test_type": "One-way ANOVA",
                 "f_statistic": round(f_stat, 3),
-                "f_statistic_note": "F-statistic: ratio of between-group to within-group variance",
                 "p_value": p_value,
                 "p_value_display": f_p_display,
-                "p_value_note": f_p_note,
                 "df_between": df_between,
                 "df_within": df_within,
-                "degrees_freedom_note": "Degrees of freedom: between groups, within groups",
                 "eta_squared": round(eta_squared, 3),
-                "eta_squared_note": "η² (eta-squared): proportion of total variance explained by group differences",
                 "effect_size_category": effect_interpretation,
-                "effect_size_note": "Effect size categories: small (<0.01), medium (0.01-0.06), large (>0.06)",
-                "posthoc_comparisons": posthoc_results,
-                "posthoc_note": "Post-hoc comparisons: pairwise group comparisons when overall F-test indicates differences"
+                "posthoc_comparisons": posthoc_results
             }
         except Exception as e:
             return {"error": f"Error performing ANOVA: {str(e)}"}
@@ -482,8 +452,7 @@ class StatisticalAnalyzer:
                 
                 result["distribution_shape"] = {
                     "skewness": skewness,
-                    "shape_description": shape_desc,
-                    "skewness_note": "Skewness measures asymmetry: 0=symmetric, >0=right tail longer, <0=left tail longer"
+                    "shape_description": shape_desc
                 }
             
             # Normality assessment (simplified)
@@ -516,8 +485,7 @@ class StatisticalAnalyzer:
                     "p50_median": p50,
                     "p95": p95,
                     "p99": p99,
-                    "p95_p50_ratio": round(p95/p50, 2) if p50 > 0 else 0,
-                    "performance_note": "P50 (median): typical performance. P95: 95% of values are below this. P99: 99% of values are below this."
+                    "p95_p50_ratio": round(p95/p50, 2) if p50 > 0 else 0
                 }
             
             # Data quality indicators
@@ -526,14 +494,12 @@ class StatisticalAnalyzer:
                 result["data_quality"] = {
                     "outlier_count": len(desc_stats["outliers"]),
                     "outlier_percentage": round(outlier_pct, 1),
-                    "outlier_values": desc_stats["outliers"],
-                    "quality_note": f"Outliers: {len(desc_stats['outliers'])} values ({outlier_pct:.1f}%) detected using IQR method"
+                    "outlier_values": desc_stats["outliers"]
                 }
             else:
                 result["data_quality"] = {
                     "outlier_count": 0,
-                    "outlier_percentage": 0.0,
-                    "quality_note": "No outliers detected using IQR method - data appears clean"
+                    "outlier_percentage": 0.0
                 }
             
             # Variability analysis
@@ -550,8 +516,7 @@ class StatisticalAnalyzer:
                 
                 result["variability_analysis"] = {
                     "coefficient_of_variation": cv,
-                    "variability_category": variability_desc,
-                    "variability_note": "CV categories: Low (<10%), Moderate (10-25%), High (25-50%), Very High (>50%)"
+                    "variability_category": variability_desc
                 }
             
             return result
@@ -610,27 +575,19 @@ class StatisticalAnalyzer:
             
             return {
                 "test_type": "Chi-square test of independence",
-                "test_note": "Tests whether two categorical variables are independent",
                 "variable_1": var1_name,
                 "variable_2": var2_name,
                 "chi_square_statistic": round(chi_square_stat, 3),
-                "chi_square_note": "Chi-square statistic: measures deviation from expected frequencies if variables were independent",
                 "degrees_of_freedom": df,
-                "df_note": f"Degrees of freedom: (rows-1) × (columns-1) = ({len(categories1)}-1) × ({len(categories2)}-1)",
                 "p_value": p_value,
                 "p_value_display": p_display,
-                "p_value_note": "p-value: probability of observing this association (or stronger) if variables were truly independent",
                 "cramers_v": round(cramers_v, 3),
-                "cramers_v_note": "Cramér's V: effect size measure for categorical associations (0 = no association, 1 = perfect association)",
                 "effect_size_category": effect_interpretation,
-                "effect_size_note": "Effect size categories: negligible (<0.1), small (0.1-0.3), medium (0.3-0.5), large (>0.5)",
                 "sample_size": n,
                 "contingency_table": contingency_table,
                 "categories_1": categories1,
                 "categories_2": categories2,
-                "contingency_note": "Contingency table shows observed frequencies for each combination of categories",
-                "expected_frequencies": chi_square_result.get("expected_frequencies", []),
-                "expected_note": "Expected frequencies assuming independence (calculated from marginal totals)"
+                "expected_frequencies": chi_square_result.get("expected_frequencies", [])
             }
             
         except Exception as e:
@@ -793,22 +750,15 @@ class StatisticalAnalyzer:
                 "variable_name": variable_name,
                 "analysis_type": "Frequency Distribution Analysis",
                 "total_observations": total_count,
-                "total_note": "Total number of observations in the dataset",
                 "unique_categories": unique_categories,
-                "unique_note": "Number of distinct categories found",
                 "frequencies": dict(sorted_frequencies),
-                "frequencies_note": "Count of each category (sorted by frequency)",
                 "proportions": {k: round(v, 3) for k, v in proportions.items()},
-                "proportions_note": "Proportion of each category (frequency/total)",
                 "mode_category": mode_category,
                 "mode_count": mode_count,
                 "mode_proportion": round(mode_proportion, 3),
-                "mode_note": f"Most frequent category: '{mode_category}' appears {mode_count} times ({mode_proportion:.1%})",
                 "entropy": round(entropy, 3),
-                "entropy_note": "Shannon entropy: measure of category diversity (higher = more diverse)",
                 "max_entropy": round(math.log2(unique_categories), 3) if unique_categories > 1 else 0,
-                "entropy_ratio": round(entropy / math.log2(unique_categories), 3) if unique_categories > 1 else 0,
-                "diversity_note": "Entropy ratio: actual diversity / maximum possible diversity (1 = perfectly diverse)"
+                "entropy_ratio": round(entropy / math.log2(unique_categories), 3) if unique_categories > 1 else 0
             }
             
         except Exception as e:
@@ -853,17 +803,12 @@ class StatisticalAnalyzer:
             
             return {
                 "correlation_coefficient": round(r, 3),
-                "correlation_note": "Pearson r: linear relationship strength (-1 to +1)",
                 "p_value": p_value,
                 "p_value_display": corr_p_display,
-                "p_value_note": "p-value: probability of observing this correlation if no true relationship exists",
                 "strength_category": strength_category,
                 "direction": direction,
-                "strength_note": "Correlation strength categories: very weak (<0.1), weak (0.1-0.3), moderate (0.3-0.5), strong (0.5-0.7), very strong (>0.7)",
                 "r_squared": round(r**2, 3),
-                "r_squared_note": "R²: proportion of variance in one variable explained by the other",
-                "sample_size": len(var1),
-                "sample_size_note": "Sample size affects reliability of correlation estimate"
+                "sample_size": len(var1)
             }
         except Exception as e:
             return {"error": f"Error calculating correlation: {str(e)}"}
@@ -979,79 +924,41 @@ class StatisticalAnalyzer:
                 if "error" not in stats:
                     output_data["analysis_report"]["results"][f"descriptive_statistics_{var_name}"] = {
                         "variable_name": var_name,
-                        "sample_size": {
-                            "value": stats.get('n', None),
-                            "note": stats.get('n_note', '')
-                        },
+                        "sample_size": stats.get('n', None),
                         "central_tendency": {
-                            "mean": {
-                                "value": stats.get('mean', None),
-                                "note": stats.get('mean_note', '')
-                            },
-                            "median": {
-                                "value": stats.get('median', None),
-                                "note": stats.get('median_note', '')
-                            }
+                            "mean": stats.get('mean', None),
+                            "median": stats.get('median', None)
                         },
                         "variability": {
-                            "standard_deviation": {
-                                "value": stats.get('std', None),
-                                "note": stats.get('std_note', '')
-                            },
-                            "variance": {
-                                "value": stats.get('variance', None),
-                                "note": stats.get('variance_note', '')
-                            },
+                            "standard_deviation": stats.get('std', None),
+                            "variance": stats.get('variance', None),
                             "range": {
                                 "value": stats.get('range', None),
                                 "min": stats.get('min', None),
-                                "max": stats.get('max', None),
-                                "note": stats.get('range_note', '')
+                                "max": stats.get('max', None)
                             }
                         },
                         "percentiles": {
-                            "q1": {
-                                "value": stats.get('q1', stats.get('p25', None)),
-                                "note": stats.get('q1_note', '')
-                            },
-                            "q3": {
-                                "value": stats.get('q3', stats.get('p75', None)),
-                                "note": stats.get('q3_note', '')
-                            },
-                            "iqr": {
-                                "value": stats.get('iqr', None),
-                                "note": stats.get('iqr_note', '')
-                            },
+                            "q1": stats.get('q1', stats.get('p25', None)),
+                            "q3": stats.get('q3', stats.get('p75', None)),
+                            "iqr": stats.get('iqr', None),
                             "all_percentiles": {
                                 p: stats.get(p, None) for p in ['p5', 'p10', 'p25', 'p50', 'p75', 'p90', 'p95', 'p99']
                                 if stats.get(p) is not None
                             }
                         },
                         "confidence_interval": {
-                            "mean_95_ci": {
-                                "lower": stats.get('mean_ci_95_lower', None),
-                                "upper": stats.get('mean_ci_95_upper', None),
-                                "note": stats.get('mean_ci_note', '')
-                            },
-                            "standard_error": {
-                                "value": stats.get('mean_se', None),
-                                "note": stats.get('mean_se_note', '')
-                            }
+                            "mean_95_ci_lower": stats.get('mean_ci_95_lower', None),
+                            "mean_ci_95_upper": stats.get('mean_ci_95_upper', None),
+                            "standard_error": stats.get('mean_se', None)
                         },
                         "outliers": {
                             "values": stats.get('outliers', []),
-                            "count": len(stats.get('outliers', [])),
-                            "note": stats.get('outliers_note', '')
+                            "count": len(stats.get('outliers', []))
                         },
                         "distribution_shape": {
-                            "coefficient_of_variation": {
-                                "value": stats.get('coefficient_of_variation', None),
-                                "note": stats.get('cv_note', '')
-                            },
-                            "skewness": {
-                                "value": stats.get('skewness', None),
-                                "note": stats.get('skewness_note', '')
-                            }
+                            "coefficient_of_variation": stats.get('coefficient_of_variation', None),
+                            "skewness": stats.get('skewness', None)
                         }
                     }
                 else:
@@ -1065,31 +972,13 @@ class StatisticalAnalyzer:
             if "error" not in t_result:
                 output_data["analysis_report"]["results"]["t_test"] = {
                     "test_type": t_result.get('test_type', ''),
-                    "statistical_results": {
-                        "t_statistic": {
-                            "value": t_result.get('t_statistic', None),
-                            "degrees_of_freedom": t_result.get('degrees_of_freedom', None)
-                        },
-                        "p_value": {
-                            "value": t_result.get('p_value', None),
-                            "display": t_result.get('p_value_display', ''),
-                            "note": t_result.get('p_value_note', '')
-                        }
-                    },
-                    "effect_size": {
-                        "cohens_d": {
-                            "value": t_result.get('cohens_d', None),
-                            "note": t_result.get('cohens_d_note', '')
-                        },
-                        "category": t_result.get('effect_size_category', ''),
-                        "interpretation_note": t_result.get('effect_size_note', '')
-                    },
-                    "descriptive_results": {
-                        "mean_difference": {
-                            "value": t_result.get('mean_difference', None),
-                            "note": t_result.get('mean_difference_note', '')
-                        }
-                    }
+                    "t_statistic": t_result.get('t_statistic', None),
+                    "degrees_of_freedom": t_result.get('degrees_of_freedom', None),
+                    "p_value": t_result.get('p_value', None),
+                    "p_value_display": t_result.get('p_value_display', ''),
+                    "cohens_d": t_result.get('cohens_d', None),
+                    "effect_size_category": t_result.get('effect_size_category', ''),
+                    "mean_difference": t_result.get('mean_difference', None)
                 }
             else:
                 output_data["analysis_report"]["results"]["t_test"] = {
@@ -1101,35 +990,15 @@ class StatisticalAnalyzer:
             anova_result = results["anova"]
             if "error" not in anova_result:
                 output_data["analysis_report"]["results"]["anova"] = {
-                    "test_type": "One-way ANOVA",
-                    "statistical_results": {
-                        "f_statistic": {
-                            "value": anova_result.get('f_statistic', None),
-                            "note": anova_result.get('f_statistic_note', '')
-                        },
-                        "degrees_of_freedom": {
-                            "between_groups": anova_result.get('df_between', None),
-                            "within_groups": anova_result.get('df_within', None),
-                            "note": anova_result.get('degrees_freedom_note', '')
-                        },
-                        "p_value": {
-                            "value": anova_result.get('p_value', None),
-                            "display": anova_result.get('p_value_display', ''),
-                            "note": anova_result.get('p_value_note', '')
-                        }
-                    },
-                    "effect_size": {
-                        "eta_squared": {
-                            "value": anova_result.get('eta_squared', None),
-                            "note": anova_result.get('eta_squared_note', '')
-                        },
-                        "category": anova_result.get('effect_size_category', ''),
-                        "interpretation_note": anova_result.get('effect_size_note', '')
-                    },
-                    "posthoc_analysis": {
-                        "comparisons": anova_result.get('posthoc_comparisons', []),
-                        "note": anova_result.get('posthoc_note', '')
-                    }
+                    "test_type": anova_result.get('test_type', 'One-way ANOVA'),
+                    "f_statistic": anova_result.get('f_statistic', None),
+                    "df_between": anova_result.get('df_between', None),
+                    "df_within": anova_result.get('df_within', None),
+                    "p_value": anova_result.get('p_value', None),
+                    "p_value_display": anova_result.get('p_value_display', ''),
+                    "eta_squared": anova_result.get('eta_squared', None),
+                    "effect_size_category": anova_result.get('effect_size_category', ''),
+                    "posthoc_comparisons": anova_result.get('posthoc_comparisons', [])
                 }
             else:
                 output_data["analysis_report"]["results"]["anova"] = {
@@ -1159,32 +1028,13 @@ class StatisticalAnalyzer:
             corr_result = results["correlation"]
             if "error" not in corr_result:
                 output_data["analysis_report"]["results"]["correlation"] = {
-                    "statistical_results": {
-                        "pearson_r": {
-                            "value": corr_result.get('correlation_coefficient', None),
-                            "note": corr_result.get('correlation_note', '')
-                        },
-                        "p_value": {
-                            "value": corr_result.get('p_value', None),
-                            "display": corr_result.get('p_value_display', ''),
-                            "note": corr_result.get('p_value_note', '')
-                        },
-                        "r_squared": {
-                            "value": corr_result.get('r_squared', None),
-                            "note": corr_result.get('r_squared_note', '')
-                        }
-                    },
-                    "relationship_properties": {
-                        "direction": corr_result.get('direction', ''),
-                        "strength_category": corr_result.get('strength_category', ''),
-                        "strength_note": corr_result.get('strength_note', '')
-                    },
-                    "sample_information": {
-                        "sample_size": {
-                            "value": corr_result.get('sample_size', None),
-                            "note": corr_result.get('sample_size_note', '')
-                        }
-                    }
+                    "correlation_coefficient": corr_result.get('correlation_coefficient', None),
+                    "p_value": corr_result.get('p_value', None),
+                    "p_value_display": corr_result.get('p_value_display', ''),
+                    "r_squared": corr_result.get('r_squared', None),
+                    "direction": corr_result.get('direction', ''),
+                    "strength_category": corr_result.get('strength_category', ''),
+                    "sample_size": corr_result.get('sample_size', None)
                 }
             else:
                 output_data["analysis_report"]["results"]["correlation"] = {
@@ -1198,36 +1048,16 @@ class StatisticalAnalyzer:
                 
                 frequency_data = {
                     "variable_name": var_name,
-                    "summary_statistics": {
-                        "total_observations": {
-                            "value": result.get('total_observations', None),
-                            "note": result.get('total_note', '')
-                        },
-                        "unique_categories": {
-                            "value": result.get('unique_categories', None),
-                            "note": result.get('unique_note', '')
-                        },
-                        "mode": {
-                            "category": result.get('mode_category', None),
-                            "count": result.get('mode_count', None),
-                            "proportion": result.get('mode_proportion', None)
-                        }
-                    },
-                    "frequency_distribution": {
-                        "frequencies": result.get('frequencies', {}),
-                        "proportions": result.get('proportions', {})
-                    },
-                    "diversity_metrics": {
-                        "shannon_entropy": {
-                            "value": result.get('entropy', None),
-                            "note": result.get('entropy_note', '')
-                        },
-                        "max_entropy": result.get('max_entropy', None),
-                        "diversity_ratio": {
-                            "value": result.get('entropy_ratio', None),
-                            "note": result.get('diversity_note', '')
-                        }
-                    }
+                    "total_observations": result.get('total_observations', None),
+                    "unique_categories": result.get('unique_categories', None),
+                    "mode_category": result.get('mode_category', None),
+                    "mode_count": result.get('mode_count', None),
+                    "mode_proportion": result.get('mode_proportion', None),
+                    "frequencies": result.get('frequencies', {}),
+                    "proportions": result.get('proportions', {}),
+                    "shannon_entropy": result.get('entropy', None),
+                    "max_entropy": result.get('max_entropy', None),
+                    "entropy_ratio": result.get('entropy_ratio', None)
                 }
                 
                 output_data["analysis_report"]["results"][f"frequency_analysis_{var_name}"] = frequency_data
@@ -1237,47 +1067,19 @@ class StatisticalAnalyzer:
             chi_result = results["chi_square"]
             if "error" not in chi_result:
                 output_data["analysis_report"]["results"]["chi_square"] = {
-                    "test_information": {
-                        "test_type": chi_result.get('test_type', ''),
-                        "note": chi_result.get('test_note', ''),
-                        "variables": {
-                            "variable_1": chi_result.get('variable_1', ''),
-                            "variable_2": chi_result.get('variable_2', '')
-                        }
-                    },
-                    "statistical_results": {
-                        "chi_square_statistic": {
-                            "value": chi_result.get('chi_square_statistic', None),
-                            "note": chi_result.get('chi_square_note', '')
-                        },
-                        "degrees_of_freedom": {
-                            "value": chi_result.get('degrees_of_freedom', None),
-                            "note": chi_result.get('df_note', '')
-                        },
-                        "p_value": {
-                            "value": chi_result.get('p_value', None),
-                            "display": chi_result.get('p_value_display', ''),
-                            "note": chi_result.get('p_value_note', '')
-                        }
-                    },
-                    "effect_size": {
-                        "cramers_v": {
-                            "value": chi_result.get('cramers_v', None),
-                            "note": chi_result.get('cramers_v_note', '')
-                        },
-                        "association_strength": chi_result.get('effect_size_category', ''),
-                        "interpretation_note": chi_result.get('effect_size_note', '')
-                    },
-                    "sample_information": {
-                        "sample_size": chi_result.get('sample_size', None)
-                    },
-                    "contingency_table": {
-                        "table_data": chi_result.get('contingency_table', []),
-                        "categories_1": chi_result.get('categories_1', []),
-                        "categories_2": chi_result.get('categories_2', []),
-                        "note": chi_result.get('contingency_note', '')
-                    },
-                    "warnings": chi_result.get('warning', None)
+                    "test_type": chi_result.get('test_type', ''),
+                    "variable_1": chi_result.get('variable_1', ''),
+                    "variable_2": chi_result.get('variable_2', ''),
+                    "chi_square_statistic": chi_result.get('chi_square_statistic', None),
+                    "degrees_of_freedom": chi_result.get('degrees_of_freedom', None),
+                    "p_value": chi_result.get('p_value', None),
+                    "p_value_display": chi_result.get('p_value_display', ''),
+                    "cramers_v": chi_result.get('cramers_v', None),
+                    "effect_size_category": chi_result.get('effect_size_category', ''),
+                    "sample_size": chi_result.get('sample_size', None),
+                    "contingency_table": chi_result.get('contingency_table', []),
+                    "categories_1": chi_result.get('categories_1', []),
+                    "categories_2": chi_result.get('categories_2', [])
                 }
             else:
                 output_data["analysis_report"]["results"]["chi_square"] = {
