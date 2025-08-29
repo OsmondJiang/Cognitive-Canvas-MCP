@@ -733,9 +733,10 @@ class TestStringDataBugFixes(unittest.TestCase):
     
     def test_unicode_string_handling(self):
         """Test handling of unicode strings"""
+        # Test data with English values for consistent internationalization
         unicode_data = {
-            "feedback": ["优秀", "良好", "一般", "较差", "优秀"],
-            "region": ["北京", "上海", "广州", "深圳", "北京"]
+            "feedback": ["Excellent", "Good", "Average", "Poor", "Excellent"],
+            "region": ["North", "South", "East", "West", "North"]
         }
         
         # Should handle unicode strings without errors

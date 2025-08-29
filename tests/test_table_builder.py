@@ -258,7 +258,7 @@ class TestTableBuilder(unittest.TestCase):
         self.assertIn("does not exist", result)
 
     def test_batch_add_rows(self):
-        """测试批量添加行功"""
+        """Test batch add rows functionality"""
         # Create a structure first
         self.manager.create_structure(
             self.conv_id, 
@@ -293,7 +293,7 @@ class TestTableBuilder(unittest.TestCase):
         self.assertIn("does not exist", result["error"])
 
     def test_batch_update_rows(self):
-        """测试批量更新行功"""
+        """Test batch update rows functionality"""
         # Create structure and add initial rows
         self.manager.create_structure(
             self.conv_id, 
@@ -337,7 +337,7 @@ class TestTableBuilder(unittest.TestCase):
         self.assertIn("out of range", result["error"])
 
     def test_batch_operations(self):
-        """测试混合批量操作功能"""
+        """Test mixed batch operations functionality"""
         # Create structure
         self.manager.create_structure(
             self.conv_id, 
