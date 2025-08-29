@@ -207,11 +207,11 @@ class TestTodoTool(unittest.TestCase):
         self.assertEqual(len(list_result["tasks"]), 1)
         self.assertEqual(list_result["tasks"][0]["title"], "Task 2")
         
-        # Test deleting a non-existent task (should not raise errors)
+        # Test deleting a non-existent task (should return error)
         result = delete_task(self.conv_id, 999)
         self.assertIsInstance(result, dict)
-        self.assertEqual(result["status"], "success")
-        self.assertIn("Task 999 deleted", result["message"])
+        self.assertEqual(result["status"], "error")
+        self.assertIn("Task 999 not found", result["message"])
         
         list_result = list_tasks(self.conv_id)
         self.assertEqual(len(list_result["tasks"]), 1)  # Still one task left

@@ -15,7 +15,8 @@ class TestTableBuilder(unittest.TestCase):
     def test_create_structure(self):
         # Test creating a structure with default template
         result = self.manager.create_structure(self.conv_id, self.structure_id)
-        self.assertIn(f"Structure '{self.structure_id}' created", result)
+        self.assertEqual(result["status"], "success")
+        self.assertIn(f"Structure '{self.structure_id}' created", result["message"])
         self.assertIn(self.conv_id, self.manager.conversations)
         self.assertIn(self.structure_id, self.manager.conversations[self.conv_id])
         
@@ -27,7 +28,8 @@ class TestTableBuilder(unittest.TestCase):
             template_type="task_list", 
             columns=columns
         )
-        self.assertIn("Structure 'custom_structure' created", result)
+        self.assertEqual(result["status"], "success")
+        self.assertIn("Structure 'custom_structure' created", result["message"])
         self.assertEqual(
             self.manager.conversations[self.conv_id]["custom_structure"]["template_type"],
             "task_list"
@@ -49,7 +51,8 @@ class TestTableBuilder(unittest.TestCase):
         # Test adding a row
         row_data = {"Name": "John", "Age": 30}
         result = self.manager.add_row(self.conv_id, self.structure_id, row_data)
-        self.assertIn(f"Row added to '{self.structure_id}'", result)
+        self.assertEqual(result["status"], "success")
+        self.assertIn(f"Row added to '{self.structure_id}'", result["message"])
         self.assertEqual(
             self.manager.conversations[self.conv_id][self.structure_id]["rows"][0],
             row_data
@@ -57,7 +60,8 @@ class TestTableBuilder(unittest.TestCase):
         
         # Test adding another row
         row_data2 = {"Name": "Jane", "Age": 25}
-        self.manager.add_row(self.conv_id, self.structure_id, row_data2)
+        result2 = self.manager.add_row(self.conv_id, self.structure_id, row_data2)
+        self.assertEqual(result2["status"], "success")
         self.assertEqual(
             self.manager.conversations[self.conv_id][self.structure_id]["rows"][1],
             row_data2
@@ -65,7 +69,8 @@ class TestTableBuilder(unittest.TestCase):
         
         # Test adding a row to non-existent structure
         result = self.manager.add_row(self.conv_id, "nonexistent", {"data": "value"})
-        self.assertIn("does not exist", result)
+        self.assertEqual(result["status"], "error")
+        self.assertIn("does not exist", result["message"])
     
     def test_update_row(self):
         # Create a structure and add rows
@@ -76,7 +81,8 @@ class TestTableBuilder(unittest.TestCase):
         # Test updating a row
         update_data = {"Age": 31}
         result = self.manager.update_row(self.conv_id, self.structure_id, 0, update_data)
-        self.assertIn(f"Row 0 updated", result)
+        self.assertEqual(result["status"], "success")
+        self.assertIn(f"Row 0 updated", result["message"])
         self.assertEqual(
             self.manager.conversations[self.conv_id][self.structure_id]["rows"][0]["Age"],
             31
@@ -84,11 +90,13 @@ class TestTableBuilder(unittest.TestCase):
         
         # Test updating a row with out-of-range index
         result = self.manager.update_row(self.conv_id, self.structure_id, 10, {"Name": "Invalid"})
-        self.assertIn("out of range", result)
+        self.assertEqual(result["status"], "error")
+        self.assertIn("out of range", result["message"])
         
         # Test updating a row in non-existent structure
         result = self.manager.update_row(self.conv_id, "nonexistent", 0, {"data": "value"})
-        self.assertIn("does not exist", result)
+        self.assertEqual(result["status"], "error")
+        self.assertIn("does not exist", result["message"])
     
     def test_get_metrics(self):
         # Test task_list metrics
@@ -138,7 +146,8 @@ class TestTableBuilder(unittest.TestCase):
         
         # Test metrics for non-existent structure
         result = self.manager.get_metrics(self.conv_id, "nonexistent")
-        self.assertIn("does not exist", result)
+        self.assertEqual(result["status"], "error")
+        self.assertIn("does not exist", result["message"])
     
     def test_render(self):
         # Test rendering a simple table
@@ -266,9 +275,12 @@ class TestTableBuilder(unittest.TestCase):
         result = self.manager.batch_add_rows(self.conv_id, self.structure_id, rows_data)
         
         # Verify all rows were added
-        self.assertIn("Row 0 added", result)
-        self.assertIn("Row 1 added", result)
-        self.assertIn("Row 2 added", result)
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(len(result["results"]), 3)
+        # Check that all individual results are successful
+        for i, result_item in enumerate(result["results"]):
+            self.assertEqual(result_item["status"], "success")
+            self.assertIn(f"Row {i} added", result_item["message"])
         
         # Verify rows are in the structure
         structure = self.manager.conversations[self.conv_id][self.structure_id]
@@ -279,7 +291,8 @@ class TestTableBuilder(unittest.TestCase):
         
         # Test with non-existent structure
         result = self.manager.batch_add_rows(self.conv_id, "nonexistent", rows_data)
-        self.assertIn("does not exist", result)
+        self.assertEqual(result["status"], "error")
+        self.assertIn("does not exist", result["message"])
 
     def test_batch_update_rows(self):
         """测试批量更新行功"""
@@ -308,9 +321,12 @@ class TestTableBuilder(unittest.TestCase):
         result = self.manager.batch_update_rows(self.conv_id, self.structure_id, updates_data)
         
         # Verify all updates were applied
-        self.assertIn("Row 0 updated", result)
-        self.assertIn("Row 1 updated", result)
-        self.assertIn("Row 2 updated", result)
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(len(result["results"]), 3)
+        # Check that all individual results are successful
+        for i, result_item in enumerate(result["results"]):
+            self.assertEqual(result_item["status"], "success")
+            self.assertIn(f"Row {i} updated", result_item["message"])
         
         # Verify the updates
         structure = self.manager.conversations[self.conv_id][self.structure_id]
@@ -322,7 +338,9 @@ class TestTableBuilder(unittest.TestCase):
         # Test with invalid index
         invalid_updates = [{"index": 10, "data": {"Status": "Invalid"}}]
         result = self.manager.batch_update_rows(self.conv_id, self.structure_id, invalid_updates)
-        self.assertIn("out of range", result)
+        self.assertEqual(result["status"], "success")  # Overall operation succeeds but with errors
+        self.assertEqual(len(result["errors"]), 1)
+        self.assertIn("out of range", result["results"][0]["message"])
 
     def test_batch_operations(self):
         """测试混合批量操作功能"""
@@ -350,9 +368,20 @@ class TestTableBuilder(unittest.TestCase):
         result = self.manager.batch_operations(self.conv_id, self.structure_id, mixed_ops)
         
         # Verify operations
-        self.assertIn("Row added", result)
-        self.assertIn("Row 0 updated", result)
-        self.assertIn("Row 1 updated", result)
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["successful_operations"], 4)
+        self.assertEqual(result["failed_operations"], 0)
+        # Check individual results
+        add_results = [r for r in result["results"] if r["action"] == "add"]
+        update_results = [r for r in result["results"] if r["action"] == "update"]
+        self.assertEqual(len(add_results), 2)
+        self.assertEqual(len(update_results), 2)
+        for add_result in add_results:
+            self.assertEqual(add_result["status"], "success")
+            self.assertIn("Row added", add_result["message"])
+        for update_result in update_results:
+            self.assertEqual(update_result["status"], "success")
+            self.assertIn("updated", update_result["message"])
         
         # Verify final state
         structure = self.manager.conversations[self.conv_id][self.structure_id]
@@ -364,7 +393,9 @@ class TestTableBuilder(unittest.TestCase):
         # Test with invalid action
         invalid_ops = [{"action": "invalid", "data": {}}]
         result = self.manager.batch_operations(self.conv_id, self.structure_id, invalid_ops)
-        self.assertIn("Unknown action", result)
+        self.assertEqual(result["status"], "success")  # Overall succeeds but with errors
+        self.assertEqual(result["failed_operations"], 1)
+        self.assertIn("Unknown action", result["results"][0]["message"])
 
     def test_server_batch_operations(self):
         """Test server-level batch operations with verification"""
@@ -375,7 +406,8 @@ class TestTableBuilder(unittest.TestCase):
         result = cognitive_canvas_server.table_builder_manager.create_structure(
             conversation_id, structure_id, "simple_table", ["Name", "Status", "Priority"]
         )
-        self.assertIn("Structure 'test_table' created", result)
+        self.assertEqual(result["status"], "success")
+        self.assertIn("Structure 'test_table' created", result["message"])
         
         # Test batch add rows through manager
         rows_data = [
@@ -389,9 +421,11 @@ class TestTableBuilder(unittest.TestCase):
         )
         
         # Verify rows were added
-        self.assertIn("Row 0 added", result)
-        self.assertIn("Row 1 added", result)
-        self.assertIn("Row 2 added", result)
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(len(result["results"]), 3)
+        for i, result_item in enumerate(result["results"]):
+            self.assertEqual(result_item["status"], "success")
+            self.assertIn(f"Row {i} added", result_item["message"])
         
         # Verify structure exists and has correct data
         conv_data = cognitive_canvas_server.table_builder_manager.conversations[conversation_id]
@@ -449,8 +483,11 @@ class TestTableBuilder(unittest.TestCase):
         )
         
         # Verify updates
-        self.assertIn("Row 0 updated", update_result)
-        self.assertIn("Row 1 updated", update_result)
+        self.assertEqual(update_result["status"], "success")
+        self.assertEqual(len(update_result["results"]), 2)
+        for i, result_item in enumerate(update_result["results"]):
+            self.assertEqual(result_item["status"], "success")
+            self.assertIn(f"Row {i} updated", result_item["message"])
         
         # Verify final state
         conv_data = cognitive_canvas_server.table_builder_manager.conversations[conversation_id]
@@ -479,7 +516,8 @@ class TestTableBuilder(unittest.TestCase):
         result = cognitive_canvas_server.table_builder_manager.batch_add_rows(
             conversation_id, "nonexistent", [{"test": "data"}]
         )
-        self.assertIn("does not exist", result)
+        self.assertEqual(result["status"], "error")
+        self.assertIn("does not exist", result["message"])
         
         # Create structure for further tests
         cognitive_canvas_server.table_builder_manager.create_structure(
@@ -490,7 +528,9 @@ class TestTableBuilder(unittest.TestCase):
         result = cognitive_canvas_server.table_builder_manager.batch_update_rows(
             conversation_id, structure_id, [{"index": 999, "data": {"test": "value"}}]
         )
-        self.assertIn("out of range", result)
+        self.assertEqual(result["status"], "success")  # Overall operation succeeds but with errors
+        self.assertEqual(len(result["errors"]), 1)
+        self.assertIn("out of range", result["results"][0]["message"])
 
 if __name__ == "__main__":
     unittest.main()
