@@ -26,7 +26,16 @@ class TableBuilder:
             "columns": columns or [],
             "rows": []
         }
-        return f"Structure '{structure_id}' created with template '{template_type}'."
+        return {
+            "status": "success",
+            "message": f"Structure '{structure_id}' created with template '{template_type}'.",
+            "structure": {
+                "structure_id": structure_id,
+                "template_type": template_type,
+                "columns": columns or [],
+                "row_count": 0
+            }
+        }
 
     def add_row(
         self,
@@ -40,9 +49,18 @@ class TableBuilder:
         self._ensure_conv(conversation_id)
         structure = self.conversations[conversation_id].get(structure_id)
         if not structure:
-            return f"Structure '{structure_id}' does not exist."
+            return {
+                "status": "error",
+                "message": f"Structure '{structure_id}' does not exist."
+            }
         structure["rows"].append(row_data)
-        return f"Row added to '{structure_id}'."
+        return {
+            "status": "success",
+            "message": f"Row added to '{structure_id}'.",
+            "structure_id": structure_id,
+            "row_data": row_data,
+            "total_rows": len(structure["rows"])
+        }
 
     def update_row(
         self,
@@ -57,11 +75,25 @@ class TableBuilder:
         self._ensure_conv(conversation_id)
         structure = self.conversations[conversation_id].get(structure_id)
         if not structure:
-            return f"Structure '{structure_id}' does not exist."
+            return {
+                "status": "error",
+                "message": f"Structure '{structure_id}' does not exist."
+            }
         if row_index < 0 or row_index >= len(structure["rows"]):
-            return f"Row index {row_index} out of range."
+            return {
+                "status": "error",
+                "message": f"Row index {row_index} out of range.",
+                "max_index": len(structure["rows"]) - 1
+            }
         structure["rows"][row_index].update(row_data)
-        return f"Row {row_index} updated in '{structure_id}'."
+        return {
+            "status": "success",
+            "message": f"Row {row_index} updated in '{structure_id}'.",
+            "structure_id": structure_id,
+            "row_index": row_index,
+            "updated_data": row_data,
+            "total_rows": len(structure["rows"])
+        }
 
     # ---------------- Batch Operations ----------------
     def batch_add_rows(self, conversation_id: str, structure_id: str, rows: List[Dict]):
@@ -72,17 +104,34 @@ class TableBuilder:
         self._ensure_conv(conversation_id)
         structure = self.conversations[conversation_id].get(structure_id)
         if not structure:
-            return f"Structure '{structure_id}' does not exist."
+            return {
+                "status": "error",
+                "message": f"Structure '{structure_id}' does not exist."
+            }
         
         results = []
+        added_rows = []
+        errors = []
+        
         for i, row_data in enumerate(rows):
             if not isinstance(row_data, dict):
-                results.append(f"Error: Row {i} is not a valid dictionary")
+                error_msg = f"Row {i} is not a valid dictionary"
+                errors.append(error_msg)
+                results.append({"status": "error", "row_index": i, "message": error_msg})
                 continue
             structure["rows"].append(row_data)
-            results.append(f"Row {i} added to '{structure_id}'.")
+            added_rows.append(row_data)
+            results.append({"status": "success", "row_index": i, "message": f"Row {i} added to '{structure_id}'.", "row_data": row_data})
         
-        return "\n".join(results)
+        return {
+            "status": "success",
+            "message": f"Batch add rows completed. {len(added_rows)} rows added, {len(errors)} errors.",
+            "structure_id": structure_id,
+            "added_rows": added_rows,
+            "errors": errors,
+            "total_rows": len(structure["rows"]),
+            "results": results
+        }
 
     def batch_update_rows(self, conversation_id: str, structure_id: str, updates: List[Dict]):
         """
@@ -92,29 +141,51 @@ class TableBuilder:
         self._ensure_conv(conversation_id)
         structure = self.conversations[conversation_id].get(structure_id)
         if not structure:
-            return f"Structure '{structure_id}' does not exist."
+            return {
+                "status": "error",
+                "message": f"Structure '{structure_id}' does not exist."
+            }
         
         results = []
+        updated_rows = []
+        errors = []
+        
         for update in updates:
             row_index = update.get("index")
             row_data = update.get("data", {})
             
             if row_index is None:
-                results.append(f"Error: Missing 'index' for update {update}")
+                error_msg = f"Missing 'index' for update {update}"
+                errors.append(error_msg)
+                results.append({"status": "error", "message": error_msg})
                 continue
                 
             if not isinstance(row_data, dict):
-                results.append(f"Error: Invalid 'data' for row {row_index}")
+                error_msg = f"Invalid 'data' for row {row_index}"
+                errors.append(error_msg)
+                results.append({"status": "error", "row_index": row_index, "message": error_msg})
                 continue
                 
             if row_index < 0 or row_index >= len(structure["rows"]):
-                results.append(f"Error: Row index {row_index} out of range.")
+                error_msg = f"Row index {row_index} out of range."
+                errors.append(error_msg)
+                results.append({"status": "error", "row_index": row_index, "message": error_msg})
                 continue
                 
             structure["rows"][row_index].update(row_data)
-            results.append(f"Row {row_index} updated in '{structure_id}'.")
+            updated_info = {"index": row_index, "data": row_data}
+            updated_rows.append(updated_info)
+            results.append({"status": "success", "row_index": row_index, "message": f"Row {row_index} updated in '{structure_id}'.", "updated_data": row_data})
         
-        return "\n".join(results)
+        return {
+            "status": "success",
+            "message": f"Batch update rows completed. {len(updated_rows)} rows updated, {len(errors)} errors.",
+            "structure_id": structure_id,
+            "updated_rows": updated_rows,
+            "errors": errors,
+            "total_rows": len(structure["rows"]),
+            "results": results
+        }
 
     def batch_operations(self, conversation_id: str, structure_id: str, operations: List[Dict]):
         """
@@ -127,43 +198,65 @@ class TableBuilder:
         self._ensure_conv(conversation_id)
         structure = self.conversations[conversation_id].get(structure_id)
         if not structure:
-            return f"Structure '{structure_id}' does not exist."
+            return {
+                "status": "error",
+                "message": f"Structure '{structure_id}' does not exist."
+            }
         
         results = []
+        success_count = 0
+        error_count = 0
+        
         for op in operations:
             action = op.get("action")
             data = op.get("data", {})
             
             if action == "add":
                 if not isinstance(data, dict):
-                    results.append(f"Error: Invalid data for add operation")
+                    results.append({"status": "error", "action": "add", "message": "Invalid data for add operation"})
+                    error_count += 1
                     continue
                 structure["rows"].append(data)
-                results.append(f"Row added to '{structure_id}'.")
+                results.append({"status": "success", "action": "add", "message": f"Row added to '{structure_id}'.", "row_data": data})
+                success_count += 1
                 
             elif action == "update":
                 row_index = data.get("index")
                 row_data = data.get("row_data", {})
                 
                 if row_index is None:
-                    results.append(f"Error: Missing 'index' for update operation")
+                    results.append({"status": "error", "action": "update", "message": "Missing 'index' for update operation"})
+                    error_count += 1
                     continue
                     
                 if not isinstance(row_data, dict):
-                    results.append(f"Error: Invalid 'row_data' for update operation")
+                    results.append({"status": "error", "action": "update", "message": "Invalid 'row_data' for update operation"})
+                    error_count += 1
                     continue
                     
                 if row_index < 0 or row_index >= len(structure["rows"]):
-                    results.append(f"Error: Row index {row_index} out of range.")
+                    results.append({"status": "error", "action": "update", "message": f"Row index {row_index} out of range."})
+                    error_count += 1
                     continue
                     
                 structure["rows"][row_index].update(row_data)
-                results.append(f"Row {row_index} updated in '{structure_id}'.")
+                results.append({"status": "success", "action": "update", "message": f"Row {row_index} updated in '{structure_id}'.", "row_index": row_index, "updated_data": row_data})
+                success_count += 1
                 
             else:
-                results.append(f"Error: Unknown action '{action}' in batch operations")
+                results.append({"status": "error", "action": action, "message": f"Unknown action '{action}' in batch operations"})
+                error_count += 1
         
-        return "\n".join(results)
+        return {
+            "status": "success",
+            "message": f"Batch operations completed. {success_count} successful, {error_count} errors.",
+            "structure_id": structure_id,
+            "total_operations": len(operations),
+            "successful_operations": success_count,
+            "failed_operations": error_count,
+            "total_rows": len(structure["rows"]),
+            "results": results
+        }
 
     def get_metrics(self, conversation_id: str, structure_id: str):
         """
@@ -172,7 +265,10 @@ class TableBuilder:
         self._ensure_conv(conversation_id)
         structure = self.conversations[conversation_id].get(structure_id)
         if not structure:
-            return f"Structure '{structure_id}' does not exist."
+            return {
+                "status": "error",
+                "message": f"Structure '{structure_id}' does not exist."
+            }
 
         template_type = structure["template_type"]
         rows = structure["rows"]

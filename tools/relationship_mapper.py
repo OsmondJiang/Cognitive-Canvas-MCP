@@ -25,35 +25,90 @@ class RelationshipMapper:
     def add_node(self, conversation_id: str, node_id: str, label: str, metadata: Optional[dict] = None):
         self._ensure_conv(conversation_id)
         self.conversations[conversation_id]["nodes"][node_id] = Node(node_id, label, metadata)
-        return f"Node '{label}' added."
+        return {
+            "status": "success",
+            "message": f"Node '{label}' added.",
+            "node": {
+                "id": node_id,
+                "label": label,
+                "metadata": metadata or {}
+            }
+        }
 
     def update_node(self, conversation_id: str, node_id: str, label: Optional[str] = None, metadata: Optional[dict] = None):
         self._ensure_conv(conversation_id)
         node = self.conversations[conversation_id]["nodes"].get(node_id)
         if not node:
-            return f"Node {node_id} not found."
+            return {
+                "status": "error",
+                "message": f"Node {node_id} not found."
+            }
+        
+        updated_fields = {}
         if label:
             node.label = label
+            updated_fields["label"] = label
         if metadata:
             node.metadata.update(metadata)
-        return f"Node '{node_id}' updated."
+            updated_fields["metadata"] = metadata
+            
+        return {
+            "status": "success",
+            "message": f"Node '{node_id}' updated.",
+            "node": {
+                "id": node_id,
+                "label": node.label,
+                "metadata": node.metadata
+            },
+            "updated_fields": updated_fields
+        }
 
     def add_edge(self, conversation_id: str, source: str, target: str, type: str, metadata: Optional[dict] = None):
         self._ensure_conv(conversation_id)
-        self.conversations[conversation_id]["edges"].append(Edge(source, target, type, metadata))
-        return f"Edge {source} -> {target} ({type}) added."
+        edge = Edge(source, target, type, metadata)
+        self.conversations[conversation_id]["edges"].append(edge)
+        return {
+            "status": "success",
+            "message": f"Edge {source} -> {target} ({type}) added.",
+            "edge": {
+                "source": source,
+                "target": target,
+                "type": type,
+                "metadata": metadata or {}
+            }
+        }
 
     def update_edge(self, conversation_id: str, index: int, type: Optional[str] = None, metadata: Optional[dict] = None):
         self._ensure_conv(conversation_id)
         edges = self.conversations[conversation_id]["edges"]
         if index >= len(edges):
-            return "Edge index out of range."
+            return {
+                "status": "error",
+                "message": "Edge index out of range.",
+                "max_index": len(edges) - 1
+            }
+        
         edge = edges[index]
+        updated_fields = {}
         if type:
             edge.type = type
+            updated_fields["type"] = type
         if metadata:
             edge.metadata.update(metadata)
-        return f"Edge at index {index} updated."
+            updated_fields["metadata"] = metadata
+            
+        return {
+            "status": "success",
+            "message": f"Edge at index {index} updated.",
+            "edge": {
+                "index": index,
+                "source": edge.source,
+                "target": edge.target,
+                "type": edge.type,
+                "metadata": edge.metadata
+            },
+            "updated_fields": updated_fields
+        }
 
     # ---------------- Batch Operations ----------------
     def batch_add_nodes(self, conversation_id: str, nodes: List[Dict]):
@@ -63,19 +118,32 @@ class RelationshipMapper:
         """
         self._ensure_conv(conversation_id)
         results = []
+        added_nodes = []
+        errors = []
+        
         for node_data in nodes:
             node_id = node_data.get("id")
             label = node_data.get("label")
             metadata = node_data.get("metadata")
             
             if not node_id or not label:
-                results.append(f"Error: Missing id or label for node {node_data}")
+                error_msg = f"Missing id or label for node {node_data}"
+                errors.append(error_msg)
+                results.append({"status": "error", "message": error_msg})
                 continue
                 
             self.conversations[conversation_id]["nodes"][node_id] = Node(node_id, label, metadata)
-            results.append(f"Node '{label}' (id: {node_id}) added.")
+            node_info = {"id": node_id, "label": label, "metadata": metadata or {}}
+            added_nodes.append(node_info)
+            results.append({"status": "success", "message": f"Node '{label}' (id: {node_id}) added.", "node": node_info})
         
-        return "\n".join(results)
+        return {
+            "status": "success",
+            "message": f"Batch add nodes completed. {len(added_nodes)} nodes added, {len(errors)} errors.",
+            "added_nodes": added_nodes,
+            "errors": errors,
+            "results": results
+        }
 
     def batch_update_nodes(self, conversation_id: str, nodes: List[Dict]):
         """
@@ -84,27 +152,46 @@ class RelationshipMapper:
         """
         self._ensure_conv(conversation_id)
         results = []
+        updated_nodes = []
+        errors = []
+        
         for node_data in nodes:
             node_id = node_data.get("id")
             label = node_data.get("label")
             metadata = node_data.get("metadata")
             
             if not node_id:
-                results.append(f"Error: Missing id for node update {node_data}")
+                error_msg = f"Missing id for node update {node_data}"
+                errors.append(error_msg)
+                results.append({"status": "error", "message": error_msg})
                 continue
                 
             node = self.conversations[conversation_id]["nodes"].get(node_id)
             if not node:
-                results.append(f"Error: Node {node_id} not found.")
+                error_msg = f"Node {node_id} not found."
+                errors.append(error_msg)
+                results.append({"status": "error", "message": error_msg})
                 continue
                 
+            updated_fields = {}
             if label:
                 node.label = label
+                updated_fields["label"] = label
             if metadata:
                 node.metadata.update(metadata)
-            results.append(f"Node '{node_id}' updated.")
+                updated_fields["metadata"] = metadata
+                
+            node_info = {"id": node_id, "label": node.label, "metadata": node.metadata, "updated_fields": updated_fields}
+            updated_nodes.append(node_info)
+            results.append({"status": "success", "message": f"Node '{node_id}' updated.", "node": node_info})
         
-        return "\n".join(results)
+        return {
+            "status": "success",
+            "message": f"Batch update nodes completed. {len(updated_nodes)} nodes updated, {len(errors)} errors.",
+            "updated_nodes": updated_nodes,
+            "errors": errors,
+            "results": results
+        }
 
     def batch_add_edges(self, conversation_id: str, edges: List[Dict]):
         """
@@ -113,6 +200,9 @@ class RelationshipMapper:
         """
         self._ensure_conv(conversation_id)
         results = []
+        added_edges = []
+        errors = []
+        
         for edge_data in edges:
             source = edge_data.get("source")
             target = edge_data.get("target")
@@ -120,13 +210,24 @@ class RelationshipMapper:
             metadata = edge_data.get("metadata")
             
             if not source or not target or not edge_type:
-                results.append(f"Error: Missing source, target, or type for edge {edge_data}")
+                error_msg = f"Missing source, target, or type for edge {edge_data}"
+                errors.append(error_msg)
+                results.append({"status": "error", "message": error_msg})
                 continue
                 
-            self.conversations[conversation_id]["edges"].append(Edge(source, target, edge_type, metadata))
-            results.append(f"Edge {source} -> {target} ({edge_type}) added.")
+            edge = Edge(source, target, edge_type, metadata)
+            self.conversations[conversation_id]["edges"].append(edge)
+            edge_info = {"source": source, "target": target, "type": edge_type, "metadata": metadata or {}}
+            added_edges.append(edge_info)
+            results.append({"status": "success", "message": f"Edge {source} -> {target} ({edge_type}) added.", "edge": edge_info})
         
-        return "\n".join(results)
+        return {
+            "status": "success",
+            "message": f"Batch add edges completed. {len(added_edges)} edges added, {len(errors)} errors.",
+            "added_edges": added_edges,
+            "errors": errors,
+            "results": results
+        }
 
     def batch_update_edges(self, conversation_id: str, edges: List[Dict]):
         """
@@ -135,6 +236,8 @@ class RelationshipMapper:
         """
         self._ensure_conv(conversation_id)
         results = []
+        updated_edges = []
+        errors = []
         conversation_edges = self.conversations[conversation_id]["edges"]
         
         for edge_data in edges:
@@ -143,21 +246,44 @@ class RelationshipMapper:
             metadata = edge_data.get("metadata")
             
             if index is None:
-                results.append(f"Error: Missing index for edge update {edge_data}")
+                error_msg = f"Missing index for edge update {edge_data}"
+                errors.append(error_msg)
+                results.append({"status": "error", "message": error_msg})
                 continue
                 
             if index >= len(conversation_edges):
-                results.append(f"Error: Edge index {index} out of range.")
+                error_msg = f"Edge index {index} out of range."
+                errors.append(error_msg)
+                results.append({"status": "error", "message": error_msg})
                 continue
                 
             edge = conversation_edges[index]
+            updated_fields = {}
             if edge_type:
                 edge.type = edge_type
+                updated_fields["type"] = edge_type
             if metadata:
                 edge.metadata.update(metadata)
-            results.append(f"Edge at index {index} updated.")
+                updated_fields["metadata"] = metadata
+                
+            edge_info = {
+                "index": index,
+                "source": edge.source,
+                "target": edge.target,
+                "type": edge.type,
+                "metadata": edge.metadata,
+                "updated_fields": updated_fields
+            }
+            updated_edges.append(edge_info)
+            results.append({"status": "success", "message": f"Edge at index {index} updated.", "edge": edge_info})
         
-        return "\n".join(results)
+        return {
+            "status": "success",
+            "message": f"Batch update edges completed. {len(updated_edges)} edges updated, {len(errors)} errors.",
+            "updated_edges": updated_edges,
+            "errors": errors,
+            "results": results
+        }
 
     def batch_operations(self, conversation_id: str, operations: List[Dict]):
         """
@@ -172,6 +298,8 @@ class RelationshipMapper:
         """
         self._ensure_conv(conversation_id)
         results = []
+        success_count = 0
+        error_count = 0
         
         for op in operations:
             action = op.get("action")
@@ -183,9 +311,11 @@ class RelationshipMapper:
                 metadata = data.get("metadata")
                 if node_id and label:
                     self.conversations[conversation_id]["nodes"][node_id] = Node(node_id, label, metadata)
-                    results.append(f"Node '{label}' (id: {node_id}) added.")
+                    results.append({"status": "success", "action": "add_node", "message": f"Node '{label}' (id: {node_id}) added."})
+                    success_count += 1
                 else:
-                    results.append(f"Error: Missing id or label for add_node operation")
+                    results.append({"status": "error", "action": "add_node", "message": "Missing id or label for add_node operation"})
+                    error_count += 1
                     
             elif action == "add_edge":
                 source = data.get("source")
@@ -194,9 +324,11 @@ class RelationshipMapper:
                 metadata = data.get("metadata")
                 if source and target and edge_type:
                     self.conversations[conversation_id]["edges"].append(Edge(source, target, edge_type, metadata))
-                    results.append(f"Edge {source} -> {target} ({edge_type}) added.")
+                    results.append({"status": "success", "action": "add_edge", "message": f"Edge {source} -> {target} ({edge_type}) added."})
+                    success_count += 1
                 else:
-                    results.append(f"Error: Missing source, target, or type for add_edge operation")
+                    results.append({"status": "error", "action": "add_edge", "message": "Missing source, target, or type for add_edge operation"})
+                    error_count += 1
                     
             elif action == "update_node":
                 node_id = data.get("id")
@@ -209,11 +341,14 @@ class RelationshipMapper:
                             node.label = label
                         if metadata:
                             node.metadata.update(metadata)
-                        results.append(f"Node '{node_id}' updated.")
+                        results.append({"status": "success", "action": "update_node", "message": f"Node '{node_id}' updated."})
+                        success_count += 1
                     else:
-                        results.append(f"Error: Node {node_id} not found.")
+                        results.append({"status": "error", "action": "update_node", "message": f"Node {node_id} not found."})
+                        error_count += 1
                 else:
-                    results.append(f"Error: Missing id for update_node operation")
+                    results.append({"status": "error", "action": "update_node", "message": "Missing id for update_node operation"})
+                    error_count += 1
                     
             elif action == "update_edge":
                 index = data.get("index")
@@ -227,23 +362,42 @@ class RelationshipMapper:
                             edge.type = edge_type
                         if metadata:
                             edge.metadata.update(metadata)
-                        results.append(f"Edge at index {index} updated.")
+                        results.append({"status": "success", "action": "update_edge", "message": f"Edge at index {index} updated."})
+                        success_count += 1
                     else:
-                        results.append(f"Error: Edge index {index} out of range.")
+                        results.append({"status": "error", "action": "update_edge", "message": f"Edge index {index} out of range."})
+                        error_count += 1
                 else:
-                    results.append(f"Error: Missing index for update_edge operation")
+                    results.append({"status": "error", "action": "update_edge", "message": "Missing index for update_edge operation"})
+                    error_count += 1
             else:
-                results.append(f"Error: Unknown action '{action}' in batch operations")
+                results.append({"status": "error", "action": action, "message": f"Unknown action '{action}' in batch operations"})
+                error_count += 1
         
-        return "\n".join(results)
+        return {
+            "status": "success",
+            "message": f"Batch operations completed. {success_count} successful, {error_count} errors.",
+            "total_operations": len(operations),
+            "successful_operations": success_count,
+            "failed_operations": error_count,
+            "results": results
+        }
 
     # ---------------- Visualization Type ----------------
     def set_visualization_type(self, conversation_id: str, visualization_type: str):
         self._ensure_conv(conversation_id)
         if visualization_type not in ["flowchart", "sequence", "mindmap", "orgchart", "tree"]:
-            return f"Unknown visualization type: {visualization_type}"
+            return {
+                "status": "error",
+                "message": f"Unknown visualization type: {visualization_type}",
+                "valid_types": ["flowchart", "sequence", "mindmap", "orgchart", "tree"]
+            }
         self.conversations[conversation_id]["visualization_type"] = visualization_type
-        return f"Visualization type set to {visualization_type}"
+        return {
+            "status": "success",
+            "message": f"Visualization type set to {visualization_type}",
+            "visualization_type": visualization_type
+        }
 
     # ---------------- Render ----------------
     def render(self,conversation_id: str):
