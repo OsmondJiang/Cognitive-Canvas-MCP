@@ -1,4 +1,5 @@
 from typing import List, Dict, Optional
+from .display_recommendations import DisplayRecommendations
 
 class Node:
     def __init__(self, id: str, label: str, metadata: Optional[dict] = None):
@@ -25,7 +26,7 @@ class RelationshipMapper:
     def add_node(self, conversation_id: str, node_id: str, label: str, metadata: Optional[dict] = None):
         self._ensure_conv(conversation_id)
         self.conversations[conversation_id]["nodes"][node_id] = Node(node_id, label, metadata)
-        return {
+        result = {
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
@@ -35,6 +36,7 @@ class RelationshipMapper:
                 "visualization_type": self.conversations[conversation_id]["visualization_type"]
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "add_node")
 
     def update_node(self, conversation_id: str, node_id: str, label: Optional[str] = None, metadata: Optional[dict] = None):
         self._ensure_conv(conversation_id)
@@ -50,7 +52,7 @@ class RelationshipMapper:
         if metadata:
             node.metadata.update(metadata)
             
-        return {
+        result = {
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
@@ -60,12 +62,13 @@ class RelationshipMapper:
                 "visualization_type": self.conversations[conversation_id]["visualization_type"]
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "update_node")
 
     def add_edge(self, conversation_id: str, source: str, target: str, type: str, metadata: Optional[dict] = None):
         self._ensure_conv(conversation_id)
         edge = Edge(source, target, type, metadata)
         self.conversations[conversation_id]["edges"].append(edge)
-        return {
+        result = {
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
@@ -75,6 +78,7 @@ class RelationshipMapper:
                 "visualization_type": self.conversations[conversation_id]["visualization_type"]
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "add_edge")
 
     def update_edge(self, conversation_id: str, index: int, type: Optional[str] = None, metadata: Optional[dict] = None):
         self._ensure_conv(conversation_id)
@@ -91,7 +95,7 @@ class RelationshipMapper:
         if metadata:
             edge.metadata.update(metadata)
             
-        return {
+        result = {
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
@@ -101,6 +105,7 @@ class RelationshipMapper:
                 "visualization_type": self.conversations[conversation_id]["visualization_type"]
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "update_edge")
 
     # ---------------- Batch Operations ----------------
     def batch_add_nodes(self, conversation_id: str, nodes: List[Dict]):
@@ -138,7 +143,7 @@ class RelationshipMapper:
                 node_data["id"], node_data["label"], node_data["metadata"]
             )
         
-        return {
+        result = {
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
@@ -148,6 +153,7 @@ class RelationshipMapper:
                 "visualization_type": self.conversations[conversation_id]["visualization_type"]
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "batch_add_nodes")
 
     def batch_update_nodes(self, conversation_id: str, nodes: List[Dict]):
         """
@@ -191,7 +197,7 @@ class RelationshipMapper:
             if update_data["metadata"]:
                 node.metadata.update(update_data["metadata"])
         
-        return {
+        result = {
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
@@ -201,6 +207,7 @@ class RelationshipMapper:
                 "visualization_type": self.conversations[conversation_id]["visualization_type"]
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "batch_update_nodes")
 
     def batch_add_edges(self, conversation_id: str, edges: List[Dict]):
         """
@@ -237,7 +244,7 @@ class RelationshipMapper:
             edge = Edge(edge_data["source"], edge_data["target"], edge_data["type"], edge_data["metadata"])
             self.conversations[conversation_id]["edges"].append(edge)
         
-        return {
+        result = {
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
@@ -247,6 +254,7 @@ class RelationshipMapper:
                 "visualization_type": self.conversations[conversation_id]["visualization_type"]
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "batch_add_edges")
 
     def batch_update_edges(self, conversation_id: str, edges: List[Dict]):
         """
@@ -290,7 +298,7 @@ class RelationshipMapper:
             if update_data["metadata"]:
                 edge.metadata.update(update_data["metadata"])
         
-        return {
+        result = {
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
@@ -300,6 +308,7 @@ class RelationshipMapper:
                 "visualization_type": self.conversations[conversation_id]["visualization_type"]
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "batch_update_edges")
 
     def batch_operations(self, conversation_id: str, operations: List[Dict]):
         """
@@ -390,7 +399,7 @@ class RelationshipMapper:
                 "error": "Some operations failed: " + "; ".join(failed_operations) + ". Example: [{'action': 'add_node', 'data': {'id': 'node1', 'label': 'Node 1'}}]"
             }
         
-        return {
+        result = {
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
@@ -400,6 +409,7 @@ class RelationshipMapper:
                 "visualization_type": self.conversations[conversation_id]["visualization_type"]
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "batch_operations")
 
     # ---------------- Visualization Type ----------------
     def set_visualization_type(self, conversation_id: str, visualization_type: str):
@@ -411,7 +421,7 @@ class RelationshipMapper:
                 "error": f"Invalid visualization type '{visualization_type}'. Must be one of: {', '.join(valid_types)}. Example: set_visualization_type('conv1', 'flowchart')"
             }
         self.conversations[conversation_id]["visualization_type"] = visualization_type
-        return {
+        result = {
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
@@ -421,6 +431,7 @@ class RelationshipMapper:
                 "visualization_type": self.conversations[conversation_id]["visualization_type"]
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "set_visualization_type")
 
     # ---------------- Render ----------------
     def render(self,conversation_id: str):
@@ -499,6 +510,8 @@ class RelationshipMapper:
 
         # Return based on visualization type
         if visualization_type in ["tree", "orgchart", "mindmap"]:
-            return f"### Relationship Map (Tree Style)\n```\n{tree_text}\n```"
+            result = f"### Relationship Map (Tree Style)\n```\n{tree_text}\n```"
         else:  # flowchart, sequence
-            return f"### Relationship Map (Table Style)\n{table_text}"
+            result = f"### Relationship Map (Table Style)\n{table_text}"
+        
+        return DisplayRecommendations.add_to_text_result(result, "relationship_mapper", "render")

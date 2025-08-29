@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional
 import json
+from .display_recommendations import DisplayRecommendations
 
 class TableBuilder:
     def __init__(self):
@@ -26,7 +27,7 @@ class TableBuilder:
             "columns": columns or [],
             "rows": []
         }
-        return {
+        result = {
             "success": True,
             "data": {
                 "structure_id": structure_id,
@@ -36,6 +37,7 @@ class TableBuilder:
                 "row_count": 0
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "table", "create_structure")
 
     def add_row(
         self,
@@ -54,7 +56,7 @@ class TableBuilder:
                 "error": f"Structure '{structure_id}' does not exist in conversation '{conversation_id}'. Use create_structure() first with structure_id='{structure_id}' and template_type (e.g., 'simple_table', 'task_list')."
             }
         structure["rows"].append(row_data)
-        return {
+        result = {
             "success": True,
             "data": {
                 "structure_id": structure_id,
@@ -64,6 +66,7 @@ class TableBuilder:
                 "row_count": len(structure["rows"])
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "table", "add_row")
 
     def update_row(
         self,
@@ -88,7 +91,7 @@ class TableBuilder:
                 "error": f"Row index {row_index} out of range. Structure has {len(structure['rows'])} rows (valid indices: 0-{len(structure['rows'])-1 if structure['rows'] else 'none'})."
             }
         structure["rows"][row_index].update(row_data)
-        return {
+        result = {
             "success": True,
             "data": {
                 "structure_id": structure_id,
@@ -98,6 +101,7 @@ class TableBuilder:
                 "row_count": len(structure["rows"])
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "table", "update_row")
 
     # ---------------- Batch Operations ----------------
     def batch_add_rows(self, conversation_id: str, structure_id: str, rows: List[Dict]):
@@ -134,7 +138,7 @@ class TableBuilder:
         for row_data in validated_rows:
             structure["rows"].append(row_data)
         
-        return {
+        result = {
             "success": True,
             "data": {
                 "structure_id": structure_id,
@@ -144,6 +148,7 @@ class TableBuilder:
                 "row_count": len(structure["rows"])
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "table", "batch_add_rows")
 
     def batch_update_rows(self, conversation_id: str, structure_id: str, updates: List[Dict]):
         """
@@ -191,7 +196,7 @@ class TableBuilder:
         for update in validated_updates:
             structure["rows"][update["index"]].update(update["data"])
         
-        return {
+        result = {
             "success": True,
             "data": {
                 "structure_id": structure_id,
@@ -201,6 +206,7 @@ class TableBuilder:
                 "row_count": len(structure["rows"])
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "table", "batch_update_rows")
 
     def batch_operations(self, conversation_id: str, structure_id: str, operations: List[Dict]):
         """
@@ -263,7 +269,7 @@ class TableBuilder:
                     "error": f"Operation {i}: unknown action '{action}'. Supported actions: 'add', 'update'. Example: {{'action': 'add', 'data': {{'col': 'val'}}}}"
                 }
         
-        return {
+        result = {
             "success": True,
             "data": {
                 "structure_id": structure_id,
@@ -273,6 +279,7 @@ class TableBuilder:
                 "row_count": len(structure["rows"])
             }
         }
+        return DisplayRecommendations.add_to_json_result(result, "table", "batch_operations")
 
     def get_metrics(self, conversation_id: str, structure_id: str):
         """
@@ -327,10 +334,11 @@ class TableBuilder:
         else:
             metrics = {"total_items": len(rows)}
 
-        return {
+        result = {
             "success": True,
             "data": metrics
         }
+        return DisplayRecommendations.add_to_json_result(result, "table", "get_metrics")
 
     def render(self, conversation_id: str, structure_id: str):
         """
@@ -383,4 +391,5 @@ class TableBuilder:
             
         summary = f"Structure '{structure_id}' ({template_type}) with {len(rows)} items.\nMetrics: {metrics}"
 
-        return f"{summary}\n\n## Markdown\n{markdown}"
+        result = f"{summary}\n\n## Markdown\n{markdown}"
+        return DisplayRecommendations.add_to_text_result(result, "table", "render")

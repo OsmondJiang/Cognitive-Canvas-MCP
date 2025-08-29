@@ -1,6 +1,7 @@
 import statistics
 import math
 from typing import Dict, List, Optional, Any, Union
+from .display_recommendations import DisplayRecommendations
 
 class StatisticalAnalyzer:
     """
@@ -815,7 +816,7 @@ class StatisticalAnalyzer:
     
     def analyze(self, conversation_id: str, data: Optional[Dict] = None, 
                 groups: Optional[Dict] = None, analysis_type: str = "auto", 
-                output_format: str = "json") -> str:
+                output_format: str = "json") -> dict:
         """Main analysis function"""
         self._ensure_conv(conversation_id)
         
@@ -897,14 +898,13 @@ class StatisticalAnalyzer:
             return self._format_output(results, analysis_type, output_format)
         
         except Exception as e:
-            return f"Error in analysis: {str(e)}"
+            return {"error": f"Error in analysis: {str(e)}"}
     
-    def _format_output(self, results: Dict, analysis_type: str, output_format: str) -> str:
+    def _format_output(self, results: Dict, analysis_type: str, output_format: str) -> dict:
         """Format analysis results for output"""
-        import json
         
         if not results:
-            return json.dumps({"error": "No results to display."}, indent=2)
+            return {"error": "No results to display."}
         
         # Create structured JSON output
         output_data = {
@@ -1086,23 +1086,21 @@ class StatisticalAnalyzer:
                     "error": chi_result.get("error", "Unknown error")
                 }
         
-        # Return JSON format
-        return json.dumps(output_data, indent=2, ensure_ascii=False)
+        # Add display recommendation and return as dictionary
+        from tools.display_recommendations import DisplayRecommendations
+        output_data.update(DisplayRecommendations.get_json_recommendation("stats", "analyze"))
+        
+        return output_data
     
-    def render_report(self, conversation_id: str, report_type: str = "summary", output_format: str = "json") -> str:
+    def render_report(self, conversation_id: str, report_type: str = "summary", output_format: str = "json") -> dict:
         """Generate a comprehensive report of all analyses in the conversation"""
-        import json
         
         if conversation_id not in self.conversations:
-            if output_format == "json":
-                return json.dumps({"error": "No analyses found for this conversation."}, indent=2)
-            return "No analyses found for this conversation."
+            return {"error": "No analyses found for this conversation."}
         
         analyses = self.conversations[conversation_id]["analyses"]
         if not analyses:
-            if output_format == "json":
-                return json.dumps({"error": "No analyses found for this conversation."}, indent=2)
-            return "No analyses found for this conversation."
+            return {"error": "No analyses found for this conversation."}
         
         if output_format == "json":
             # Create comprehensive JSON report
@@ -1311,4 +1309,6 @@ class StatisticalAnalyzer:
                 "note": "All p-values represent probability of observing results if null hypothesis is true"
             }
             
-            return json.dumps(report_data, indent=2, ensure_ascii=False)
+            # Add display recommendation to the report data
+            report_data.update(DisplayRecommendations.get_json_recommendation("stats", "render_report"))
+            return report_data

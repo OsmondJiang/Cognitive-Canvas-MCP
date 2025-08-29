@@ -1,3 +1,5 @@
+from .display_recommendations import DisplayRecommendations
+
 tasks_by_conversation = {}
 task_counters = {}
 
@@ -24,10 +26,11 @@ def add_task(conversation_id: str, title: str, description: str = "", status: st
     task = {"id": counter, "title": title, "description": description, "status": status}
     _get_tasks(conversation_id).append(task)
     _increment_counter(conversation_id)
-    return {
+    result = {
         "success": True,
         "data": _get_tasks(conversation_id)
     }
+    return DisplayRecommendations.add_to_json_result(result, "todo", "add_task")
 
 def add_tasks_batch(conversation_id: str, tasks: list):
     """
@@ -93,10 +96,11 @@ def add_tasks_batch(conversation_id: str, tasks: list):
         _get_tasks(conversation_id).append(new_task)
         _increment_counter(conversation_id)
     
-    return {
+    result = {
         "success": True,
         "data": _get_tasks(conversation_id)
     }
+    return DisplayRecommendations.add_to_json_result(result, "todo", "add_tasks_batch")
 
 def update_task(conversation_id: str, task_id: int, title: str = None, description: str = None, status: str = None) -> dict:
     for t in _get_tasks(conversation_id):
@@ -114,10 +118,11 @@ def update_task(conversation_id: str, task_id: int, title: str = None, descripti
             if status is not None:
                 t["status"] = status
                 
-            return {
+            result = {
                 "success": True,
                 "data": _get_tasks(conversation_id)
             }
+            return DisplayRecommendations.add_to_json_result(result, "todo", "update_task")
     
     return {
         "success": False,
@@ -131,10 +136,11 @@ def delete_task(conversation_id: str, task_id: int) -> dict:
     new_count = len(tasks_by_conversation[conversation_id])
     
     if new_count < original_count:
-        return {
+        result = {
             "success": True,
             "data": _get_tasks(conversation_id)
         }
+        return DisplayRecommendations.add_to_json_result(result, "todo", "delete_task")
     else:
         return {
             "success": False,
@@ -144,10 +150,11 @@ def delete_task(conversation_id: str, task_id: int) -> dict:
 def get_task(conversation_id: str, task_id: int) -> dict:
     for t in _get_tasks(conversation_id):
         if t["id"] == task_id:
-            return {
+            result = {
                 "success": True,
                 "data": [t]  # Return as single-item list for consistency
             }
+            return DisplayRecommendations.add_to_json_result(result, "todo", "get_task")
     return {
         "success": False,
         "error": f"Task {task_id} not found in conversation '{conversation_id}'. Use list_tasks() to see available tasks."
@@ -155,8 +162,9 @@ def get_task(conversation_id: str, task_id: int) -> dict:
 
 def list_tasks(conversation_id: str) -> dict:
     tasks = _get_tasks(conversation_id)
-    return {
+    result = {
         "success": True,
         "data": tasks
     }
+    return DisplayRecommendations.add_to_json_result(result, "todo", "list_tasks")
     

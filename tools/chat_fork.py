@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional, Tuple
 import re
+from .display_recommendations import DisplayRecommendations
 
 class ChatNode:
     def __init__(self, summary: str, details: str = "", parent: Optional['ChatNode'] = None):
@@ -88,7 +89,7 @@ class ChatForkManager:
             current.children.append(new_topic_node)
             self.conversations[conversation_id] = new_topic_node
             
-            return {
+            result = {
                 "status": "success",
                 "message": f"Nested pause: diving deeper into '{new_topic}' from '{current.summary}'",
                 "paused_topic": current.summary,
@@ -101,8 +102,11 @@ class ChatForkManager:
                 "pause_type": "nested",
                 "action": "topic_paused",
                 "depth": self._get_conversation_depth(new_topic_node),
+                "paused_from_depth": self._get_conversation_depth(current),
                 "bookmark_created": bookmark if bookmark else None
             }
+            result.update(DisplayRecommendations.get_json_recommendation("chat_fork", "pause_topic"))
+            return result
             
         elif pause_type == "parallel":
             # Parallel mode: create sibling topic under the same parent
@@ -137,7 +141,7 @@ class ChatForkManager:
             parent_node.children.append(new_topic_node)
             self.conversations[conversation_id] = new_topic_node
             
-            return {
+            result = {
                 "status": "success", 
                 "message": f"Parallel pause: switched to '{new_topic}', can resume back to '{current.summary}'",
                 "paused_topic": current.summary,
@@ -149,6 +153,8 @@ class ChatForkManager:
                 "paused_from_depth": self._get_conversation_depth(current),
                 "bookmark_created": bookmark if bookmark else None
             }
+            result.update(DisplayRecommendations.get_json_recommendation("chat_fork", "pause_topic"))
+            return result
         
         else:
             return {
@@ -251,7 +257,7 @@ class ChatForkManager:
         # Execute resume
         self.conversations[conversation_id] = target_node
         
-        return {
+        result = {
             "status": "success",
             "message": f"Completed topic '{current.summary}' and resumed: {target_node.summary}",
             "completed_topic": current.summary,
@@ -267,6 +273,8 @@ class ChatForkManager:
             "action": "topic_resumed",
             "resumed_to_bookmark": target_node.bookmark_name if target_node.is_bookmarked else None
         }
+        result.update(DisplayRecommendations.get_json_recommendation("chat_fork", "resume_topic"))
+        return result
 
     def _get_conversation_depth(self, node: ChatNode) -> int:
         """Calculate the depth of a node in the conversation tree"""
@@ -469,10 +477,12 @@ class ChatForkManager:
         
         if search_query:
             # Search mode: filter tree to show only matching nodes and their paths
-            return self._render_filtered_tree(root_node, current_node, search_query, search_scope, max_results)
+            result = self._render_filtered_tree(root_node, current_node, search_query, search_scope, max_results)
         else:
             # Normal mode: show complete tree
-            return self._render_complete_tree(root_node, current_node)
+            result = self._render_complete_tree(root_node, current_node)
+        
+        return DisplayRecommendations.add_to_text_result(result, "chat_fork", "search_conversation_tree")
     
     def _render_complete_tree(self, root_node: ChatNode, current_node: ChatNode) -> str:
         """Render the complete conversation tree"""

@@ -25,7 +25,7 @@ class TestChiSquareBasic(unittest.TestCase):
     def _validate_json_structure(self, result, analysis_name):
         """Helper method to validate JSON structure"""
         try:
-            result_data = json.loads(result)
+            result_data = result
             self.assertIsInstance(result_data, dict, f"{analysis_name}: Result should be a JSON object")
             self.assertIn("analysis_report", result_data, f"{analysis_name}: Missing 'analysis_report' key")
             return result_data
@@ -120,7 +120,7 @@ class TestChiSquareEdgeCases(unittest.TestCase):
     def _validate_json_structure(self, result, analysis_name):
         """Helper method to validate JSON structure"""
         try:
-            result_data = json.loads(result)
+            result_data = result
             self.assertIsInstance(result_data, dict, f"{analysis_name}: Result should be a JSON object")
             return result_data
         except json.JSONDecodeError as e:
@@ -176,7 +176,7 @@ class TestChiSquareContingencyTable(unittest.TestCase):
     def _validate_json_structure(self, result, analysis_name):
         """Helper method to validate JSON structure"""
         try:
-            result_data = json.loads(result)
+            result_data = result
             self.assertIsInstance(result_data, dict, f"{analysis_name}: Result should be a JSON object")
             self.assertIn("analysis_report", result_data, f"{analysis_name}: Missing 'analysis_report' key")
             return result_data
@@ -243,7 +243,7 @@ class TestChiSquareIntegration(unittest.TestCase):
     def _validate_json_structure(self, result, analysis_name):
         """Helper method to validate JSON structure"""
         try:
-            result_data = json.loads(result)
+            result_data = result
             self.assertIsInstance(result_data, dict, f"{analysis_name}: Result should be a JSON object")
             self.assertIn("analysis_report", result_data, f"{analysis_name}: Missing 'analysis_report' key")
             return result_data
@@ -301,7 +301,7 @@ class TestChiSquareFrequencyAnalysis(unittest.TestCase):
     def _validate_json_structure(self, result, analysis_name):
         """Helper method to validate JSON structure"""
         try:
-            result_data = json.loads(result)
+            result_data = result
             self.assertIsInstance(result_data, dict, f"{analysis_name}: Result should be a JSON object")
             self.assertIn("analysis_report", result_data, f"{analysis_name}: Missing 'analysis_report' key")
             return result_data

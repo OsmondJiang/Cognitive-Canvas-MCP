@@ -183,8 +183,8 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         ab_data = {"control": self.control_group, "treatment": self.treatment_group}
         result = self.tool.analyze(self.conv_id, groups=ab_data, analysis_type="auto")
         
-        # Parse JSON result
-        parsed_result = json.loads(result)
+        # Parse result (now a dictionary)
+        parsed_result = result
         self.assertIn("analysis_report", parsed_result)
         self.assertIn("results", parsed_result["analysis_report"])
         
@@ -203,8 +203,8 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         }
         anova_result = self.tool.analyze(self.conv_id, groups=edu_groups, analysis_type="auto")
         
-        # Parse ANOVA JSON result
-        anova_parsed = json.loads(anova_result)
+        # Parse ANOVA result (now a dictionary)
+        anova_parsed = anova_result
         anova_results = anova_parsed["analysis_report"]["results"]
         self.assertIn("anova", anova_results)
         self.assertEqual(anova_results["anova"]["test_type"], "One-way ANOVA")
@@ -215,8 +215,8 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         corr_data = {"study_hours": self.study_hours, "test_scores": self.test_scores}
         corr_result = self.tool.analyze(self.conv_id, data=corr_data, analysis_type="auto")
         
-        # Parse correlation JSON result
-        corr_parsed = json.loads(corr_result)
+        # Parse correlation result (now a dictionary)
+        corr_parsed = corr_result
         corr_results = corr_parsed["analysis_report"]["results"]
         self.assertIn("correlation", corr_results)
         self.assertIn("correlation_coefficient", corr_results["correlation"])
@@ -225,8 +225,8 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         paired_data = {"before": self.before_training, "after": self.after_training}
         paired_result = self.tool.analyze(self.conv_id, data=paired_data, analysis_type="auto")
         
-        # Parse paired comparison JSON result
-        paired_parsed = json.loads(paired_result)
+        # Parse paired comparison result (now a dictionary)
+        paired_parsed = paired_result
         paired_results = paired_parsed["analysis_report"]["results"]
         self.assertIn("t_test", paired_results)
         self.assertEqual(paired_results["t_test"]["test_type"], "Paired t-test")
@@ -253,8 +253,8 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         # Generate comprehensive report
         report = self.tool.render_report(self.conv_id)
         
-        # Parse report JSON result
-        report_parsed = json.loads(report)
+        # Parse report result (now a dictionary)
+        report_parsed = report
         self.assertIn("comprehensive_statistical_report", report_parsed)
         report_data = report_parsed["comprehensive_statistical_report"]
         
@@ -299,31 +299,32 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         
         # Test invalid analysis type
         invalid_result = self.tool.analyze(self.conv_id, data={"x": [1, 2, 3]}, analysis_type="invalid_type")
-        self.assertIn("No results", invalid_result)  # Updated to match actual output
+        self.assertIn("error", invalid_result)  # Should return error dict
+        self.assertEqual(invalid_result["error"], "No results to display.")  # Check exact error message
     
     def test_output_format_variations(self):
         """Test different output formats"""
         ab_data = {"control": self.control_group, "treatment": self.treatment_group}
         
-        # Test comprehensive format (default JSON)
+        # Test comprehensive format (default)
         comprehensive = self.tool.analyze(self.conv_id, groups=ab_data, output_format="comprehensive")
-        comprehensive_data = json.loads(comprehensive)
+        comprehensive_data = comprehensive
         self.assertIn("analysis_report", comprehensive_data)
         self.assertIn("results", comprehensive_data["analysis_report"])
         
-        # Test business format (JSON)
+        # Test business format
         business = self.tool.analyze("conv2", groups=ab_data, output_format="business")
-        business_data = json.loads(business)
+        business_data = business
         self.assertIn("analysis_report", business_data)
         
-        # Test academic format (JSON)
+        # Test academic format
         academic = self.tool.analyze("conv3", groups=ab_data, output_format="academic")
-        academic_data = json.loads(academic)
+        academic_data = academic
         self.assertIn("analysis_report", academic_data)
         
-        # Test simple format (JSON)
+        # Test simple format
         simple = self.tool.analyze("conv4", groups=ab_data, output_format="simple")
-        simple_data = json.loads(simple)
+        simple_data = simple
         self.assertIn("analysis_report", simple_data)
     
     def test_single_variable_comprehensive_analysis(self):
@@ -335,8 +336,8 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         result = self.tool.analyze(self.conv_id, data={"response_time": response_times}, 
                                  analysis_type="comprehensive_descriptive")
         
-        # Parse JSON result
-        result_data = json.loads(result)
+        # Parse result (now a dictionary)
+        result_data = result
         
         # Check that comprehensive analysis was performed
         self.assertIn("analysis_report", result_data)
@@ -487,7 +488,7 @@ class TestRenderReportFunctionality(unittest.TestCase):
     def test_render_report_empty_conversation(self):
         """Test render_report with no analyses"""
         result = self.tool.render_report("nonexistent_conv")
-        result_data = json.loads(result)
+        result_data = result
         result_str = str(result_data)
         self.assertIn("No analyses found", result_str)
     
@@ -500,8 +501,8 @@ class TestRenderReportFunctionality(unittest.TestCase):
         # Generate report
         report = self.tool.render_report(self.conv_id)
         
-        # Parse JSON result
-        report_data = json.loads(report)
+        # Parse result (now a dictionary)
+        report_data = report
         
         # Check report structure
         self.assertIn("comprehensive_statistical_report", report_data)
@@ -526,8 +527,8 @@ class TestRenderReportFunctionality(unittest.TestCase):
         # Generate report
         report = self.tool.render_report(self.conv_id)
         
-        # Parse JSON result
-        report_data = json.loads(report)
+        # Parse result (now a dictionary)
+        report_data = report
         
         # Check categorical analysis section
         self.assertIn("comprehensive_statistical_report", report_data)
@@ -551,8 +552,8 @@ class TestRenderReportFunctionality(unittest.TestCase):
         # Generate report
         report = self.tool.render_report(self.conv_id)
         
-        # Parse JSON result
-        report_data = json.loads(report)
+        # Parse result (now a dictionary)
+        report_data = report
         
         # Check frequency analysis results
         self.assertIn("comprehensive_statistical_report", report_data)
@@ -586,8 +587,8 @@ class TestRenderReportFunctionality(unittest.TestCase):
         # Generate report
         report = self.tool.render_report(self.conv_id)
         
-        # Parse JSON result
-        report_data = json.loads(report)
+        # Parse result (now a dictionary)
+        report_data = report
         
         # Check all analysis types are present
         self.assertIn("comprehensive_statistical_report", report_data)
@@ -622,8 +623,8 @@ class TestRenderReportFunctionality(unittest.TestCase):
         # Generate report
         report = self.tool.render_report(self.conv_id)
         
-        # Parse JSON result
-        report_data = json.loads(report)
+        # Parse result (now a dictionary)
+        report_data = report
         
         # Should count both effect sizes
         self.assertIn("comprehensive_statistical_report", report_data)
@@ -654,9 +655,9 @@ class TestMixedDataTypeHandling(unittest.TestCase):
         data = {"scores": [85, 92, 78, 88, 91]}
         result = self.tool.analyze(self.conv_id, data, None, "descriptive_analysis")
         
-        # Should not error with numerical data and should be valid JSON
-        result_data = json.loads(result)
-        self.assertIsInstance(result, str)
+        # Should not error with numerical data and should be valid dict
+        result_data = result
+        self.assertIsInstance(result, dict)
         
         # Check that the analysis completed successfully (has results)
         self.assertIn("analysis_report", result_data)
@@ -668,10 +669,10 @@ class TestMixedDataTypeHandling(unittest.TestCase):
         data = {"category": ["A", "B", "C", "A", "B", "A"]}
         result = self.tool.analyze(self.conv_id, data, None, "frequency_analysis")
         
-        # Should handle categorical data without trying to calculate min/max and should be valid JSON
-        result_data = json.loads(result)
-        self.assertIsInstance(result, str)
-        self.assertNotIn("error", str(result_data).lower())
+        # Should handle categorical data without trying to calculate min/max and should be valid dict
+        result_data = result
+        self.assertIsInstance(result, dict)
+        self.assertNotIn("error", result_data)
     
     def test_mixed_numerical_categorical_in_render_report(self):
         """Test render_report handles mixed data types correctly"""
@@ -686,8 +687,8 @@ class TestMixedDataTypeHandling(unittest.TestCase):
         # Generate report - should not crash on mixed data types
         report = self.tool.render_report(self.conv_id)
         
-        # Parse JSON result
-        report_data = json.loads(report)
+        # Parse result (now a dictionary)
+        report_data = report
         
         # Should handle both data types
         self.assertIn("comprehensive_statistical_report", report_data)
@@ -724,8 +725,8 @@ class TestStringDataBugFixes(unittest.TestCase):
         # Should not raise ValueError for string min/max
         try:
             result = self.tool.analyze(self.conv_id, string_data, None, "chi_square_test")
-            result_data = json.loads(result)
-            self.assertIsInstance(result, str)
+            result_data = result
+            self.assertIsInstance(result, dict)
         except ValueError as e:
             if "Unknown format code" in str(e):
                 self.fail(f"String formatting error not fixed: {e}")
@@ -740,8 +741,8 @@ class TestStringDataBugFixes(unittest.TestCase):
         # Should handle unicode strings without errors
         try:
             result = self.tool.analyze(self.conv_id, unicode_data, None, "chi_square_test")
-            result_data = json.loads(result)
-            self.assertIsInstance(result, str)
+            result_data = result
+            self.assertIsInstance(result, dict)
             
             # Check for chi-square analysis in the results
             self.assertIn("analysis_report", result_data)
@@ -760,8 +761,8 @@ class TestStringDataBugFixes(unittest.TestCase):
         
         # Should detect and handle appropriately
         result = self.tool.analyze(self.conv_id, categorical_data, None, "chi_square_test")
-        result_data = json.loads(result)
-        self.assertIsInstance(result, str)
+        result_data = result
+        self.assertIsInstance(result, dict)
         
         # Should perform chi-square test for categorical data
         self.assertIn("analysis_report", result_data)

@@ -23,16 +23,13 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
     
     def _validate_json_structure(self, result, expected_keys, analysis_name):
         """Helper method to validate JSON structure"""
-        try:
-            result_data = json.loads(result)
-            self.assertIsInstance(result_data, dict, f"{analysis_name}: Result should be a JSON object")
-            
-            for key in expected_keys:
-                self.assertIn(key, result_data, f"{analysis_name}: Missing key '{key}' in result")
-            
-            return result_data
-        except json.JSONDecodeError as e:
-            self.fail(f"{analysis_name}: Invalid JSON format - {e}")
+        # Result is now a dictionary, not a JSON string
+        self.assertIsInstance(result, dict, f"{analysis_name}: Result should be a dictionary object")
+        
+        for key in expected_keys:
+            self.assertIn(key, result, f"{analysis_name}: Missing key '{key}' in result")
+        
+        return result
     
     def test_descriptive_analysis_json(self):
         """Test descriptive analysis JSON output"""
@@ -271,7 +268,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
         
         # Parse as JSON and check if it's a structured error or proper analysis report
         try:
-            result_data = json.loads(result)
+            result_data = result
             
             # Could be either error format or analysis_report format
             if "error" in result_data:
