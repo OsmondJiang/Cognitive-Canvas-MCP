@@ -39,21 +39,20 @@ class TestRelationshipMapper(unittest.TestCase):
     def test_add_node(self):
         # Test adding a node
         result = self.manager.add_node(self.conv_id, "node1", "Test Node")
-        self.assertEqual(result["status"], "success")
-        self.assertIn("Node 'Test Node' added", result["message"])
-        self.assertIn(self.conv_id, self.manager.conversations)
-        self.assertIn("nodes", self.manager.conversations[self.conv_id])
-        self.assertIn("node1", self.manager.conversations[self.conv_id]["nodes"])
+        self.assertEqual(result["success"], True)
+        self.assertIn("data", result)
+        
+        # Verify node was added
+        nodes = result["data"]["nodes"]
+        self.assertIn("node1", nodes)
+        self.assertEqual(nodes["node1"]["label"], "Test Node")
         
         # Test adding a node with metadata
         metadata = {"color": "blue"}
         result = self.manager.add_node(self.conv_id, "node2", "Test Node 2", metadata)
-        self.assertEqual(result["status"], "success")
-        self.assertIn("Node 'Test Node 2' added", result["message"])
-        self.assertEqual(
-            self.manager.conversations[self.conv_id]["nodes"]["node2"].metadata,
-            metadata
-        )
+        self.assertEqual(result["success"], True)
+        nodes = result["data"]["nodes"]
+        self.assertEqual(nodes["node2"]["metadata"], metadata)
         
     def test_update_node(self):
         # Add a node first
@@ -61,22 +60,19 @@ class TestRelationshipMapper(unittest.TestCase):
         
         # Test updating label
         result = self.manager.update_node(self.conv_id, "node1", label="Updated Label")
-        self.assertEqual(result["status"], "success")
-        self.assertIn("Node 'node1' updated", result["message"])
-        self.assertEqual(
-            self.manager.conversations[self.conv_id]["nodes"]["node1"].label,
-            "Updated Label"
-        )
+        self.assertEqual(result["success"], True)
+        self.assertIn("data", result)
+        
+        # Verify update worked
+        nodes = result["data"]["nodes"]
+        self.assertEqual(nodes["node1"]["label"], "Updated Label")
         
         # Test updating metadata
         metadata = {"color": "red"}
         result = self.manager.update_node(self.conv_id, "node1", metadata=metadata)
-        self.assertEqual(result["status"], "success")
-        self.assertIn("Node 'node1' updated", result["message"])
-        self.assertEqual(
-            self.manager.conversations[self.conv_id]["nodes"]["node1"].metadata,
-            metadata
-        )
+        self.assertEqual(result["success"], True)
+        nodes = result["data"]["nodes"]
+        self.assertEqual(nodes["node1"]["metadata"], metadata)
         
         # Test updating both
         result = self.manager.update_node(
@@ -85,16 +81,18 @@ class TestRelationshipMapper(unittest.TestCase):
             label="Final Label", 
             metadata={"size": "large"}
         )
-        self.assertEqual(result["status"], "success")
-        self.assertIn("Node 'node1' updated", result["message"])
-        node = self.manager.conversations[self.conv_id]["nodes"]["node1"]
-        self.assertEqual(node.label, "Final Label")
-        self.assertEqual(node.metadata, {"color": "red", "size": "large"})  # Metadata is merged
+        self.assertEqual(result["success"], True)
+        nodes = result["data"]["nodes"]
+        self.assertEqual(nodes["node1"]["label"], "Final Label")
+        # Metadata should be merged: {"color": "red", "size": "large"}
+        expected_metadata = {"color": "red", "size": "large"}
+        self.assertEqual(nodes["node1"]["metadata"], expected_metadata)
         
         # Test updating a non-existent node
         result = self.manager.update_node(self.conv_id, "nonexistent", label="Invalid")
-        self.assertEqual(result["status"], "error")
-        self.assertIn("not found", result["message"])
+        self.assertEqual(result["success"], False)
+        self.assertIn("error", result)
+        self.assertIn("not found", result["error"])
         
     def test_add_edge(self):
         # Add nodes first
@@ -103,9 +101,15 @@ class TestRelationshipMapper(unittest.TestCase):
         
         # Test adding an edge
         result = self.manager.add_edge(self.conv_id, "node1", "node2", "connects_to")
-        self.assertEqual(result["status"], "success")
-        self.assertIn("Edge node1 -> node2 (connects_to) added", result["message"])
-        self.assertEqual(len(self.manager.conversations[self.conv_id]["edges"]), 1)
+        self.assertEqual(result["success"], True)
+        self.assertIn("data", result)
+        
+        # Verify edge was added
+        edges = result["data"]["edges"]
+        self.assertEqual(len(edges), 1)
+        self.assertEqual(edges[0]["source"], "node1")
+        self.assertEqual(edges[0]["target"], "node2")
+        self.assertEqual(edges[0]["type"], "connects_to")
         
         # Test adding an edge with metadata
         metadata = {"weight": 5}
@@ -116,14 +120,11 @@ class TestRelationshipMapper(unittest.TestCase):
             "depends_on", 
             metadata
         )
-        self.assertEqual(result["status"], "success")
-        self.assertIn("Edge node2 -> node1 (depends_on) added", result["message"])
-        self.assertEqual(len(self.manager.conversations[self.conv_id]["edges"]), 2)
-        self.assertEqual(
-            self.manager.conversations[self.conv_id]["edges"][1].metadata,
-            metadata
-        )
-        
+        self.assertEqual(result["success"], True)
+        edges = result["data"]["edges"]
+        self.assertEqual(len(edges), 2)
+        self.assertEqual(edges[1]["metadata"], metadata)
+
     def test_update_edge(self):
         # Add nodes and edges first
         self.manager.add_node(self.conv_id, "node1", "Node 1")
@@ -132,8 +133,7 @@ class TestRelationshipMapper(unittest.TestCase):
         
         # Test updating edge type
         result = self.manager.update_edge(self.conv_id, 0, type="updated_type")
-        self.assertEqual(result["status"], "success")
-        self.assertIn("Edge at index 0 updated", result["message"])
+        self.assertEqual(result["success"], True)
         self.assertEqual(
             self.manager.conversations[self.conv_id]["edges"][0].type,
             "updated_type"
@@ -142,8 +142,7 @@ class TestRelationshipMapper(unittest.TestCase):
         # Test updating edge metadata
         metadata = {"weight": 10}
         result = self.manager.update_edge(self.conv_id, 0, metadata=metadata)
-        self.assertEqual(result["status"], "success")
-        self.assertIn("Edge at index 0 updated", result["message"])
+        self.assertEqual(result["success"], True)
         self.assertEqual(
             self.manager.conversations[self.conv_id]["edges"][0].metadata,
             metadata
@@ -156,8 +155,7 @@ class TestRelationshipMapper(unittest.TestCase):
             type="final_type", 
             metadata={"condition": "if x > 0"}
         )
-        self.assertEqual(result["status"], "success")
-        self.assertIn("Edge at index 0 updated", result["message"])
+        self.assertEqual(result["success"], True)
         edge = self.manager.conversations[self.conv_id]["edges"][0]
         self.assertEqual(edge.type, "final_type")
         # Metadata should be merged
@@ -165,14 +163,13 @@ class TestRelationshipMapper(unittest.TestCase):
         
         # Test updating with an invalid index
         result = self.manager.update_edge(self.conv_id, 999, type="invalid")
-        self.assertEqual(result["status"], "error")
-        self.assertIn("Edge index out of range", result["message"])
+        self.assertEqual(result["success"], False)
+        self.assertIn("out of range", result["error"])
         
     def test_set_visualization_type(self):
         # Test setting a valid Relationship Map type
         result = self.manager.set_visualization_type(self.conv_id, "mindmap")
-        self.assertEqual(result["status"], "success")
-        self.assertIn("Visualization type set to mindmap", result["message"])
+        self.assertEqual(result["success"], True)
         self.assertEqual(
             self.manager.conversations[self.conv_id]["visualization_type"],
             "mindmap"
@@ -180,8 +177,8 @@ class TestRelationshipMapper(unittest.TestCase):
         
         # Test setting an invalid Relationship Map type
         result = self.manager.set_visualization_type(self.conv_id, "invalid_type")
-        self.assertEqual(result["status"], "error")
-        self.assertIn("Unknown visualization type", result["message"])
+        self.assertEqual(result["success"], False)
+        self.assertIn("Invalid visualization type", result["error"])
         self.assertEqual(
             self.manager.conversations[self.conv_id]["visualization_type"],
             "mindmap"  # Should remain unchanged
@@ -343,12 +340,8 @@ class TestRelationshipMapper(unittest.TestCase):
         result = self.manager.batch_add_nodes(self.conv_id, nodes)
         
         # Check that the batch operation succeeded
-        self.assertEqual(result["status"], "success")
-        self.assertEqual(len(result["results"]), 3)
-        # Check that all individual operations succeeded
-        for i, result_item in enumerate(result["results"]):
-            self.assertEqual(result_item["status"], "success")
-            self.assertIn(f"Batch Node {i+1}", result_item["message"])
+        self.assertEqual(result["success"], True)
+        self.assertEqual(len(result["data"]["nodes"]), 3)
         
         # Verify nodes exist in the conversation
         conv_nodes = self.manager.conversations[self.conv_id]["nodes"]
@@ -376,12 +369,8 @@ class TestRelationshipMapper(unittest.TestCase):
         result = self.manager.batch_add_edges(self.conv_id, edges)
         
         # Check that the batch operation succeeded
-        self.assertEqual(result["status"], "success")
-        self.assertEqual(len(result["results"]), 2)
-        # Check that all individual operations succeeded
-        for result_item in result["results"]:
-            self.assertEqual(result_item["status"], "success")
-            self.assertIn("added", result_item["message"])
+        self.assertEqual(result["success"], True)
+        self.assertEqual(len(result["data"]["edges"]), 2)
         
         # Verify edges exist
         conv_edges = self.manager.conversations[self.conv_id]["edges"]
@@ -405,12 +394,8 @@ class TestRelationshipMapper(unittest.TestCase):
         result = self.manager.batch_update_nodes(self.conv_id, updates)
         
         # Check update results
-        self.assertEqual(result["status"], "success")
-        self.assertEqual(len(result["results"]), 2)
-        # Check that all individual operations succeeded
-        for result_item in result["results"]:
-            self.assertEqual(result_item["status"], "success")
-            self.assertIn("updated", result_item["message"])
+        self.assertEqual(result["success"], True)
+        self.assertEqual(len(result["data"]["nodes"]), 2)
         
         # Verify updates
         conv_nodes = self.manager.conversations[self.conv_id]["nodes"]
@@ -435,12 +420,8 @@ class TestRelationshipMapper(unittest.TestCase):
         result = self.manager.batch_update_edges(self.conv_id, updates)
         
         # Check update results
-        self.assertEqual(result["status"], "success")
-        self.assertEqual(len(result["results"]), 2)
-        # Check that all individual operations succeeded
-        for result_item in result["results"]:
-            self.assertEqual(result_item["status"], "success")
-            self.assertIn("updated", result_item["message"])
+        self.assertEqual(result["success"], True)
+        self.assertEqual(len(result["data"]["edges"]), 2)
         
         # Verify updates
         conv_edges = self.manager.conversations[self.conv_id]["edges"]
@@ -461,18 +442,7 @@ class TestRelationshipMapper(unittest.TestCase):
         result = self.manager.batch_operations(self.conv_id, operations)
         
         # Check that the batch operation succeeded
-        self.assertEqual(result["status"], "success")
-        self.assertEqual(result["successful_operations"], 4)
-        self.assertEqual(result["failed_operations"], 0)
-        # Check individual results
-        add_node_results = [r for r in result["results"] if r["action"] == "add_node"]
-        add_edge_results = [r for r in result["results"] if r["action"] == "add_edge"]
-        update_node_results = [r for r in result["results"] if r["action"] == "update_node"]
-        self.assertEqual(len(add_node_results), 2)
-        self.assertEqual(len(add_edge_results), 1)
-        self.assertEqual(len(update_node_results), 1)
-        for result_item in result["results"]:
-            self.assertEqual(result_item["status"], "success")
+        self.assertEqual(result["success"], True)
         
         # Verify final state
         conv_nodes = self.manager.conversations[self.conv_id]["nodes"]
@@ -493,14 +463,14 @@ class TestRelationshipMapper(unittest.TestCase):
         ]
         
         result = self.manager.batch_add_nodes(self.conv_id, invalid_nodes)
-        self.assertEqual(result["status"], "success")  # Overall operation succeeds but with errors
-        self.assertEqual(len(result["errors"]), 1)
-        self.assertEqual(len(result["added_nodes"]), 1)
-        # Check individual results
-        error_result = [r for r in result["results"] if r["status"] == "error"][0]
-        self.assertIn("Missing id or label", error_result["message"])
-        success_result = [r for r in result["results"] if r["status"] == "success"][0]
-        self.assertIn("Valid Node", success_result["message"])
+        self.assertEqual(result["success"], False)  # Should fail validation
+        self.assertIn("error", result)
+        self.assertIn("missing required 'id' or 'label' field", result["error"])
+        
+        # Valid nodes should work
+        valid_nodes = [{"id": "valid", "label": "Valid Node"}]
+        result = self.manager.batch_add_nodes(self.conv_id, valid_nodes)
+        self.assertEqual(result["success"], True)
         
         # Test batch update with non-existent node
         invalid_updates = [
@@ -508,22 +478,19 @@ class TestRelationshipMapper(unittest.TestCase):
         ]
         
         result = self.manager.batch_update_nodes(self.conv_id, invalid_updates)
-        self.assertEqual(result["status"], "success")  # Overall operation succeeds but with errors
-        self.assertEqual(len(result["errors"]), 1)
-        self.assertIn("Node nonexistent not found", result["errors"][0])
+        self.assertEqual(result["success"], False)  # Should fail validation
+        self.assertIn("error", result)
+        self.assertIn("not found", result["error"])
         
         # Test batch add edges with missing data
         invalid_edges = [
             {"source": "missing_target", "type": "incomplete"},  # Missing target
-            {"source": "valid", "target": "valid", "type": "complete"}
         ]
         
         result = self.manager.batch_add_edges(self.conv_id, invalid_edges)
-        self.assertEqual(result["status"], "success")  # Overall operation succeeds but with errors
-        self.assertEqual(len(result["errors"]), 1)
-        # Check that one operation failed due to missing data
-        error_result = [r for r in result["results"] if r["status"] == "error"][0]
-        self.assertIn("Missing", error_result["message"])
+        self.assertEqual(result["success"], False)  # Should fail validation
+        self.assertIn("error", result)
+        self.assertIn("missing required", result["error"])
 
     def test_server_batch_operations(self):
         """Test server-level batch operations with verification"""
@@ -539,11 +506,8 @@ class TestRelationshipMapper(unittest.TestCase):
         result = cognitive_canvas_server.relationship_mapper_manager.batch_add_nodes(conversation_id, nodes_data)
         
         # Verify nodes were added
-        self.assertEqual(result["status"], "success")
-        self.assertEqual(len(result["results"]), 3)
-        for result_item in result["results"]:
-            self.assertEqual(result_item["status"], "success")
-            self.assertIn("added", result_item["message"])
+        self.assertEqual(result["success"], True)
+        self.assertEqual(len(result["data"]["nodes"]), 3)
         
         # Verify nodes exist in manager
         conv_data = cognitive_canvas_server.relationship_mapper_manager.conversations[conversation_id]
@@ -561,11 +525,8 @@ class TestRelationshipMapper(unittest.TestCase):
         result = cognitive_canvas_server.relationship_mapper_manager.batch_add_edges(conversation_id, edges_data)
         
         # Verify edges were added
-        self.assertEqual(result["status"], "success")
-        self.assertEqual(len(result["results"]), 2)
-        for result_item in result["results"]:
-            self.assertEqual(result_item["status"], "success")
-            self.assertIn("added", result_item["message"])
+        self.assertEqual(result["success"], True)
+        self.assertEqual(len(result["data"]["edges"]), 2)
         self.assertEqual(len(conv_data["edges"]), 2)
         
         # Test rendering and verify structure
@@ -598,11 +559,7 @@ class TestRelationshipMapper(unittest.TestCase):
         ])
         
         # Verify updates
-        self.assertEqual(update_result["status"], "success")
-        self.assertEqual(len(update_result["results"]), 2)
-        for result_item in update_result["results"]:
-            self.assertEqual(result_item["status"], "success")
-            self.assertIn("updated", result_item["message"])
+        self.assertEqual(update_result["success"], True)
         
         conv_data = cognitive_canvas_server.relationship_mapper_manager.conversations[conversation_id]
         self.assertEqual(conv_data["nodes"]["node1"].label, "Updated 1")
@@ -616,10 +573,7 @@ class TestRelationshipMapper(unittest.TestCase):
         ])
         
         # Verify edge update
-        self.assertEqual(edge_update_result["status"], "success")
-        self.assertEqual(len(edge_update_result["results"]), 1)
-        self.assertEqual(edge_update_result["results"][0]["status"], "success")
-        self.assertIn("Edge at index 0 updated", edge_update_result["results"][0]["message"])
+        self.assertEqual(edge_update_result["success"], True)
         self.assertEqual(conv_data["edges"][0].type, "updated_type")
         self.assertEqual(conv_data["edges"][0].metadata["modified"], True)
         
@@ -640,12 +594,7 @@ class TestRelationshipMapper(unittest.TestCase):
         result = cognitive_canvas_server.relationship_mapper_manager.batch_operations(conversation_id, mixed_ops)
         
         # Verify all operations succeeded
-        self.assertEqual(result["status"], "success")
-        self.assertEqual(result["successful_operations"], 6)
-        self.assertEqual(result["failed_operations"], 0)
-        # Check individual results
-        for result_item in result["results"]:
-            self.assertEqual(result_item["status"], "success")
+        self.assertEqual(result["success"], True)
         
         # Verify final state
         conv_data = cognitive_canvas_server.relationship_mapper_manager.conversations[conversation_id]
@@ -670,18 +619,17 @@ class TestRelationshipMapper(unittest.TestCase):
         result = cognitive_canvas_server.relationship_mapper_manager.batch_add_nodes(conversation_id, [
             {"label": "Missing ID"}  # Missing required id field
         ])
-        self.assertEqual(result["status"], "success")  # Overall operation succeeds but with errors
-        self.assertEqual(len(result["errors"]), 1)
-        self.assertIn("Missing id or label", result["errors"][0])
+        self.assertEqual(result["success"], False)  # Should fail validation
+        self.assertIn("error", result)
+        self.assertIn("missing required 'id' or 'label' field", result["error"])
         
         # Test invalid edge data in batch
         result = cognitive_canvas_server.relationship_mapper_manager.batch_add_edges(conversation_id, [
             {"source": "node1", "target": "node2"}  # Missing type field
         ])
-        self.assertEqual(result["status"], "success")  # Overall operation succeeds but with errors
-        self.assertEqual(len(result["errors"]), 1)
-        # The actual error message should be about missing type
-        self.assertTrue(any("type" in error.lower() for error in result["errors"]))
+        self.assertEqual(result["success"], False)  # Should fail validation
+        self.assertIn("error", result)
+        self.assertIn("type", result["error"])
 
 if __name__ == "__main__":
     unittest.main()
