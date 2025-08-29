@@ -231,57 +231,6 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         self.assertIn("t_test", paired_results)
         self.assertEqual(paired_results["t_test"]["test_type"], "Paired t-test")
     
-    def test_batch_analysis_comprehensive(self):
-        """Test comprehensive batch analysis functionality"""
-        # Complex dataset with multiple variables
-        complex_data = {
-            "satisfaction_scores": [7.2, 8.1, 6.8, 7.5, 8.0, 6.9, 7.8, 7.1, 8.2, 7.4],
-            "productivity_index": [85, 92, 78, 88, 94, 80, 91, 83, 95, 87],
-            "experience_years": [1, 3, 2, 4, 5, 2, 4, 3, 5, 3],
-            "training_hours": [10, 25, 15, 30, 40, 12, 35, 20, 45, 28]
-        }
-        
-        batch_analyses = [
-            {"type": "descriptive", "variables": ["satisfaction_scores", "productivity_index"]},
-            {"type": "correlation", "var1": "satisfaction_scores", "var2": "productivity_index"},
-            {"type": "correlation", "var1": "experience_years", "var2": "productivity_index"},
-            {"type": "correlation", "var1": "training_hours", "var2": "satisfaction_scores"},
-            {"type": "outlier_detection", "variable": "productivity_index"}
-        ]
-        
-        result = self.tool.batch_analyze(self.conv_id, complex_data, batch_analyses)
-        
-        # Parse batch analysis JSON result
-        batch_parsed = json.loads(result)
-        self.assertIn("batch_analysis_report", batch_parsed)
-        batch_results = batch_parsed["batch_analysis_report"]
-        
-        # Should contain all requested analyses
-        self.assertEqual(batch_results["title"], "Batch Statistical Analysis Report")
-        self.assertIn("analyses", batch_results)
-        
-        # Check for descriptive statistics
-        analyses = batch_results["analyses"]
-        descriptive_found = False
-        correlation_found = False
-        outlier_found = False
-        
-        for analysis_name, analysis_data in analyses.items():
-            if analysis_data["type"] == "descriptive_statistics":
-                descriptive_found = True
-            elif analysis_data["type"] == "correlation_analysis":
-                correlation_found = True
-            elif analysis_data["type"] == "outlier_detection":
-                outlier_found = True
-        
-        self.assertTrue(descriptive_found, "Should contain descriptive statistics")
-        self.assertTrue(correlation_found, "Should contain correlation analysis")
-        self.assertTrue(outlier_found, "Should contain outlier detection")
-        
-        # Check summary information
-        self.assertIn("summary", batch_results)
-        self.assertGreater(batch_results["summary"]["analyses_with_p_values"], 0)
-    
     def test_render_report_comprehensive(self):
         """Test comprehensive report generation"""
         # Perform multiple analyses first

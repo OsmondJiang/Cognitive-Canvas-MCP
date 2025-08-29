@@ -320,7 +320,7 @@ def table_builder_command(
 @mcp.tool(name="statistical_analyzer", description="Use this tool for automated statistical analysis and data exploration. Automatically selects appropriate statistical methods (t-tests, ANOVA, correlation analysis, chi-square tests) based on data structure. Supports both numerical data analysis (descriptive statistics, hypothesis testing) and categorical data analysis (frequency distributions, chi-square independence tests). Perfect for data exploration, comparing groups, validating hypotheses, analyzing categorical relationships, and generating statistical reports. Best for researchers, analysts, and anyone who needs comprehensive statistical analysis.")
 def statistical_analyzer(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")],
-    action: Annotated[str, Field(description="The operation to perform", enum=["analyze", "batch_analyze", "render_report"])],
+    action: Annotated[str, Field(description="The operation to perform", enum=["analyze", "render_report"])],
     
     # Data input (supports multiple formats)
     data: Annotated[Optional[dict], Field(description="Single dataset or paired data (e.g., {'before': [1,2,3], 'after': [4,5,6]}) for analysis", default=None)],
@@ -328,9 +328,6 @@ def statistical_analyzer(
     
     # Analysis configuration
     analysis_type: Annotated[str, Field(description="Type of analysis - 'auto' automatically detects based on data structure", enum=["auto", "descriptive", "comprehensive_descriptive", "paired_comparison", "two_group_comparison", "multi_group_comparison", "correlation_analysis", "frequency_analysis", "chi_square_test"], default="auto")],
-    
-    # Batch analysis support
-    batch_analyses: Annotated[Optional[List[dict]], Field(description="Array of analysis configurations for batch processing. Each item should specify 'type' and relevant parameters", default=None)],
     
     # Output control
     output_format: Annotated[str, Field(description="Format of the analysis report", enum=["simple", "comprehensive", "academic", "business"], default="comprehensive")],
@@ -344,11 +341,10 @@ def statistical_analyzer(
 
     Parameters:
     - conversation_id (str, required): Unique identifier of the conversation
-    - action (str, required): Operation type - ["analyze", "batch_analyze", "render_report"]
+    - action (str, required): Operation type - ["analyze", "render_report"]
     - data (dict, optional): Data for analysis (paired/related variables)
     - groups (dict, optional): Groups for comparison (independent groups)
     - analysis_type (str): Type of analysis (default: "auto" for automatic detection)
-    - batch_analyses (list, optional): Array of analysis configurations for batch processing
     - output_format (str): Report format - "simple", "comprehensive", "academic", or "business"
     - confidence_level (float): Confidence level for statistical tests (default: 0.95)
 
@@ -359,8 +355,7 @@ def statistical_analyzer(
     4. Correlation analysis: statistical_analyzer("conv1", "analyze", data={"experience": [1,3,5,7], "performance": [65,75,85,95]}, analysis_type="correlation_analysis")
     5. Chi-square test: statistical_analyzer("conv1", "analyze", data={"age_group": ["18-25", "26-35", "36-45"], "product_preference": ["Electronics", "Books", "Fashion"]}, analysis_type="chi_square_test")
     6. Frequency analysis: statistical_analyzer("conv1", "analyze", data={"feedback": ["Excellent", "Good", "Average", "Poor"]}, analysis_type="frequency_analysis")
-    7. Batch analysis: statistical_analyzer("conv1", "batch_analyze", data={"scores": [85,92,78], "experience": [1,3,5]}, batch_analyses=[{"type": "descriptive", "variables": ["scores"]}, {"type": "correlation", "var1": "scores", "var2": "experience"}])
-    8. Generate summary: statistical_analyzer("conv1", "render_report")
+    7. Generate summary: statistical_analyzer("conv1", "render_report")
     """
     
     if action == "analyze":
@@ -368,16 +363,11 @@ def statistical_analyzer(
             return "Error: Either 'data' or 'groups' is required for analyze action"
         return statistical_analyzer_manager.analyze(conversation_id, data, groups, analysis_type, output_format)
     
-    elif action == "batch_analyze":
-        if not data or not batch_analyses:
-            return "Error: Both 'data' and 'batch_analyses' are required for batch_analyze action"
-        return statistical_analyzer_manager.batch_analyze(conversation_id, data, batch_analyses, output_format)
-    
     elif action == "render_report":
         return statistical_analyzer_manager.render_report(conversation_id, "summary")
     
     else:
-        return f"Unknown action: {action}. Valid actions: analyze, batch_analyze, render_report"
+        return f"Unknown action: {action}. Valid actions: analyze, render_report"
 
 def main():
     """Main entry point for the MCP server when installed via pip"""

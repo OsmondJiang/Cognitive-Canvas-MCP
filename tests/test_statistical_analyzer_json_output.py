@@ -204,29 +204,6 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
         self.assertEqual(result_data["analysis_report"]["analysis_type"], "paired_comparison")
         self.assertIn("t_test", result_data["analysis_report"]["results"])
     
-    def test_batch_analysis_json(self):
-        """Test batch analysis JSON output"""
-        data = {
-            "values": [1, 2, 3, 4, 5],
-            "x": [1, 2, 3],
-            "y": [2, 4, 6]
-        }
-        
-        batch_config = [
-            {"type": "descriptive", "variables": ["values"]},
-            {"type": "correlation", "var1": "x", "var2": "y"}
-        ]
-        
-        result = self.tool.batch_analyze("test_batch", data, batch_config)
-        
-        result_data = self._validate_json_structure(result, ["batch_analysis_report"], "Batch Analysis")
-        
-        # Validate batch structure
-        batch_report = result_data["batch_analysis_report"]
-        self.assertIn("total_analyses", batch_report)
-        self.assertIn("analyses", batch_report)
-        self.assertTrue(batch_report["total_analyses"] > 0)
-    
     def test_output_format_variations(self):
         """Test different output format options"""
         data = {"control": [65, 67, 69], "treatment": [75, 77, 79]}
