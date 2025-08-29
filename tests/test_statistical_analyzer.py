@@ -2,6 +2,7 @@ import sys
 import os
 import unittest
 import math
+import json
 
 # Add the parent directory to the path to import tools
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -181,9 +182,18 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         # Test A/B testing scenario
         ab_data = {"control": self.control_group, "treatment": self.treatment_group}
         result = self.tool.analyze(self.conv_id, groups=ab_data, analysis_type="auto")
-        self.assertIn("Independent t-test", result)
-        self.assertIn("t-statistic", result)
-        self.assertIn("p-value", result)
+        
+        # Parse JSON result
+        parsed_result = json.loads(result)
+        self.assertIn("analysis_report", parsed_result)
+        self.assertIn("results", parsed_result["analysis_report"])
+        
+        # Check for t-test results
+        results = parsed_result["analysis_report"]["results"]
+        self.assertIn("t_test", results)
+        self.assertEqual(results["t_test"]["test_type"], "Independent t-test")
+        self.assertIn("t_statistic", results["t_test"]["statistical_results"])
+        self.assertIn("p_value", results["t_test"]["statistical_results"])
         
         # Test educational intervention
         edu_groups = {
@@ -192,20 +202,34 @@ class TestStatisticalAnalyzer(unittest.TestCase):
             "ai_assisted": self.ai_assisted_teaching
         }
         anova_result = self.tool.analyze(self.conv_id, groups=edu_groups, analysis_type="auto")
-        self.assertIn("Analysis of Variance", anova_result)  # Updated to match actual output
-        self.assertIn("F-statistic", anova_result)
-        self.assertIn("Post-hoc", anova_result)
+        
+        # Parse ANOVA JSON result
+        anova_parsed = json.loads(anova_result)
+        anova_results = anova_parsed["analysis_report"]["results"]
+        self.assertIn("anova", anova_results)
+        self.assertEqual(anova_results["anova"]["test_type"], "One-way ANOVA")
+        self.assertIn("f_statistic", anova_results["anova"]["statistical_results"])
+        self.assertIn("posthoc_analysis", anova_results["anova"])
         
         # Test correlation analysis
         corr_data = {"study_hours": self.study_hours, "test_scores": self.test_scores}
         corr_result = self.tool.analyze(self.conv_id, data=corr_data, analysis_type="auto")
-        self.assertIn("Correlation Analysis", corr_result)
-        self.assertIn("Pearson r", corr_result)
+        
+        # Parse correlation JSON result
+        corr_parsed = json.loads(corr_result)
+        corr_results = corr_parsed["analysis_report"]["results"]
+        self.assertIn("correlation", corr_results)
+        self.assertIn("pearson_r", corr_results["correlation"]["statistical_results"])
         
         # Test paired comparison
         paired_data = {"before": self.before_training, "after": self.after_training}
         paired_result = self.tool.analyze(self.conv_id, data=paired_data, analysis_type="auto")
-        self.assertIn("Paired t-test", paired_result)
+        
+        # Parse paired comparison JSON result
+        paired_parsed = json.loads(paired_result)
+        paired_results = paired_parsed["analysis_report"]["results"]
+        self.assertIn("t_test", paired_results)
+        self.assertEqual(paired_results["t_test"]["test_type"], "Paired t-test")
     
     def test_batch_analysis_comprehensive(self):
         """Test comprehensive batch analysis functionality"""
@@ -227,14 +251,36 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         
         result = self.tool.batch_analyze(self.conv_id, complex_data, batch_analyses)
         
+        # Parse batch analysis JSON result
+        batch_parsed = json.loads(result)
+        self.assertIn("batch_analysis_report", batch_parsed)
+        batch_results = batch_parsed["batch_analysis_report"]
+        
         # Should contain all requested analyses
-        self.assertIn("Batch Statistical Analysis Report", result)
-        self.assertIn("Descriptive Statistics - satisfaction_scores", result)
-        self.assertIn("Descriptive Statistics - productivity_index", result)
-        self.assertIn("Correlation Analysis", result)  # Updated to be less specific about variable names
-        self.assertIn("satisfaction", result)  # Check for variable names in the analysis
-        self.assertIn("productivity", result)
-        self.assertIn("Total analyses completed: 6", result)
+        self.assertEqual(batch_results["title"], "Batch Statistical Analysis Report")
+        self.assertIn("analyses", batch_results)
+        
+        # Check for descriptive statistics
+        analyses = batch_results["analyses"]
+        descriptive_found = False
+        correlation_found = False
+        outlier_found = False
+        
+        for analysis_name, analysis_data in analyses.items():
+            if analysis_data["type"] == "descriptive_statistics":
+                descriptive_found = True
+            elif analysis_data["type"] == "correlation_analysis":
+                correlation_found = True
+            elif analysis_data["type"] == "outlier_detection":
+                outlier_found = True
+        
+        self.assertTrue(descriptive_found, "Should contain descriptive statistics")
+        self.assertTrue(correlation_found, "Should contain correlation analysis")
+        self.assertTrue(outlier_found, "Should contain outlier detection")
+        
+        # Check summary information
+        self.assertIn("summary", batch_results)
+        self.assertGreater(batch_results["summary"]["analyses_with_p_values"], 0)
     
     def test_render_report_comprehensive(self):
         """Test comprehensive report generation"""
@@ -258,16 +304,26 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         # Generate comprehensive report
         report = self.tool.render_report(self.conv_id)
         
-        # Should contain summary information
-        self.assertIn("Comprehensive Statistical Analysis Report", report)
-        self.assertIn("Total analyses: 3", report)
-        self.assertIn("STATISTICAL SUMMARY", report)
-        self.assertIn("DETAILED ANALYSIS RESULTS", report)
+        # Parse report JSON result
+        report_parsed = json.loads(report)
+        self.assertIn("comprehensive_statistical_report", report_parsed)
+        report_data = report_parsed["comprehensive_statistical_report"]
         
-        # Should contain details from all analyses
-        self.assertIn("t-test", report)  # Updated to be less specific
-        self.assertIn("ANOVA", report)
-        self.assertIn("Correlation", report)
+        # Should contain summary information
+        self.assertEqual(report_data["title"], "Comprehensive Statistical Analysis Report")
+        self.assertEqual(report_data["total_analyses"], 3)
+        self.assertIn("statistical_summary", report_data)
+        self.assertIn("summary_statistics", report_data)
+        
+        # Check detailed analyses
+        self.assertIn("detailed_analyses", report_data)
+        self.assertEqual(len(report_data["detailed_analyses"]), 3)
+        
+        # Should contain statistical summaries from all analyses
+        statistical_summary = report_data["statistical_summary"]
+        self.assertGreater(len(statistical_summary["t_tests"]), 0)
+        self.assertGreater(len(statistical_summary["correlations"]), 0)
+        self.assertGreater(len(statistical_summary["group_comparisons"]), 0)
     
     def test_edge_cases_and_error_handling(self):
         """Test edge cases and error handling"""
@@ -300,22 +356,26 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         """Test different output formats"""
         ab_data = {"control": self.control_group, "treatment": self.treatment_group}
         
-        # Test comprehensive format (default)
+        # Test comprehensive format (default JSON)
         comprehensive = self.tool.analyze(self.conv_id, groups=ab_data, output_format="comprehensive")
-        self.assertIn("Statistical Analysis Report", comprehensive)
-        self.assertIn("t-statistic", comprehensive)
+        comprehensive_data = json.loads(comprehensive)
+        self.assertIn("analysis_report", comprehensive_data)
+        self.assertIn("results", comprehensive_data["analysis_report"])
         
-        # Test business format
+        # Test business format (JSON)
         business = self.tool.analyze("conv2", groups=ab_data, output_format="business")
-        self.assertIn("Business Interpretation", business)
+        business_data = json.loads(business)
+        self.assertIn("analysis_report", business_data)
         
-        # Test academic format
+        # Test academic format (JSON)
         academic = self.tool.analyze("conv3", groups=ab_data, output_format="academic")
-        self.assertIn("Academic Conclusion", academic)
+        academic_data = json.loads(academic)
+        self.assertIn("analysis_report", academic_data)
         
-        # Test simple format
+        # Test simple format (JSON)
         simple = self.tool.analyze("conv4", groups=ab_data, output_format="simple")
-        self.assertIn("Statistical Analysis Report", simple)
+        simple_data = json.loads(simple)
+        self.assertIn("analysis_report", simple_data)
     
     def test_single_variable_comprehensive_analysis(self):
         """Test comprehensive single variable analysis"""
@@ -326,17 +386,25 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         result = self.tool.analyze(self.conv_id, data={"response_time": response_times}, 
                                  analysis_type="comprehensive_descriptive")
         
-        # Check that comprehensive analysis was performed
-        self.assertIn("Distribution Analysis", result)
-        self.assertIn("Descriptive Statistics", result)
-        self.assertIn("Percentiles", result)
-        self.assertIn("Performance Metrics", result)
-        self.assertIn("Data Quality", result)
-        self.assertIn("Variability Analysis", result)
+        # Parse JSON result
+        result_data = json.loads(result)
         
-        # Check for specific percentiles
-        self.assertIn("P95:", result)
-        self.assertIn("P99:", result)
+        # Check that comprehensive analysis was performed
+        self.assertIn("analysis_report", result_data)
+        self.assertIn("results", result_data["analysis_report"])
+        
+        # Check for distribution analysis results
+        results = result_data["analysis_report"]["results"]
+        self.assertTrue(any("distribution_analysis" in key for key in results.keys()))
+        
+        # Check for specific analysis components in the results
+        distribution_key = [k for k in results.keys() if "distribution_analysis" in k][0]
+        distribution_data = results[distribution_key]
+        
+        self.assertIn("descriptive_statistics", distribution_data)
+        self.assertIn("performance_metrics", distribution_data)
+        self.assertIn("data_quality", distribution_data)
+        self.assertIn("variability_analysis", distribution_data)
         
     def test_single_variable_percentiles(self):
         """Test percentile calculations for single variable"""
@@ -470,7 +538,9 @@ class TestRenderReportFunctionality(unittest.TestCase):
     def test_render_report_empty_conversation(self):
         """Test render_report with no analyses"""
         result = self.tool.render_report("nonexistent_conv")
-        self.assertIn("No analyses found", result)
+        result_data = json.loads(result)
+        result_str = str(result_data)
+        self.assertIn("No analyses found", result_str)
     
     def test_render_report_single_numerical_analysis(self):
         """Test render_report with single numerical analysis"""
@@ -481,13 +551,19 @@ class TestRenderReportFunctionality(unittest.TestCase):
         # Generate report
         report = self.tool.render_report(self.conv_id)
         
+        # Parse JSON result
+        report_data = json.loads(report)
+        
         # Check report structure
-        self.assertIn("Comprehensive Statistical Analysis Report", report)
-        self.assertIn("STATISTICAL SUMMARY", report)
-        self.assertIn("T-test Results", report)
-        self.assertIn("DETAILED ANALYSIS RESULTS", report)
-        self.assertIn("Total analyses: 1", report)
-        self.assertIn("Statistical tests performed: 1", report)
+        self.assertIn("comprehensive_statistical_report", report_data)
+        report_content = report_data["comprehensive_statistical_report"]
+        
+        self.assertEqual(report_content["title"], "Comprehensive Statistical Analysis Report")
+        self.assertIn("statistical_summary", report_content)
+        self.assertIn("detailed_analyses", report_content)
+        self.assertEqual(report_content["total_analyses"], 1)
+        self.assertEqual(report_content["summary_statistics"]["t_tests_conducted"], 1)
+        self.assertEqual(report_content["summary_statistics"]["total_statistical_tests"], 1)
     
     def test_render_report_categorical_analysis(self):
         """Test render_report with categorical analysis (chi-square)"""
@@ -501,12 +577,21 @@ class TestRenderReportFunctionality(unittest.TestCase):
         # Generate report
         report = self.tool.render_report(self.conv_id)
         
+        # Parse JSON result
+        report_data = json.loads(report)
+        
         # Check categorical analysis section
-        self.assertIn("Categorical Analysis Results", report)
-        self.assertIn("Chi-square", report)
-        self.assertIn("Cramér's V", report)
-        self.assertIn("unique values", report)  # Should show categorical data info
-        self.assertIn("Categorical analyses performed: 1", report)
+        self.assertIn("comprehensive_statistical_report", report_data)
+        report_content = report_data["comprehensive_statistical_report"]
+        
+        self.assertGreater(len(report_content["statistical_summary"]["categorical_analyses"]), 0)
+        # Chi-square test includes: 1 chi-square test + 2 frequency analyses = 3 total categorical analyses
+        self.assertEqual(report_content["summary_statistics"]["categorical_analyses_performed"], 3)
+        
+        # Check for chi-square specific data
+        categorical_analysis = report_content["statistical_summary"]["categorical_analyses"][0]
+        self.assertIn("chi_square_statistic", categorical_analysis)
+        self.assertIn("cramers_v", categorical_analysis)
     
     def test_render_report_frequency_analysis(self):
         """Test render_report with frequency analysis"""
@@ -517,11 +602,20 @@ class TestRenderReportFunctionality(unittest.TestCase):
         # Generate report
         report = self.tool.render_report(self.conv_id)
         
+        # Parse JSON result
+        report_data = json.loads(report)
+        
         # Check frequency analysis results
-        self.assertIn("Categorical Analysis Results", report)
-        self.assertIn("Frequency analysis", report)
-        self.assertIn("categories", report)
-        self.assertIn("observations", report)
+        self.assertIn("comprehensive_statistical_report", report_data)
+        report_content = report_data["comprehensive_statistical_report"]
+        
+        self.assertGreater(len(report_content["statistical_summary"]["categorical_analyses"]), 0)
+        self.assertEqual(report_content["summary_statistics"]["categorical_analyses_performed"], 1)
+        
+        # Check for frequency analysis specific data
+        categorical_analysis = report_content["statistical_summary"]["categorical_analyses"][0]
+        self.assertIn("total_observations", categorical_analysis)
+        self.assertIn("unique_categories", categorical_analysis)
     
     def test_render_report_mixed_analysis_types(self):
         """Test render_report with mixed numerical and categorical analyses"""
@@ -543,17 +637,25 @@ class TestRenderReportFunctionality(unittest.TestCase):
         # Generate report
         report = self.tool.render_report(self.conv_id)
         
-        # Check all analysis types are present
-        self.assertIn("T-test Results", report)
-        self.assertIn("Categorical Analysis Results", report) 
-        self.assertIn("Correlation Results", report)
-        self.assertIn("Total analyses: 3", report)
-        self.assertIn("Statistical tests performed: 3", report)
+        # Parse JSON result
+        report_data = json.loads(report)
         
-        # Check detailed sections
-        self.assertIn("Paired Comparison", report)
-        self.assertIn("Chi Square Test", report)
-        self.assertIn("Correlation Analysis", report)
+        # Check all analysis types are present
+        self.assertIn("comprehensive_statistical_report", report_data)
+        report_content = report_data["comprehensive_statistical_report"]
+        
+        self.assertEqual(report_content["total_analyses"], 3)
+        # total_statistical_tests: 1 t-test + 1 correlation + 1 chi-square + 2 frequency analyses = 5 total
+        self.assertEqual(report_content["summary_statistics"]["total_statistical_tests"], 5)
+        self.assertEqual(report_content["summary_statistics"]["t_tests_conducted"], 1)
+        self.assertEqual(report_content["summary_statistics"]["correlations_calculated"], 1)
+        # Chi-square test includes 1 chi-square + 2 frequency analyses = 3 categorical analyses
+        self.assertEqual(report_content["summary_statistics"]["categorical_analyses_performed"], 3)
+        
+        # Check that all analysis types have data
+        self.assertGreater(len(report_content["statistical_summary"]["t_tests"]), 0)
+        self.assertGreater(len(report_content["statistical_summary"]["correlations"]), 0)
+        self.assertGreater(len(report_content["statistical_summary"]["categorical_analyses"]), 0)
     
     def test_render_report_effect_sizes_counting(self):
         """Test that effect sizes are properly counted in report"""
@@ -571,10 +673,24 @@ class TestRenderReportFunctionality(unittest.TestCase):
         # Generate report
         report = self.tool.render_report(self.conv_id)
         
+        # Parse JSON result
+        report_data = json.loads(report)
+        
         # Should count both effect sizes
-        self.assertIn("Effect sizes calculated: 2", report)
-        self.assertIn("Cohen's d", report)
-        self.assertIn("Cramér's V", report)
+        self.assertIn("comprehensive_statistical_report", report_data)
+        report_content = report_data["comprehensive_statistical_report"]
+        
+        self.assertEqual(report_content["summary_statistics"]["effect_sizes_calculated"], 2)
+        
+        # Check for Cohen's d in t-test results
+        t_test_results = report_content["statistical_summary"]["t_tests"]
+        self.assertGreater(len(t_test_results), 0)
+        self.assertIn("cohens_d", t_test_results[0])
+        
+        # Check for Cramér's V in categorical results
+        categorical_results = report_content["statistical_summary"]["categorical_analyses"]
+        self.assertGreater(len(categorical_results), 0)
+        self.assertIn("cramers_v", categorical_results[0])
 
 class TestMixedDataTypeHandling(unittest.TestCase):
     """Test handling of mixed numerical and categorical data types"""
@@ -587,26 +703,32 @@ class TestMixedDataTypeHandling(unittest.TestCase):
     def test_numerical_data_range_display(self):
         """Test that numerical data shows range in reports"""
         data = {"scores": [85, 92, 78, 88, 91]}
-        result = self.tool.analyze(self.conv_id, data, None, "descriptive")
+        result = self.tool.analyze(self.conv_id, data, None, "descriptive_analysis")
         
-        # Should not error with numerical data
+        # Should not error with numerical data and should be valid JSON
+        result_data = json.loads(result)
         self.assertIsInstance(result, str)
-        self.assertNotIn("error", result.lower())
+        
+        # Check that the analysis completed successfully (has results)
+        self.assertIn("analysis_report", result_data)
+        self.assertIn("results", result_data["analysis_report"])
+        self.assertGreater(len(result_data["analysis_report"]["results"]), 0)
     
     def test_categorical_data_unique_values_display(self):
         """Test that categorical data shows unique values count"""
         data = {"category": ["A", "B", "C", "A", "B", "A"]}
         result = self.tool.analyze(self.conv_id, data, None, "frequency_analysis")
         
-        # Should handle categorical data without trying to calculate min/max
+        # Should handle categorical data without trying to calculate min/max and should be valid JSON
+        result_data = json.loads(result)
         self.assertIsInstance(result, str)
-        self.assertNotIn("error", result.lower())
+        self.assertNotIn("error", str(result_data).lower())
     
     def test_mixed_numerical_categorical_in_render_report(self):
         """Test render_report handles mixed data types correctly"""
         # Add numerical analysis
         numerical_data = {"values": [10, 15, 12, 18, 14]}
-        self.tool.analyze(self.conv_id, numerical_data, None, "descriptive")
+        self.tool.analyze(self.conv_id, numerical_data, None, "descriptive_analysis")
         
         # Add categorical analysis  
         categorical_data = {"categories": ["Red", "Blue", "Green", "Red", "Blue"]}
@@ -615,10 +737,24 @@ class TestMixedDataTypeHandling(unittest.TestCase):
         # Generate report - should not crash on mixed data types
         report = self.tool.render_report(self.conv_id)
         
+        # Parse JSON result
+        report_data = json.loads(report)
+        
         # Should handle both data types
-        self.assertIn("range =", report)  # Numerical data should show range
-        self.assertIn("unique values =", report)  # Categorical data should show unique count
-        self.assertNotIn("Unknown format code", report)  # Should not have format errors
+        self.assertIn("comprehensive_statistical_report", report_data)
+        report_content = report_data["comprehensive_statistical_report"]
+        
+        # Check that both analyses are present
+        self.assertEqual(report_content["total_analyses"], 2)
+        
+        # Check for numerical data in detailed analyses
+        detailed_analyses = report_content["detailed_analyses"]
+        numerical_analysis = [a for a in detailed_analyses if a["analysis_type"] == "descriptive_analysis"]
+        self.assertGreater(len(numerical_analysis), 0)
+        
+        # Check for categorical analysis
+        categorical_analysis = [a for a in detailed_analyses if a["analysis_type"] == "frequency_analysis"]
+        self.assertGreater(len(categorical_analysis), 0)
 
 class TestStringDataBugFixes(unittest.TestCase):
     """Test fixes for string data handling bugs"""
@@ -639,6 +775,7 @@ class TestStringDataBugFixes(unittest.TestCase):
         # Should not raise ValueError for string min/max
         try:
             result = self.tool.analyze(self.conv_id, string_data, None, "chi_square_test")
+            result_data = json.loads(result)
             self.assertIsInstance(result, str)
         except ValueError as e:
             if "Unknown format code" in str(e):
@@ -654,8 +791,13 @@ class TestStringDataBugFixes(unittest.TestCase):
         # Should handle unicode strings without errors
         try:
             result = self.tool.analyze(self.conv_id, unicode_data, None, "chi_square_test")
+            result_data = json.loads(result)
             self.assertIsInstance(result, str)
-            self.assertIn("Chi-Square Test", result)
+            
+            # Check for chi-square analysis in the results
+            self.assertIn("analysis_report", result_data)
+            self.assertIn("results", result_data["analysis_report"])
+            self.assertIn("chi_square", result_data["analysis_report"]["results"])
         except (UnicodeError, ValueError) as e:
             self.fail(f"Unicode handling error: {e}")
     
@@ -669,10 +811,13 @@ class TestStringDataBugFixes(unittest.TestCase):
         
         # Should detect and handle appropriately
         result = self.tool.analyze(self.conv_id, categorical_data, None, "chi_square_test")
+        result_data = json.loads(result)
         self.assertIsInstance(result, str)
         
         # Should perform chi-square test for categorical data
-        self.assertIn("Chi-Square Test", result)
+        self.assertIn("analysis_report", result_data)
+        self.assertIn("results", result_data["analysis_report"])
+        self.assertIn("chi_square", result_data["analysis_report"]["results"])
 
 if __name__ == "__main__":
     unittest.main()

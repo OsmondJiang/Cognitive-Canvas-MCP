@@ -138,8 +138,12 @@ class StatisticalAnalyzer:
             if "before" in data and "after" in data:
                 return "paired_comparison"
             elif len(data) == 1:
-                # Single variable analysis - comprehensive descriptive analysis
-                return "comprehensive_descriptive"
+                # Single variable analysis - check if categorical or numerical
+                values = list(data.values())[0]
+                if self._is_categorical_data(values):
+                    return "frequency_analysis"
+                else:
+                    return "comprehensive_descriptive"
             elif len(data) == 2:
                 # Check if this might be categorical data for chi-square
                 data_values = list(data.values())
@@ -866,7 +870,7 @@ class StatisticalAnalyzer:
     
     def analyze(self, conversation_id: str, data: Optional[Dict] = None, 
                 groups: Optional[Dict] = None, analysis_type: str = "auto", 
-                output_format: str = "comprehensive") -> str:
+                output_format: str = "json") -> str:
         """Main analysis function"""
         self._ensure_conv(conversation_id)
         
@@ -933,7 +937,7 @@ class StatisticalAnalyzer:
                 # Handle frequency analysis for one or more categorical variables
                 for var_name, var_values in data.items():
                     if isinstance(var_values, list):
-                        results[f"frequency"] = self._calculate_frequency_distribution(var_values, var_name)
+                        results[f"frequency_{var_name}"] = self._calculate_frequency_distribution(var_values, var_name)
                         break  # Only analyze the first variable for frequency_analysis
             
             # Store analysis in conversation history
@@ -951,7 +955,7 @@ class StatisticalAnalyzer:
             return f"Error in analysis: {str(e)}"
     
     def batch_analyze(self, conversation_id: str, data: Dict, 
-                     batch_analyses: List[Dict], output_format: str = "comprehensive") -> str:
+                     batch_analyses: List[Dict], output_format: str = "json") -> str:
         """Perform multiple analyses in a single call"""
         self._ensure_conv(conversation_id)
         
@@ -983,224 +987,450 @@ class StatisticalAnalyzer:
     
     def _format_output(self, results: Dict, analysis_type: str, output_format: str) -> str:
         """Format analysis results for output"""
+        import json
+        
         if not results:
-            return "No results to display."
+            return json.dumps({"error": "No results to display."}, indent=2)
         
-        output = []
-        output.append("🔬 Statistical Analysis Report")
-        output.append("━" * 50)
+        # Create structured JSON output
+        output_data = {
+            "analysis_report": {
+                "title": "Statistical Analysis Report",
+                "analysis_type": analysis_type,
+                "output_format": output_format,
+                "timestamp": None,  # Could be added if needed
+                "results": {}
+            }
+        }
         
-        # Format descriptive statistics
+        # Process descriptive statistics
         for key, stats in results.items():
             if key.startswith("descriptive_"):
                 var_name = key.replace("descriptive_", "")
                 if "error" not in stats:
-                    output.append(f"\n📊 {var_name} Descriptive Statistics:")
-                    output.append(f"• Sample size: {stats.get('n', 'N/A')} ({stats.get('n_note', '')})")
-                    output.append(f"• Mean: {stats.get('mean', 'N/A')} ({stats.get('mean_note', '')})")
-                    output.append(f"• Median: {stats.get('median', 'N/A')} ({stats.get('median_note', '')})")
-                    output.append(f"• Standard deviation: {stats.get('std', 'N/A')} ({stats.get('std_note', '')})")
-                    output.append(f"• Range: {stats.get('range', 'N/A')} [{stats.get('min', 'N/A')} to {stats.get('max', 'N/A')}]")
-                    
-                    # Show percentiles if available
-                    if stats.get('p25') is not None:
-                        output.append(f"• Q1 (25th percentile): {stats.get('p25', 'N/A')}")
-                        output.append(f"• Q3 (75th percentile): {stats.get('p75', 'N/A')}")
-                        output.append(f"• IQR: {stats.get('iqr', 'N/A')} ({stats.get('iqr_note', '')})")
-                    
-                    # Show confidence interval if available
-                    if stats.get('mean_ci_95_lower') is not None:
-                        output.append(f"• 95% CI for mean: [{stats['mean_ci_95_lower']}, {stats['mean_ci_95_upper']}]")
-                    
-                    # Show outliers if any
-                    if stats.get("outliers") and len(stats["outliers"]) > 0:
-                        output.append(f"• Outliers: {stats['outliers']} ({stats.get('outliers_note', '')})")
-                    elif stats.get("outliers_note"):
-                        output.append(f"• {stats.get('outliers_note', '')}")
+                    output_data["analysis_report"]["results"][f"descriptive_statistics_{var_name}"] = {
+                        "variable_name": var_name,
+                        "sample_size": {
+                            "value": stats.get('n', None),
+                            "note": stats.get('n_note', '')
+                        },
+                        "central_tendency": {
+                            "mean": {
+                                "value": stats.get('mean', None),
+                                "note": stats.get('mean_note', '')
+                            },
+                            "median": {
+                                "value": stats.get('median', None),
+                                "note": stats.get('median_note', '')
+                            }
+                        },
+                        "variability": {
+                            "standard_deviation": {
+                                "value": stats.get('std', None),
+                                "note": stats.get('std_note', '')
+                            },
+                            "variance": {
+                                "value": stats.get('variance', None),
+                                "note": stats.get('variance_note', '')
+                            },
+                            "range": {
+                                "value": stats.get('range', None),
+                                "min": stats.get('min', None),
+                                "max": stats.get('max', None),
+                                "note": stats.get('range_note', '')
+                            }
+                        },
+                        "percentiles": {
+                            "q1": {
+                                "value": stats.get('q1', stats.get('p25', None)),
+                                "note": stats.get('q1_note', '')
+                            },
+                            "q3": {
+                                "value": stats.get('q3', stats.get('p75', None)),
+                                "note": stats.get('q3_note', '')
+                            },
+                            "iqr": {
+                                "value": stats.get('iqr', None),
+                                "note": stats.get('iqr_note', '')
+                            },
+                            "all_percentiles": {
+                                p: stats.get(p, None) for p in ['p5', 'p10', 'p25', 'p50', 'p75', 'p90', 'p95', 'p99']
+                                if stats.get(p) is not None
+                            }
+                        },
+                        "confidence_interval": {
+                            "mean_95_ci": {
+                                "lower": stats.get('mean_ci_95_lower', None),
+                                "upper": stats.get('mean_ci_95_upper', None),
+                                "note": stats.get('mean_ci_note', '')
+                            },
+                            "standard_error": {
+                                "value": stats.get('mean_se', None),
+                                "note": stats.get('mean_se_note', '')
+                            }
+                        },
+                        "outliers": {
+                            "values": stats.get('outliers', []),
+                            "count": len(stats.get('outliers', [])),
+                            "note": stats.get('outliers_note', '')
+                        },
+                        "distribution_shape": {
+                            "coefficient_of_variation": {
+                                "value": stats.get('coefficient_of_variation', None),
+                                "note": stats.get('cv_note', '')
+                            },
+                            "skewness": {
+                                "value": stats.get('skewness', None),
+                                "note": stats.get('skewness_note', '')
+                            }
+                        }
+                    }
+                else:
+                    output_data["analysis_report"]["results"][f"descriptive_statistics_{var_name}"] = {
+                        "error": stats.get("error", "Unknown error")
+                    }
         
-        # Format t-test results
+        # Process t-test results
         if "t_test" in results:
             t_result = results["t_test"]
             if "error" not in t_result:
-                output.append(f"\n🧮 {t_result['test_type']} Results:")
-                output.append(f"• t-statistic: {t_result['t_statistic']} (df = {t_result['degrees_of_freedom']})")
-                output.append(f"• {t_result['p_value_display']} ({t_result['p_value_note']})")
-                output.append(f"• Cohen's d: {t_result['cohens_d']} ({t_result['cohens_d_note']})")
-                output.append(f"• Effect size category: {t_result['effect_size_category']} ({t_result['effect_size_note']})")
-                output.append(f"• Mean difference: {t_result['mean_difference']} ({t_result['mean_difference_note']})")
+                output_data["analysis_report"]["results"]["t_test"] = {
+                    "test_type": t_result.get('test_type', ''),
+                    "statistical_results": {
+                        "t_statistic": {
+                            "value": t_result.get('t_statistic', None),
+                            "degrees_of_freedom": t_result.get('degrees_of_freedom', None)
+                        },
+                        "p_value": {
+                            "value": t_result.get('p_value', None),
+                            "display": t_result.get('p_value_display', ''),
+                            "note": t_result.get('p_value_note', '')
+                        }
+                    },
+                    "effect_size": {
+                        "cohens_d": {
+                            "value": t_result.get('cohens_d', None),
+                            "note": t_result.get('cohens_d_note', '')
+                        },
+                        "category": t_result.get('effect_size_category', ''),
+                        "interpretation_note": t_result.get('effect_size_note', '')
+                    },
+                    "descriptive_results": {
+                        "mean_difference": {
+                            "value": t_result.get('mean_difference', None),
+                            "note": t_result.get('mean_difference_note', '')
+                        }
+                    }
+                }
+            else:
+                output_data["analysis_report"]["results"]["t_test"] = {
+                    "error": t_result.get("error", "Unknown error")
+                }
         
-        # Format ANOVA results
+        # Process ANOVA results
         if "anova" in results:
             anova_result = results["anova"]
             if "error" not in anova_result:
-                output.append(f"\n🔬 Analysis of Variance (ANOVA) Results:")
-                output.append(f"• F-statistic: {anova_result['f_statistic']} (df = {anova_result['df_between']}, {anova_result['df_within']})")
-                output.append(f"• {anova_result['f_statistic_note']}")
-                output.append(f"• {anova_result['p_value_display']} ({anova_result['p_value_note']})")
-                output.append(f"• η² (eta-squared): {anova_result['eta_squared']} ({anova_result['eta_squared_note']})")
-                output.append(f"• Effect size category: {anova_result['effect_size_category']} ({anova_result['effect_size_note']})")
-                
-                if anova_result.get("posthoc_comparisons"):
-                    output.append(f"\n📈 Post-hoc Analysis ({anova_result['posthoc_note']}):")
-                    for comp in anova_result["posthoc_comparisons"]:
-                        p_status = f"p = {comp['p_value']:.3f}" if comp['p_value'] >= 0.05 else f"p < {comp['p_value']:.3f}"
-                        output.append(f"  {comp['comparison']}: difference = {comp['mean_difference']:.3f}, {p_status}")
+                output_data["analysis_report"]["results"]["anova"] = {
+                    "test_type": "One-way ANOVA",
+                    "statistical_results": {
+                        "f_statistic": {
+                            "value": anova_result.get('f_statistic', None),
+                            "note": anova_result.get('f_statistic_note', '')
+                        },
+                        "degrees_of_freedom": {
+                            "between_groups": anova_result.get('df_between', None),
+                            "within_groups": anova_result.get('df_within', None),
+                            "note": anova_result.get('degrees_freedom_note', '')
+                        },
+                        "p_value": {
+                            "value": anova_result.get('p_value', None),
+                            "display": anova_result.get('p_value_display', ''),
+                            "note": anova_result.get('p_value_note', '')
+                        }
+                    },
+                    "effect_size": {
+                        "eta_squared": {
+                            "value": anova_result.get('eta_squared', None),
+                            "note": anova_result.get('eta_squared_note', '')
+                        },
+                        "category": anova_result.get('effect_size_category', ''),
+                        "interpretation_note": anova_result.get('effect_size_note', '')
+                    },
+                    "posthoc_analysis": {
+                        "comparisons": anova_result.get('posthoc_comparisons', []),
+                        "note": anova_result.get('posthoc_note', '')
+                    }
+                }
+            else:
+                output_data["analysis_report"]["results"]["anova"] = {
+                    "error": anova_result.get("error", "Unknown error")
+                }
         
-        # Format distribution analysis results
+        # Process distribution analysis results
         for key, result in results.items():
             if key.startswith("distribution_") and "error" not in result:
                 var_name = result.get("variable_name", key.replace("distribution_", ""))
-                output.append(f"\n📊 Distribution Analysis: {var_name}")
                 
-                # Basic descriptive statistics
-                desc_stats = result.get("descriptive_statistics", {})
-                if desc_stats and "error" not in desc_stats:
-                    output.append(f"\n📈 Descriptive Statistics:")
-                    output.append(f"• Sample size: {desc_stats.get('n', 'N/A')} ({desc_stats.get('n_note', '')})")
-                    output.append(f"• Mean: {desc_stats.get('mean', 'N/A')} ({desc_stats.get('mean_note', '')})")
-                    output.append(f"• Median: {desc_stats.get('median', 'N/A')} ({desc_stats.get('median_note', '')})")
-                    output.append(f"• Standard deviation: {desc_stats.get('std', 'N/A')} ({desc_stats.get('std_note', '')})")
-                    output.append(f"• Range: {desc_stats.get('range', 'N/A')} [{desc_stats.get('min', 'N/A')} to {desc_stats.get('max', 'N/A')}]")
-                    
-                    # Percentiles
-                    if desc_stats.get('p5') is not None:
-                        output.append(f"\n📊 Percentiles ({desc_stats.get('percentiles_note', '')}):")
-                        percentiles = ['p5', 'p10', 'p25', 'p50', 'p75', 'p90', 'p95', 'p99']
-                        for p in percentiles:
-                            if desc_stats.get(p) is not None:
-                                output.append(f"  {p.upper()}: {desc_stats[p]}")
-                    
-                    # Confidence interval
-                    if desc_stats.get('mean_ci_95_lower') is not None:
-                        output.append(f"\n🎯 95% Confidence Interval for Mean:")
-                        output.append(f"• [{desc_stats['mean_ci_95_lower']}, {desc_stats['mean_ci_95_upper']}]")
-                        output.append(f"• {desc_stats.get('mean_ci_note', '')}")
+                distribution_data = {
+                    "variable_name": var_name,
+                    "analysis_type": result.get("analysis_type", ""),
+                    "descriptive_statistics": result.get("descriptive_statistics", {}),
+                    "distribution_shape": result.get("distribution_shape", {}),
+                    "normality_assessment": result.get("normality_assessment", {}),
+                    "performance_metrics": result.get("performance_metrics", {}),
+                    "data_quality": result.get("data_quality", {}),
+                    "variability_analysis": result.get("variability_analysis", {})
+                }
                 
-                # Distribution shape
-                if "distribution_shape" in result:
-                    shape = result["distribution_shape"]
-                    output.append(f"\n📐 Distribution Shape:")
-                    output.append(f"• Skewness: {shape.get('skewness', 'N/A')} ({shape.get('skewness_note', '')})")
-                    output.append(f"• Shape: {shape.get('shape_description', 'N/A')}")
-                
-                # Normality assessment
-                if "normality_assessment" in result:
-                    norm = result["normality_assessment"]
-                    output.append(f"\n🔍 Normality Assessment:")
-                    output.append(f"• Mean-median difference: {norm.get('mean_median_difference', 'N/A')}")
-                    output.append(f"• Within 1 std: {norm.get('within_1_std_pct', 'N/A')}% (expected: {norm.get('expected_1std_pct', 'N/A')}%)")
-                    output.append(f"• Within 2 std: {norm.get('within_2_std_pct', 'N/A')}% (expected: {norm.get('expected_2std_pct', 'N/A')}%)")
-                    output.append(f"• {norm.get('normality_note', '')}")
-                
-                # Performance metrics
-                if "performance_metrics" in result:
-                    perf = result["performance_metrics"]
-                    output.append(f"\n⚡ Performance Metrics:")
-                    output.append(f"• P50 (median): {perf.get('p50_median', 'N/A')}")
-                    output.append(f"• P95: {perf.get('p95', 'N/A')}")
-                    output.append(f"• P99: {perf.get('p99', 'N/A')}")
-                    output.append(f"• P95/P50 ratio: {perf.get('p95_p50_ratio', 'N/A')}")
-                    output.append(f"• {perf.get('performance_note', '')}")
-                
-                # Data quality
-                if "data_quality" in result:
-                    quality = result["data_quality"]
-                    output.append(f"\n🔍 Data Quality:")
-                    output.append(f"• Outliers: {quality.get('outlier_count', 'N/A')} ({quality.get('outlier_percentage', 'N/A')}%)")
-                    if quality.get("outlier_values") and len(quality["outlier_values"]) > 0:
-                        output.append(f"• Outlier values: {quality['outlier_values']}")
-                    output.append(f"• {quality.get('quality_note', '')}")
-                
-                # Variability
-                if "variability_analysis" in result:
-                    var_analysis = result["variability_analysis"]
-                    output.append(f"\n📊 Variability Analysis:")
-                    output.append(f"• Coefficient of variation: {var_analysis.get('coefficient_of_variation', 'N/A')}%")
-                    output.append(f"• Category: {var_analysis.get('variability_category', 'N/A')}")
-                    output.append(f"• {var_analysis.get('variability_note', '')}")
+                output_data["analysis_report"]["results"][f"distribution_analysis_{var_name}"] = distribution_data
         
-        # Format correlation results
+        # Process correlation results
         if "correlation" in results:
             corr_result = results["correlation"]
             if "error" not in corr_result:
-                output.append(f"\n📈 Correlation Analysis:")
-                output.append(f"• Pearson r: {corr_result['correlation_coefficient']} ({corr_result['correlation_note']})")
-                output.append(f"• {corr_result['p_value_display']} ({corr_result['p_value_note']})")
-                output.append(f"• Direction: {corr_result['direction']}")
-                output.append(f"• Strength category: {corr_result['strength_category']} ({corr_result['strength_note']})")
-                output.append(f"• R²: {corr_result['r_squared']} ({corr_result['r_squared_note']})")
-                output.append(f"• Sample size: {corr_result['sample_size']} ({corr_result['sample_size_note']})")
+                output_data["analysis_report"]["results"]["correlation"] = {
+                    "statistical_results": {
+                        "pearson_r": {
+                            "value": corr_result.get('correlation_coefficient', None),
+                            "note": corr_result.get('correlation_note', '')
+                        },
+                        "p_value": {
+                            "value": corr_result.get('p_value', None),
+                            "display": corr_result.get('p_value_display', ''),
+                            "note": corr_result.get('p_value_note', '')
+                        },
+                        "r_squared": {
+                            "value": corr_result.get('r_squared', None),
+                            "note": corr_result.get('r_squared_note', '')
+                        }
+                    },
+                    "relationship_properties": {
+                        "direction": corr_result.get('direction', ''),
+                        "strength_category": corr_result.get('strength_category', ''),
+                        "strength_note": corr_result.get('strength_note', '')
+                    },
+                    "sample_information": {
+                        "sample_size": {
+                            "value": corr_result.get('sample_size', None),
+                            "note": corr_result.get('sample_size_note', '')
+                        }
+                    }
+                }
+            else:
+                output_data["analysis_report"]["results"]["correlation"] = {
+                    "error": corr_result.get("error", "Unknown error")
+                }
         
-        # Format frequency distribution results
+        # Process frequency distribution results
         for key, result in results.items():
             if key.startswith("frequency_") and "error" not in result:
                 var_name = result.get("variable_name", key.replace("frequency_", ""))
-                output.append(f"\n📊 Frequency Distribution: {var_name}")
-                output.append(f"• Total observations: {result.get('total_observations', 'N/A')} ({result.get('total_note', '')})")
-                output.append(f"• Unique categories: {result.get('unique_categories', 'N/A')} ({result.get('unique_note', '')})")
-                output.append(f"• Mode: {result.get('mode_category', 'N/A')} (count: {result.get('mode_count', 'N/A')}, {result.get('mode_proportion', 'N/A'):.1%})")
                 
-                # Show frequency table
-                frequencies = result.get('frequencies', {})
-                if frequencies:
-                    output.append(f"\n📈 Category Frequencies:")
-                    for category, count in list(frequencies.items())[:10]:  # Show top 10
-                        proportion = result.get('proportions', {}).get(category, 0)
-                        output.append(f"  {category}: {count} ({proportion:.1%})")
-                    if len(frequencies) > 10:
-                        output.append(f"  ... and {len(frequencies) - 10} more categories")
+                frequency_data = {
+                    "variable_name": var_name,
+                    "summary_statistics": {
+                        "total_observations": {
+                            "value": result.get('total_observations', None),
+                            "note": result.get('total_note', '')
+                        },
+                        "unique_categories": {
+                            "value": result.get('unique_categories', None),
+                            "note": result.get('unique_note', '')
+                        },
+                        "mode": {
+                            "category": result.get('mode_category', None),
+                            "count": result.get('mode_count', None),
+                            "proportion": result.get('mode_proportion', None)
+                        }
+                    },
+                    "frequency_distribution": {
+                        "frequencies": result.get('frequencies', {}),
+                        "proportions": result.get('proportions', {})
+                    },
+                    "diversity_metrics": {
+                        "shannon_entropy": {
+                            "value": result.get('entropy', None),
+                            "note": result.get('entropy_note', '')
+                        },
+                        "max_entropy": result.get('max_entropy', None),
+                        "diversity_ratio": {
+                            "value": result.get('entropy_ratio', None),
+                            "note": result.get('diversity_note', '')
+                        }
+                    }
+                }
                 
-                # Diversity metrics
-                output.append(f"\n🎯 Diversity Metrics:")
-                output.append(f"• Shannon entropy: {result.get('entropy', 'N/A')} ({result.get('entropy_note', '')})")
-                output.append(f"• Maximum entropy: {result.get('max_entropy', 'N/A')}")
-                output.append(f"• Diversity ratio: {result.get('entropy_ratio', 'N/A')} ({result.get('diversity_note', '')})")
+                output_data["analysis_report"]["results"][f"frequency_analysis_{var_name}"] = frequency_data
         
-        # Format chi-square test results
+        # Process chi-square test results
         if "chi_square" in results:
             chi_result = results["chi_square"]
             if "error" not in chi_result:
-                output.append(f"\n🔬 Chi-Square Test of Independence:")
-                output.append(f"• Test: {chi_result.get('test_type', 'N/A')} ({chi_result.get('test_note', '')})")
-                output.append(f"• Variables: {chi_result.get('variable_1', 'N/A')} vs {chi_result.get('variable_2', 'N/A')}")
-                output.append(f"• χ² statistic: {chi_result.get('chi_square_statistic', 'N/A')} ({chi_result.get('chi_square_note', '')})")
-                output.append(f"• Degrees of freedom: {chi_result.get('degrees_of_freedom', 'N/A')} ({chi_result.get('df_note', '')})")
-                output.append(f"• {chi_result.get('p_value_display', 'N/A')} ({chi_result.get('p_value_note', '')})")
-                output.append(f"• Effect size (Cramér's V): {chi_result.get('cramers_v', 'N/A')} ({chi_result.get('cramers_v_note', '')})")
-                output.append(f"• Association strength: {chi_result.get('effect_size_category', 'N/A')} ({chi_result.get('effect_size_note', '')})")
-                output.append(f"• Sample size: {chi_result.get('sample_size', 'N/A')}")
-                
-                # Show contingency table
-                contingency_table = chi_result.get('contingency_table', [])
-                categories1 = chi_result.get('categories_1', [])
-                categories2 = chi_result.get('categories_2', [])
-                
-                if contingency_table and categories1 and categories2:
-                    output.append(f"\n📋 Contingency Table ({chi_result.get('contingency_note', '')}):")
-                    # Header row
-                    header = "     " + " ".join(f"{cat:>8}" for cat in categories2)
-                    output.append(header)
-                    # Data rows
-                    for i, cat1 in enumerate(categories1):
-                        row_data = " ".join(f"{contingency_table[i][j]:>8}" for j in range(len(categories2)))
-                        output.append(f"{cat1:>4} {row_data}")
-                
-                # Warning about low expected frequencies
-                if chi_result.get('warning'):
-                    output.append(f"\n⚠️  Warning: {chi_result['warning']}")
+                output_data["analysis_report"]["results"]["chi_square"] = {
+                    "test_information": {
+                        "test_type": chi_result.get('test_type', ''),
+                        "note": chi_result.get('test_note', ''),
+                        "variables": {
+                            "variable_1": chi_result.get('variable_1', ''),
+                            "variable_2": chi_result.get('variable_2', '')
+                        }
+                    },
+                    "statistical_results": {
+                        "chi_square_statistic": {
+                            "value": chi_result.get('chi_square_statistic', None),
+                            "note": chi_result.get('chi_square_note', '')
+                        },
+                        "degrees_of_freedom": {
+                            "value": chi_result.get('degrees_of_freedom', None),
+                            "note": chi_result.get('df_note', '')
+                        },
+                        "p_value": {
+                            "value": chi_result.get('p_value', None),
+                            "display": chi_result.get('p_value_display', ''),
+                            "note": chi_result.get('p_value_note', '')
+                        }
+                    },
+                    "effect_size": {
+                        "cramers_v": {
+                            "value": chi_result.get('cramers_v', None),
+                            "note": chi_result.get('cramers_v_note', '')
+                        },
+                        "association_strength": chi_result.get('effect_size_category', ''),
+                        "interpretation_note": chi_result.get('effect_size_note', '')
+                    },
+                    "sample_information": {
+                        "sample_size": chi_result.get('sample_size', None)
+                    },
+                    "contingency_table": {
+                        "table_data": chi_result.get('contingency_table', []),
+                        "categories_1": chi_result.get('categories_1', []),
+                        "categories_2": chi_result.get('categories_2', []),
+                        "note": chi_result.get('contingency_note', '')
+                    },
+                    "warnings": chi_result.get('warning', None)
+                }
+            else:
+                output_data["analysis_report"]["results"]["chi_square"] = {
+                    "error": chi_result.get("error", "Unknown error")
+                }
         
-        # Add interpretation based on output format
-        if output_format == "business":
-            output.append("\n💼 Business Interpretation:")
-            output.append("• Based on statistical analysis results, management should consider significant differences when making strategic decisions")
-        elif output_format == "academic":
-            output.append("\n🎓 Academic Conclusion:")
-            output.append("• Results meet academic publication standards. Consider including effect sizes and confidence intervals in discussion")
-        
-        return "\n".join(output)
+        # Return JSON format
+        return json.dumps(output_data, indent=2, ensure_ascii=False)
     
     def _format_batch_output(self, results: Dict, output_format: str) -> str:
         """Format batch analysis results with meaningful statistical information"""
+        import json
+        
+        if output_format == "json":
+            # Create JSON structure for batch results
+            batch_data = {
+                "batch_analysis_report": {
+                    "title": "Batch Statistical Analysis Report",
+                    "output_format": output_format,
+                    "total_analyses": len(results),
+                    "analyses": {}
+                }
+            }
+            
+            for key, result in results.items():
+                analysis_name = key
+                
+                # Descriptive statistics
+                if key.startswith("descriptive_"):
+                    var_name = key.replace("descriptive_", "")
+                    if isinstance(result, dict) and "error" not in result:
+                        batch_data["batch_analysis_report"]["analyses"][analysis_name] = {
+                            "type": "descriptive_statistics",
+                            "variable_name": var_name,
+                            "sample_size": result.get('n', None),
+                            "mean": result.get('mean', None),
+                            "std": result.get('std', None),
+                            "min": result.get('min', None),
+                            "max": result.get('max', None),
+                            "outliers": {
+                                "count": len(result.get('outliers', [])),
+                                "values": result.get('outliers', [])
+                            }
+                        }
+                    else:
+                        batch_data["batch_analysis_report"]["analyses"][analysis_name] = {
+                            "type": "descriptive_statistics",
+                            "error": str(result)
+                        }
+                
+                # Correlation analysis
+                elif key.startswith("correlation_"):
+                    var_pair = key.replace("correlation_", "")
+                    if isinstance(result, dict) and "error" not in result:
+                        batch_data["batch_analysis_report"]["analyses"][analysis_name] = {
+                            "type": "correlation_analysis",
+                            "variable_pair": var_pair,
+                            "correlation_coefficient": result.get('correlation_coefficient', None),
+                            "p_value": result.get('p_value', None),
+                            "p_value_display": result.get('p_value_display', None),
+                            "direction": result.get('direction', None),
+                            "strength_category": result.get('strength_category', None),
+                            "r_squared": result.get('r_squared', None),
+                            "sample_size": result.get('sample_size', None)
+                        }
+                    else:
+                        batch_data["batch_analysis_report"]["analyses"][analysis_name] = {
+                            "type": "correlation_analysis",
+                            "error": str(result)
+                        }
+                
+                # T-test results
+                elif key == "t_test":
+                    if isinstance(result, dict) and "error" not in result:
+                        batch_data["batch_analysis_report"]["analyses"][analysis_name] = {
+                            "type": "t_test",
+                            "test_type": result.get('test_type', None),
+                            "t_statistic": result.get('t_statistic', None),
+                            "degrees_of_freedom": result.get('degrees_of_freedom', None),
+                            "p_value": result.get('p_value', None),
+                            "p_value_display": result.get('p_value_display', None),
+                            "cohens_d": result.get('cohens_d', None),
+                            "effect_size_category": result.get('effect_size_category', None),
+                            "mean_difference": result.get('mean_difference', None)
+                        }
+                    else:
+                        batch_data["batch_analysis_report"]["analyses"][analysis_name] = {
+                            "type": "t_test",
+                            "error": str(result)
+                        }
+                
+                # Outlier detection
+                elif key.startswith("outliers_"):
+                    var_name = key.replace("outliers_", "")
+                    batch_data["batch_analysis_report"]["analyses"][analysis_name] = {
+                        "type": "outlier_detection",
+                        "variable_name": var_name,
+                        "outliers_found": isinstance(result, list) and len(result) > 0,
+                        "outlier_count": len(result) if isinstance(result, list) else 0,
+                        "outlier_values": result if isinstance(result, list) else []
+                    }
+                
+                # Generic handling for other result types
+                else:
+                    batch_data["batch_analysis_report"]["analyses"][analysis_name] = {
+                        "type": "other",
+                        "result": result
+                    }
+            
+            # Add summary statistics
+            p_value_count = sum(1 for key, result in results.items() 
+                              if isinstance(result, dict) and 'p_value' in result)
+            
+            batch_data["batch_analysis_report"]["summary"] = {
+                "analyses_with_p_values": p_value_count,
+                "note": "p-values indicate probability of observing results if null hypothesis is true"
+            }
+            
+            return json.dumps(batch_data, indent=2, ensure_ascii=False)
+    
+    def _format_batch_output_legacy(self, results: Dict, output_format: str) -> str:
+        """Format batch analysis results with meaningful statistical information (legacy text format)"""
         output = []
         output.append("🔬 Batch Statistical Analysis Report")
         output.append("━" * 50)
@@ -1299,14 +1529,232 @@ class StatisticalAnalyzer:
         
         return "\n".join(output)
     
-    def render_report(self, conversation_id: str, report_type: str = "summary") -> str:
+    def render_report(self, conversation_id: str, report_type: str = "summary", output_format: str = "json") -> str:
         """Generate a comprehensive report of all analyses in the conversation"""
+        import json
+        
         if conversation_id not in self.conversations:
+            if output_format == "json":
+                return json.dumps({"error": "No analyses found for this conversation."}, indent=2)
             return "No analyses found for this conversation."
         
         analyses = self.conversations[conversation_id]["analyses"]
         if not analyses:
+            if output_format == "json":
+                return json.dumps({"error": "No analyses found for this conversation."}, indent=2)
             return "No analyses found for this conversation."
+        
+        if output_format == "json":
+            # Create comprehensive JSON report
+            report_data = {
+                "comprehensive_statistical_report": {
+                    "title": "Comprehensive Statistical Analysis Report",
+                    "conversation_id": conversation_id,
+                    "report_type": report_type,
+                    "total_analyses": len(analyses),
+                    "statistical_summary": {
+                        "t_tests": [],
+                        "correlations": [],
+                        "group_comparisons": [],
+                        "categorical_analyses": []
+                    },
+                    "detailed_analyses": [],
+                    "summary_statistics": {}
+                }
+            }
+            
+            # Extract statistical information
+            for i, analysis in enumerate(analyses, 1):
+                results = analysis.get('results', {})
+                analysis_type = analysis.get('analysis_type', 'unknown')
+                
+                # Detailed analysis record
+                detailed_analysis = {
+                    "analysis_id": i,
+                    "analysis_type": analysis_type,
+                    "data_variables": list(analysis.get('data', {}).keys()) if analysis.get('data') else [],
+                    "group_variables": list(analysis.get('groups', {}).keys()) if analysis.get('groups') else [],
+                    "results": {}
+                }
+                
+                # Add data overview
+                if analysis.get('data'):
+                    data_overview = {}
+                    for var in analysis['data']:
+                        var_data = analysis['data'][var]
+                        if isinstance(var_data, list):
+                            try:
+                                numeric_data = [float(x) for x in var_data if x is not None]
+                                if len(numeric_data) == len(var_data):
+                                    data_overview[var] = {
+                                        "type": "numerical",
+                                        "sample_size": len(var_data),
+                                        "range": {"min": min(numeric_data), "max": max(numeric_data)}
+                                    }
+                                else:
+                                    data_overview[var] = {
+                                        "type": "mixed_or_categorical",
+                                        "sample_size": len(var_data),
+                                        "unique_values": len(set(var_data))
+                                    }
+                            except (ValueError, TypeError):
+                                data_overview[var] = {
+                                    "type": "categorical",
+                                    "sample_size": len(var_data),
+                                    "unique_values": len(set(var_data))
+                                }
+                    detailed_analysis["data_overview"] = data_overview
+                
+                # Add group overview
+                if analysis.get('groups'):
+                    group_overview = {}
+                    for group in analysis['groups']:
+                        group_data = analysis['groups'][group]
+                        if isinstance(group_data, list):
+                            try:
+                                numeric_data = [float(x) for x in group_data if x is not None]
+                                if len(numeric_data) == len(group_data):
+                                    group_overview[group] = {
+                                        "type": "numerical",
+                                        "sample_size": len(group_data),
+                                        "mean": sum(numeric_data)/len(numeric_data) if numeric_data else None
+                                    }
+                                else:
+                                    group_overview[group] = {
+                                        "type": "mixed_or_categorical",
+                                        "sample_size": len(group_data),
+                                        "unique_values": len(set(group_data))
+                                    }
+                            except (ValueError, TypeError, ZeroDivisionError):
+                                group_overview[group] = {
+                                    "type": "categorical",
+                                    "sample_size": len(group_data),
+                                    "unique_values": len(set(group_data)) if group_data else 0
+                                }
+                    detailed_analysis["group_overview"] = group_overview
+                
+                # Extract statistical results
+                if 't_test' in results and 'error' not in results['t_test']:
+                    t_result = results['t_test']
+                    t_test_data = {
+                        "analysis_id": i,
+                        "p_value": t_result.get('p_value', None),
+                        "effect_size_category": t_result.get('effect_size_category', None),
+                        "mean_difference": t_result.get('mean_difference', None),
+                        "t_statistic": t_result.get('t_statistic', None),
+                        "degrees_of_freedom": t_result.get('degrees_of_freedom', None),
+                        "cohens_d": t_result.get('cohens_d', None)
+                    }
+                    report_data["comprehensive_statistical_report"]["statistical_summary"]["t_tests"].append(t_test_data)
+                    detailed_analysis["results"]["t_test"] = t_test_data
+                
+                if 'anova' in results and 'error' not in results['anova']:
+                    anova_result = results['anova']
+                    posthoc = anova_result.get('posthoc_comparisons', [])
+                    anova_data = {
+                        "analysis_id": i,
+                        "p_value": anova_result.get('p_value', None),
+                        "effect_size_category": anova_result.get('effect_size_category', None),
+                        "eta_squared": anova_result.get('eta_squared', None),
+                        "f_statistic": anova_result.get('f_statistic', None),
+                        "df_between": anova_result.get('df_between', None),
+                        "df_within": anova_result.get('df_within', None),
+                        "posthoc_comparisons_count": len(posthoc)
+                    }
+                    report_data["comprehensive_statistical_report"]["statistical_summary"]["group_comparisons"].append(anova_data)
+                    detailed_analysis["results"]["anova"] = anova_data
+                
+                if 'correlation' in results and 'error' not in results['correlation']:
+                    corr_result = results['correlation']
+                    correlation_data = {
+                        "analysis_id": i,
+                        "correlation_coefficient": corr_result.get('correlation_coefficient', None),
+                        "p_value": corr_result.get('p_value', None),
+                        "strength_category": corr_result.get('strength_category', None),
+                        "direction": corr_result.get('direction', None),
+                        "r_squared": corr_result.get('r_squared', None),
+                        "sample_size": corr_result.get('sample_size', None)
+                    }
+                    report_data["comprehensive_statistical_report"]["statistical_summary"]["correlations"].append(correlation_data)
+                    detailed_analysis["results"]["correlation"] = correlation_data
+                
+                if 'chi_square' in results and 'error' not in results['chi_square']:
+                    chi_result = results['chi_square']
+                    chi_data = {
+                        "analysis_id": i,
+                        "chi_square_statistic": chi_result.get('chi_square_statistic', None),
+                        "p_value": chi_result.get('p_value', None),
+                        "cramers_v": chi_result.get('cramers_v', None),
+                        "effect_size_category": chi_result.get('effect_size_category', None),
+                        "sample_size": chi_result.get('sample_size', None),
+                        "degrees_of_freedom": chi_result.get('degrees_of_freedom', None)
+                    }
+                    report_data["comprehensive_statistical_report"]["statistical_summary"]["categorical_analyses"].append(chi_data)
+                    detailed_analysis["results"]["chi_square"] = chi_data
+                
+                if 'frequency' in results and 'error' not in results['frequency']:
+                    freq_result = results['frequency']
+                    frequency_data = {
+                        "analysis_id": i,
+                        "total_observations": freq_result.get('total_observations', None),
+                        "unique_categories": freq_result.get('unique_categories', None),
+                        "shannon_entropy": freq_result.get('shannon_entropy', None),
+                        "diversity_ratio": freq_result.get('diversity_ratio', None),
+                        "mode_category": freq_result.get('mode_category', None),
+                        "mode_count": freq_result.get('mode_count', None)
+                    }
+                    report_data["comprehensive_statistical_report"]["statistical_summary"]["categorical_analyses"].append(frequency_data)
+                    detailed_analysis["results"]["frequency"] = frequency_data
+                
+                # Handle frequency analysis with variable-specific keys (frequency_variablename)
+                for key, value in results.items():
+                    if key.startswith('frequency_') and 'error' not in value:
+                        freq_result = value
+                        frequency_data = {
+                            "analysis_id": i,
+                            "variable_name": freq_result.get('variable_name', key),
+                            "total_observations": freq_result.get('total_observations', None),
+                            "unique_categories": freq_result.get('unique_categories', None),
+                            "shannon_entropy": freq_result.get('entropy', None),
+                            "diversity_ratio": freq_result.get('entropy_ratio', None),
+                            "mode_category": freq_result.get('mode_category', None),
+                            "mode_count": freq_result.get('mode_count', None)
+                        }
+                        report_data["comprehensive_statistical_report"]["statistical_summary"]["categorical_analyses"].append(frequency_data)
+                        detailed_analysis["results"][key] = frequency_data
+                
+                report_data["comprehensive_statistical_report"]["detailed_analyses"].append(detailed_analysis)
+            
+            # Summary statistics
+            total_tests = (
+                len(report_data["comprehensive_statistical_report"]["statistical_summary"]["t_tests"]) +
+                len(report_data["comprehensive_statistical_report"]["statistical_summary"]["correlations"]) +
+                len(report_data["comprehensive_statistical_report"]["statistical_summary"]["group_comparisons"]) +
+                len(report_data["comprehensive_statistical_report"]["statistical_summary"]["categorical_analyses"])
+            )
+            
+            effect_sizes_reported = sum(
+                1 for analysis in analyses
+                for results in [analysis.get('results', {})]
+                if any(test_type in results and effect_size_field in results.get(test_type, {})
+                      for test_type, effect_size_field in [('t_test', 'cohens_d'), ('anova', 'eta_squared'), ('chi_square', 'cramers_v')])
+            )
+            
+            report_data["comprehensive_statistical_report"]["summary_statistics"] = {
+                "total_analyses": len(analyses),
+                "total_statistical_tests": total_tests,
+                "t_tests_conducted": len(report_data["comprehensive_statistical_report"]["statistical_summary"]["t_tests"]),
+                "correlations_calculated": len(report_data["comprehensive_statistical_report"]["statistical_summary"]["correlations"]),
+                "group_comparisons_performed": len(report_data["comprehensive_statistical_report"]["statistical_summary"]["group_comparisons"]),
+                "categorical_analyses_performed": len(report_data["comprehensive_statistical_report"]["statistical_summary"]["categorical_analyses"]),
+                "effect_sizes_calculated": effect_sizes_reported,
+                "note": "All p-values represent probability of observing results if null hypothesis is true"
+            }
+            
+            return json.dumps(report_data, indent=2, ensure_ascii=False)
+    
+    def _render_report_legacy(self, conversation_id: str, report_type: str, analyses: List[Dict]) -> str:
+        """Generate a comprehensive report in legacy text format"""
         
         output = []
         output.append("📋 Comprehensive Statistical Analysis Report")
