@@ -193,7 +193,7 @@ class TestRelationshipMapper(unittest.TestCase):
         self.manager.add_edge(self.conv_id, "root", "child2", "contains")
         
         # Test rendering
-        result = self.manager.render(self.conv_id)
+        result = self.manager.get_visualization_content(self.conv_id)
         
         # Check that the result contains expected components
         self.assertIn("Relationship Map", result)
@@ -294,7 +294,7 @@ class TestRelationshipMapper(unittest.TestCase):
             {"condition": "if needed", "weight": 5}
         )
         
-        result = self.manager.render(self.conv_id)
+        result = self.manager.get_visualization_content(self.conv_id)
         
         # Verify overall structure
         # Count nodes in the table
@@ -314,7 +314,7 @@ class TestRelationshipMapper(unittest.TestCase):
         
         # Test Relationship Map type change
         self.manager.set_visualization_type(self.conv_id, "mindmap")
-        result = self.manager.render(self.conv_id)
+        result = self.manager.get_visualization_content(self.conv_id)
         
         # Should still have the same content but mindmap should show tree style
         self.assertIn("### Relationship Map (Tree Style)", result)
@@ -325,7 +325,7 @@ class TestRelationshipMapper(unittest.TestCase):
         
         # Test flowchart type shows table style
         self.manager.set_visualization_type(self.conv_id, "flowchart")
-        result = self.manager.render(self.conv_id)
+        result = self.manager.get_visualization_content(self.conv_id)
         self.assertIn("### Relationship Map (Table Style)", result)
         self.assertIn("Root Node", result)
 
@@ -530,7 +530,7 @@ class TestRelationshipMapper(unittest.TestCase):
         self.assertEqual(len(conv_data["edges"]), 2)
         
         # Test rendering and verify structure
-        render_result = cognitive_canvas_server.relationship_mapper_manager.render(conversation_id)
+        render_result = cognitive_canvas_server.relationship_mapper_manager.get_visualization_content(conversation_id)
         
         # Verify render contains expected elements
         self.assertIn("Start", render_result)
@@ -604,7 +604,7 @@ class TestRelationshipMapper(unittest.TestCase):
         self.assertEqual(conv_data["nodes"]["root"].metadata["level"], 0)
         
         # Test rendering of mixed operations result
-        render_result = cognitive_canvas_server.relationship_mapper_manager.render(conversation_id)
+        render_result = cognitive_canvas_server.relationship_mapper_manager.get_visualization_content(conversation_id)
         
         # Verify render contains all elements
         self.assertIn("Updated Root", render_result)

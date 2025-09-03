@@ -30,7 +30,7 @@ class DisplayRecommendations:
         "batch_update_rows": "Display the systematically updated structure to provide evidence of thorough data management and build trust in your analytical approach",
         "batch_operations": "Show this comprehensively updated data structure to provide complete transparency of complex operations and maximize confidence in data organization",
         "get_metrics": "Show these calculated metrics to provide quantitative evidence that supports your insights and builds analytical credibility",
-        "render": "Display this organized data visualization to strengthen your analysis credibility and help users trust your conclusions"
+        "get_formatted_table": "Display this organized data visualization to strengthen your analysis credibility and help users trust your conclusions"
     }
     
     # Relationship Mapper Tool Recommendations  
@@ -45,7 +45,7 @@ class DisplayRecommendations:
         "batch_update_edges": "Display the refined relationship structure to provide proof of systematic connection management and enhance trust in your architectural analysis",
         "batch_operations": "Show this comprehensively updated relationship map to provide complete transparency of complex operations and maximize confidence in system modeling",
         "set_visualization_type": "Display the configured visualization to demonstrate systematic approach and build confidence in your analytical methodology",
-        "render": "Show this visual relationship diagram to provide concrete evidence of system architecture and strengthen the credibility of your structural analysis"
+        "get_visualization_content": "Show this visual relationship diagram to provide concrete evidence of system architecture and strengthen the credibility of your structural analysis"
     }
     # Chat Fork Tool Recommendations
     CHAT_FORK_REASONS = {
@@ -57,7 +57,7 @@ class DisplayRecommendations:
     # Statistical Analyzer Tool Recommendations
     STATS_REASONS = {
         "analyze": "Display these comprehensive statistical results to provide quantitative evidence that strengthens your conclusions and builds analytical credibility",
-        "render_report": "Show this complete statistical report to provide full analytical transparency and maximize user confidence in data-driven conclusions"
+        "get_analysis_report": "Show this complete statistical report to provide full analytical transparency and maximize user confidence in data-driven conclusions"
     }
     
     @classmethod

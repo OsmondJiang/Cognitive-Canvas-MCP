@@ -231,7 +231,7 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         self.assertIn("t_test", paired_results)
         self.assertEqual(paired_results["t_test"]["test_type"], "Paired t-test")
     
-    def test_render_report_comprehensive(self):
+    def test_get_analysis_report_comprehensive(self):
         """Test comprehensive report generation"""
         # Perform multiple analyses first
         # 1. A/B test
@@ -251,7 +251,7 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         self.tool.analyze(self.conv_id, data=corr_data, analysis_type="auto")
         
         # Generate comprehensive report
-        report = self.tool.render_report(self.conv_id)
+        report = self.tool.get_analysis_report(self.conv_id)
         
         # Parse report result (now a dictionary)
         report_parsed = report
@@ -478,28 +478,28 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         self.assertIn("error", result)
 
 class TestRenderReportFunctionality(unittest.TestCase):
-    """Test render_report functionality with various analysis types"""
+    """Test get_analysis_report functionality with various analysis types"""
     
     def setUp(self):
         """Set up test fixtures"""
         self.tool = StatisticalAnalyzer()
-        self.conv_id = "test_render_report"
+        self.conv_id = "test_get_analysis_report"
     
-    def test_render_report_empty_conversation(self):
-        """Test render_report with no analyses"""
-        result = self.tool.render_report("nonexistent_conv")
+    def test_get_analysis_report_empty_conversation(self):
+        """Test get_analysis_report with no analyses"""
+        result = self.tool.get_analysis_report("nonexistent_conv")
         result_data = result
         result_str = str(result_data)
         self.assertIn("No analyses found", result_str)
     
-    def test_render_report_single_numerical_analysis(self):
-        """Test render_report with single numerical analysis"""
+    def test_get_analysis_report_single_numerical_analysis(self):
+        """Test get_analysis_report with single numerical analysis"""
         # Perform a t-test
         data = {"before": [70, 72, 68], "after": [78, 80, 76]}
         self.tool.analyze(self.conv_id, data, None, "paired_comparison")
         
         # Generate report
-        report = self.tool.render_report(self.conv_id)
+        report = self.tool.get_analysis_report(self.conv_id)
         
         # Parse result (now a dictionary)
         report_data = report
@@ -515,8 +515,8 @@ class TestRenderReportFunctionality(unittest.TestCase):
         self.assertEqual(report_content["summary_statistics"]["t_tests_conducted"], 1)
         self.assertEqual(report_content["summary_statistics"]["total_statistical_tests"], 1)
     
-    def test_render_report_categorical_analysis(self):
-        """Test render_report with categorical analysis (chi-square)"""
+    def test_get_analysis_report_categorical_analysis(self):
+        """Test get_analysis_report with categorical analysis (chi-square)"""
         # Perform chi-square test
         data = {
             "device": ["Mobile", "Desktop", "Tablet", "Mobile", "Desktop"],
@@ -525,7 +525,7 @@ class TestRenderReportFunctionality(unittest.TestCase):
         self.tool.analyze(self.conv_id, data, None, "chi_square_test")
         
         # Generate report
-        report = self.tool.render_report(self.conv_id)
+        report = self.tool.get_analysis_report(self.conv_id)
         
         # Parse result (now a dictionary)
         report_data = report
@@ -543,14 +543,14 @@ class TestRenderReportFunctionality(unittest.TestCase):
         self.assertIn("chi_square_statistic", categorical_analysis)
         self.assertIn("cramers_v", categorical_analysis)
     
-    def test_render_report_frequency_analysis(self):
-        """Test render_report with frequency analysis"""
+    def test_get_analysis_report_frequency_analysis(self):
+        """Test get_analysis_report with frequency analysis"""
         # Perform frequency analysis
         data = {"feedback": ["Excellent", "Good", "Average", "Poor", "Excellent", "Good"]}
         self.tool.analyze(self.conv_id, data, None, "frequency_analysis")
         
         # Generate report
-        report = self.tool.render_report(self.conv_id)
+        report = self.tool.get_analysis_report(self.conv_id)
         
         # Parse result (now a dictionary)
         report_data = report
@@ -567,8 +567,8 @@ class TestRenderReportFunctionality(unittest.TestCase):
         self.assertIn("total_observations", categorical_analysis)
         self.assertIn("unique_categories", categorical_analysis)
     
-    def test_render_report_mixed_analysis_types(self):
-        """Test render_report with mixed numerical and categorical analyses"""
+    def test_get_analysis_report_mixed_analysis_types(self):
+        """Test get_analysis_report with mixed numerical and categorical analyses"""
         # Numerical analysis (t-test)
         numerical_data = {"before": [70, 72, 68], "after": [78, 80, 76]}
         self.tool.analyze(self.conv_id, numerical_data, None, "paired_comparison")
@@ -585,7 +585,7 @@ class TestRenderReportFunctionality(unittest.TestCase):
         self.tool.analyze(self.conv_id, correlation_data, None, "correlation_analysis")
         
         # Generate report
-        report = self.tool.render_report(self.conv_id)
+        report = self.tool.get_analysis_report(self.conv_id)
         
         # Parse result (now a dictionary)
         report_data = report
@@ -607,7 +607,7 @@ class TestRenderReportFunctionality(unittest.TestCase):
         self.assertGreater(len(report_content["statistical_summary"]["correlations"]), 0)
         self.assertGreater(len(report_content["statistical_summary"]["categorical_analyses"]), 0)
     
-    def test_render_report_effect_sizes_counting(self):
+    def test_get_analysis_report_effect_sizes_counting(self):
         """Test that effect sizes are properly counted in report"""
         # Analysis with Cohen's d
         data = {"before": [70, 72, 68], "after": [78, 80, 76]}
@@ -621,7 +621,7 @@ class TestRenderReportFunctionality(unittest.TestCase):
         self.tool.analyze(self.conv_id, categorical_data, None, "chi_square_test")
         
         # Generate report
-        report = self.tool.render_report(self.conv_id)
+        report = self.tool.get_analysis_report(self.conv_id)
         
         # Parse result (now a dictionary)
         report_data = report
@@ -674,8 +674,8 @@ class TestMixedDataTypeHandling(unittest.TestCase):
         self.assertIsInstance(result, dict)
         self.assertNotIn("error", result_data)
     
-    def test_mixed_numerical_categorical_in_render_report(self):
-        """Test render_report handles mixed data types correctly"""
+    def test_mixed_numerical_categorical_in_get_analysis_report(self):
+        """Test get_analysis_report handles mixed data types correctly"""
         # Add numerical analysis
         numerical_data = {"values": [10, 15, 12, 18, 14]}
         self.tool.analyze(self.conv_id, numerical_data, None, "descriptive_analysis")
@@ -685,7 +685,7 @@ class TestMixedDataTypeHandling(unittest.TestCase):
         self.tool.analyze(self.conv_id, categorical_data, None, "frequency_analysis")
         
         # Generate report - should not crash on mixed data types
-        report = self.tool.render_report(self.conv_id)
+        report = self.tool.get_analysis_report(self.conv_id)
         
         # Parse result (now a dictionary)
         report_data = report

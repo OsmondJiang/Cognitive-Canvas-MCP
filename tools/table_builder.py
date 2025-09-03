@@ -340,10 +340,21 @@ class TableBuilder:
         }
         return DisplayRecommendations.add_to_json_result(result, "table", "get_metrics")
 
-    def render(self, conversation_id: str, structure_id: str):
+    def get_formatted_table(self, conversation_id: str, structure_id: str):
         """
-        Render the structure according to its template_type.
-        Outputs Markdown + JSON + summary text, including metrics.
+        Generate formatted table content according to its template_type.
+        
+        This method returns structured table data in multiple formats (Markdown, JSON) 
+        along with summary information for the agent to process and present to the user.
+        
+        The output includes:
+        - Formatted markdown tables/lists based on template type
+        - JSON representation of the data
+        - Summary metrics and information
+        
+        Returns:
+            str: Formatted content with display recommendations that the agent should 
+            use to present the table data to the user in an appropriate format.
         """
         self._ensure_conv(conversation_id)
         structure = self.conversations[conversation_id].get(structure_id)
@@ -392,4 +403,4 @@ class TableBuilder:
         summary = f"Structure '{structure_id}' ({template_type}) with {len(rows)} items.\nMetrics: {metrics}"
 
         result = f"{summary}\n\n## Markdown\n{markdown}"
-        return DisplayRecommendations.add_to_text_result(result, "table", "render")
+        return DisplayRecommendations.add_to_text_result(result, "table", "get_formatted_table")

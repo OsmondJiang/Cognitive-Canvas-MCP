@@ -1092,8 +1092,27 @@ class StatisticalAnalyzer:
         
         return output_data
     
-    def render_report(self, conversation_id: str, report_type: str = "summary", output_format: str = "json") -> dict:
-        """Generate a comprehensive report of all analyses in the conversation"""
+    def get_analysis_report(self, conversation_id: str, report_type: str = "summary", output_format: str = "json") -> dict:
+        """
+        Generate a comprehensive statistical analysis report for agent processing.
+        
+        This method compiles all statistical analyses performed in a conversation into 
+        a structured report that the agent can use to present findings to the user.
+        The report includes:
+        - Summary of all statistical tests performed
+        - Detailed results with effect sizes and significance levels
+        - Data overviews and group comparisons
+        - Summary statistics across all analyses
+        
+        Args:
+            conversation_id: Unique identifier for the conversation
+            report_type: Type of report to generate (default: "summary")
+            output_format: Format of the output (default: "json")
+            
+        Returns:
+            dict: Structured report data with display recommendations that the agent
+            should use to present the statistical findings to the user in an appropriate format.
+        """
         
         if conversation_id not in self.conversations:
             return {"error": "No analyses found for this conversation."}
@@ -1310,5 +1329,5 @@ class StatisticalAnalyzer:
             }
             
             # Add display recommendation to the report data
-            report_data.update(DisplayRecommendations.get_json_recommendation("stats", "render_report"))
+            report_data.update(DisplayRecommendations.get_json_recommendation("stats", "get_analysis_report"))
             return report_data

@@ -218,8 +218,8 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
                 result_data = self._validate_json_structure(result, ["analysis_report"], f"Format {fmt}")
                 self.assertEqual(result_data["analysis_report"]["output_format"], fmt)
     
-    def test_render_report_json(self):
-        """Test render report functionality"""
+    def test_get_analysis_report_json(self):
+        """Test get analysis report functionality"""
         # Use same conversation_id for all analyses
         conversation_id = "test_report"
         
@@ -228,7 +228,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
         self.tool.analyze(conversation_id, data={"before": [68, 70, 72], "after": [76, 78, 80]}, analysis_type="paired_comparison")
         self.tool.analyze(conversation_id, data={"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]}, analysis_type="correlation_analysis")
         
-        result = self.tool.render_report(conversation_id)
+        result = self.tool.get_analysis_report(conversation_id)
         
         result_data = self._validate_json_structure(result, ["comprehensive_statistical_report"], "Render Report")
         

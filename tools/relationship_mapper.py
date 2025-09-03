@@ -434,11 +434,19 @@ class RelationshipMapper:
         return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "set_visualization_type")
 
     # ---------------- Render ----------------
-    def render(self,conversation_id: str):
+    def get_visualization_content(self, conversation_id: str):
         """
-        Render the relationship map for the conversation as Markdown table or tree.
+        Generate formatted visualization content for the relationship map.
+        
+        This method returns structured data and markdown content for the agent to process 
+        and present to the user. The output includes both tabular and tree-style 
+        visualizations based on the conversation's visualization type.
+        
         Supports visualization types: flowchart, sequence, mindmap, orgchart, tree.
-        Returns a string with both structured table and readable text-based visualization.
+        
+        Returns:
+            str: Formatted content with markdown tables/trees and display recommendations
+            that the agent should use to present the relationship map to the user.
         """
         visualization_type = self.conversations[conversation_id]["visualization_type"]
         nodes = self.conversations[conversation_id]["nodes"]
@@ -514,4 +522,4 @@ class RelationshipMapper:
         else:  # flowchart, sequence
             result = f"### Relationship Map (Table Style)\n{table_text}"
         
-        return DisplayRecommendations.add_to_text_result(result, "relationship_mapper", "render")
+        return DisplayRecommendations.add_to_text_result(result, "relationship_mapper", "get_visualization_content")

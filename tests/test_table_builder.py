@@ -162,7 +162,7 @@ class TestTableBuilder(unittest.TestCase):
         self.manager.add_row(self.conv_id, self.structure_id, {"Name": "John", "Age": 30})
         self.manager.add_row(self.conv_id, self.structure_id, {"Name": "Jane", "Age": 25})
         
-        render_result = self.manager.render(self.conv_id, self.structure_id)
+        render_result = self.manager.get_formatted_table(self.conv_id, self.structure_id)
         
         # Verify structure of the result
         self.assertIn(f"Structure '{self.structure_id}' (simple_table) with 2 items", render_result)
@@ -191,7 +191,7 @@ class TestTableBuilder(unittest.TestCase):
         self.manager.add_row(self.conv_id, "bullet_list", {"content": "Item 1"})
         self.manager.add_row(self.conv_id, "bullet_list", {"content": "Item 2"})
         
-        render_result = self.manager.render(self.conv_id, "bullet_list")
+        render_result = self.manager.get_formatted_table(self.conv_id, "bullet_list")
         
         # Verify structure and content
         self.assertIn("Structure 'bullet_list' (bulleted_list) with 2 items", render_result)
@@ -214,7 +214,7 @@ class TestTableBuilder(unittest.TestCase):
         self.manager.add_row(self.conv_id, "check_list", {"content": "Item 1", "checked": True})
         self.manager.add_row(self.conv_id, "check_list", {"content": "Item 2", "checked": False})
         
-        render_result = self.manager.render(self.conv_id, "check_list")
+        render_result = self.manager.get_formatted_table(self.conv_id, "check_list")
         
         # Verify structure and content
         self.assertIn("Structure 'check_list' (check_list) with 2 items", render_result)
@@ -242,7 +242,7 @@ class TestTableBuilder(unittest.TestCase):
         self.manager.add_row(self.conv_id, "numbered_list", {"content": "First item"})
         self.manager.add_row(self.conv_id, "numbered_list", {"content": "Second item"})
         
-        render_result = self.manager.render(self.conv_id, "numbered_list")
+        render_result = self.manager.get_formatted_table(self.conv_id, "numbered_list")
         
         # Extract markdown section
         markdown_section = render_result.split('## Markdown\n')[1].split('\n\n')[0]
@@ -254,7 +254,7 @@ class TestTableBuilder(unittest.TestCase):
         self.assertEqual(markdown_lines[1], "2. Second item")
         
         # Test rendering non-existent structure
-        result = self.manager.render(self.conv_id, "nonexistent")
+        result = self.manager.get_formatted_table(self.conv_id, "nonexistent")
         self.assertIn("does not exist", result)
 
     def test_batch_add_rows(self):
@@ -413,7 +413,7 @@ class TestTableBuilder(unittest.TestCase):
         self.assertEqual(structure["rows"][2]["Priority"], "Low")
         
         # Test rendering and verify content
-        render_result = cognitive_canvas_server.table_builder_manager.render(
+        render_result = cognitive_canvas_server.table_builder_manager.get_formatted_table(
             conversation_id, structure_id
         )
         
@@ -471,7 +471,7 @@ class TestTableBuilder(unittest.TestCase):
         self.assertEqual(structure["rows"][1]["Progress"], "100%")
         
         # Test rendering after updates
-        render_result = cognitive_canvas_server.table_builder_manager.render(
+        render_result = cognitive_canvas_server.table_builder_manager.get_formatted_table(
             conversation_id, structure_id
         )
         

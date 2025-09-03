@@ -176,7 +176,7 @@ def chat_fork_command(
 @mcp.tool(name="relationship_mapper", description="Use this tool for visualizing relationships, dependencies, and hierarchical structures between entities. Create flowcharts for processes, organizational charts for hierarchies, mind maps for concept exploration, or dependency trees for system architecture. Best for showing how things connect, flow, or depend on each other. Use when you need to map relationships, visualize system architecture, or show process flows rather than just listing items.")
 def relationship_mapper_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")], 
-    action: Annotated[str, Field(description="The operation to perform on the relationship mapper", enum=["set_visualization_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "render"])], 
+    action: Annotated[str, Field(description="The operation to perform on the relationship mapper", enum=["set_visualization_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "get_visualization_content"])], 
     # For diagram type
     diagram_type: Annotated[Optional[str], Field(description="Type of diagram to create", enum=["flowchart", "sequence", "mindmap", "orgchart", "tree"], default=None)],
     # For batch operations
@@ -191,7 +191,7 @@ def relationship_mapper_command(
 
     Parameters:
     - conversation_id (str, required): Unique identifier of the conversation
-    - action (str, required): Operation type - ["set_visualization_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "render"]
+    - action (str, required): Operation type - ["set_visualization_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "get_visualization_content"]
     - visualization_type (str): Type of visualization (required for "set_visualization_type")
     - nodes (list): Array of node objects for batch node operations
     - edges (list): Array of edge objects for batch edge operations  
@@ -204,7 +204,7 @@ def relationship_mapper_command(
     4. Update nodes: diagram_command("conv1", "batch_update_nodes", nodes=[{"id": "node1", "label": "Updated Label1"}])
     5. Update edges: diagram_command("conv1", "batch_update_edges", edges=[{"index": 0, "type": "new_type"}])
     6. Mixed operations: diagram_command("conv1", "batch_operations", operations=[{"action": "add_node", "data": {"id": "n1", "label": "Node1"}}, {"action": "add_edge", "data": {"source": "n1", "target": "n2", "type": "link"}}])
-    7. Render: diagram_command("conv1", "render")
+    7. Get visualization content: diagram_command("conv1", "get_visualization_content") - Returns formatted content that should be displayed to the user
     """
     
     if action == "set_visualization_type":
@@ -237,11 +237,11 @@ def relationship_mapper_command(
             return "Error: 'operations' array is required for batch_operations action"
         return relationship_mapper_manager.batch_operations(conversation_id, operations)
     
-    elif action == "render":
-        return relationship_mapper_manager.render(conversation_id)
+    elif action == "get_visualization_content":
+        return relationship_mapper_manager.get_visualization_content(conversation_id)
     
     else:
-        return f"Unknown action: {action}. Valid actions: set_visualization_type, batch_add_nodes, batch_update_nodes, batch_add_edges, batch_update_edges, batch_operations, render"
+        return f"Unknown action: {action}. Valid actions: set_visualization_type, batch_add_nodes, batch_update_nodes, batch_add_edges, batch_update_edges, batch_operations, get_visualization_content"
     
 @mcp.tool(
     name="table_builder",
@@ -249,7 +249,7 @@ def relationship_mapper_command(
 )
 def table_builder_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")], 
-    action: Annotated[str, Field(description="The operation to perform on the table builder", enum=["create", "batch_add_rows", "batch_update_rows", "batch_operations", "render", "metrics"])], 
+    action: Annotated[str, Field(description="The operation to perform on the table builder", enum=["create", "batch_add_rows", "batch_update_rows", "batch_operations", "get_formatted_table", "metrics"])], 
     # For all operations
     structure_id: Annotated[Optional[str], Field(description="Unique identifier for the structure. Required for all actions.", default=None)],
     # For create operation
@@ -267,7 +267,7 @@ def table_builder_command(
 
     Parameters:
     - conversation_id (str, required): Unique identifier of the conversation
-    - action (str, required): Operation type - ["create", "batch_add_rows", "batch_update_rows", "batch_operations", "render", "metrics"]
+    - action (str, required): Operation type - ["create", "batch_add_rows", "batch_update_rows", "batch_operations", "get_formatted_table", "metrics"]
     - structure_id (str): Structure identifier (required for all actions)
     - template_type (str): Type of structure (required for "create")
     - columns (list): Column names (optional for "create")
@@ -280,7 +280,7 @@ def table_builder_command(
     2. Batch add rows: table_builder_command("conv1", "batch_add_rows", structure_id="tasks", rows=[{"Task": "Review code", "Owner": "Alice", "Status": "Pending"}, {"Task": "Write tests", "Owner": "Bob", "Status": "In Progress"}])
     3. Batch update rows: table_builder_command("conv1", "batch_update_rows", structure_id="tasks", updates=[{"index": 0, "data": {"Status": "Completed"}}, {"index": 1, "data": {"Status": "Completed"}}])
     4. Mixed operations: table_builder_command("conv1", "batch_operations", structure_id="tasks", operations=[{"action": "add", "data": {"Task": "Deploy", "Owner": "Charlie", "Status": "Pending"}}, {"action": "update", "data": {"index": 0, "row_data": {"Status": "Done"}}}])
-    5. Render: table_builder_command("conv1", "render", structure_id="tasks")
+    5. Get formatted table: table_builder_command("conv1", "get_formatted_table", structure_id="tasks") - Returns formatted content for user display
     6. Metrics: table_builder_command("conv1", "metrics", structure_id="tasks")
     """
     
@@ -304,10 +304,10 @@ def table_builder_command(
             return "Error: structure_id and operations array are required for batch_operations action"
         return table_builder_manager.batch_operations(conversation_id, structure_id, operations)
     
-    elif action == "render":
+    elif action == "get_formatted_table":
         if not structure_id:
-            return "Error: structure_id is required for render action"
-        return table_builder_manager.render(conversation_id, structure_id)
+            return "Error: structure_id is required for get_formatted_table action"
+        return table_builder_manager.get_formatted_table(conversation_id, structure_id)
     
     elif action == "metrics":
         if not structure_id:
@@ -315,12 +315,12 @@ def table_builder_command(
         return table_builder_manager.get_metrics(conversation_id, structure_id)
     
     else:
-        return f"Unknown action: {action}. Valid actions: create, batch_add_rows, batch_update_rows, batch_operations, render, metrics"
+        return f"Unknown action: {action}. Valid actions: create, batch_add_rows, batch_update_rows, batch_operations, get_formatted_table, metrics"
 
 @mcp.tool(name="statistical_analyzer", description="Use this tool for automated statistical analysis and data exploration. Automatically selects appropriate statistical methods (t-tests, ANOVA, correlation analysis, chi-square tests) based on data structure. Supports both numerical data analysis (descriptive statistics, hypothesis testing) and categorical data analysis (frequency distributions, chi-square independence tests). Perfect for data exploration, comparing groups, validating hypotheses, analyzing categorical relationships, and generating statistical reports. Best for researchers, analysts, and anyone who needs comprehensive statistical analysis.")
 def statistical_analyzer(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")],
-    action: Annotated[str, Field(description="The operation to perform", enum=["analyze", "render_report"])],
+    action: Annotated[str, Field(description="The operation to perform", enum=["analyze", "get_analysis_report"])],
     
     # Data input (supports multiple formats)
     data: Annotated[Optional[dict], Field(description="Single dataset or paired data (e.g., {'before': [1,2,3], 'after': [4,5,6]}) for analysis", default=None)],
@@ -341,7 +341,7 @@ def statistical_analyzer(
 
     Parameters:
     - conversation_id (str, required): Unique identifier of the conversation
-    - action (str, required): Operation type - ["analyze", "render_report"]
+    - action (str, required): Operation type - ["analyze", "get_analysis_report"]
     - data (dict, optional): Data for analysis (paired/related variables)
     - groups (dict, optional): Groups for comparison (independent groups)
     - analysis_type (str): Type of analysis (default: "auto" for automatic detection)
@@ -355,7 +355,7 @@ def statistical_analyzer(
     4. Correlation analysis: statistical_analyzer("conv1", "analyze", data={"experience": [1,3,5,7], "performance": [65,75,85,95]}, analysis_type="correlation_analysis")
     5. Chi-square test: statistical_analyzer("conv1", "analyze", data={"age_group": ["18-25", "26-35", "36-45"], "product_preference": ["Electronics", "Books", "Fashion"]}, analysis_type="chi_square_test")
     6. Frequency analysis: statistical_analyzer("conv1", "analyze", data={"feedback": ["Excellent", "Good", "Average", "Poor"]}, analysis_type="frequency_analysis")
-    7. Generate summary: statistical_analyzer("conv1", "render_report")
+    7. Generate analysis report: statistical_analyzer("conv1", "get_analysis_report") - Returns comprehensive statistical report for user presentation
     """
     
     if action == "analyze":
@@ -363,11 +363,11 @@ def statistical_analyzer(
             return "Error: Either 'data' or 'groups' is required for analyze action"
         return statistical_analyzer_manager.analyze(conversation_id, data, groups, analysis_type, output_format)
     
-    elif action == "render_report":
-        return statistical_analyzer_manager.render_report(conversation_id, "summary")
+    elif action == "get_analysis_report":
+        return statistical_analyzer_manager.get_analysis_report(conversation_id, "summary")
     
     else:
-        return f"Unknown action: {action}. Valid actions: analyze, render_report"
+        return f"Unknown action: {action}. Valid actions: analyze, get_analysis_report"
 
 def main():
     """Main entry point for the MCP server when installed via pip"""
