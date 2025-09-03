@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cognitive-canvas-mcp"
-version = "0.1.0"
+version = "0.1.2"
 description = "MCP server for cognitive workspace and task management"
 authors = [{name = "OsmondJiang", email = "your.email@example.com"}]
 license = "MIT"
