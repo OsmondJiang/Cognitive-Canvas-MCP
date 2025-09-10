@@ -14,13 +14,29 @@ statistical_analyzer_manager = StatisticalAnalyzer()
 
 mcp = FastMCP(name = "Cognitive Canvas", instructions="""**REQUIRED: ALL TOOL OUTPUTS ARE HIDDEN FROM USERS** - Users cannot see any tool output. You MUST include relevant tool output content in your response when necessary. Each tool output contains a '_show_to_user' field with specific display requirements.
 
-Use this MCP server to enhance your thinking and problem-solving capabilities through structured organization and statistical analysis. This server transforms AI into a research-grade cognitive workspace with five specialized tools: TODO_COMMAND for systematic task and project management with status tracking; RELATIONSHIP_MAPPER for visualizing complex dependencies, relationships, and system architectures; TABLE_BUILDER for organizing unstructured information into structured formats with automated metrics; CHAT_FORK for managing conversation branches and maintaining context across topic switches; STATISTICAL_ANALYZER for automated statistical analysis, hypothesis testing, categorical data analysis (chi-square tests), and comprehensive data exploration. Together, these tools enable systematic reasoning, persistent memory, data-driven insights, and PhD-level analytical capabilities. Choose tools strategically: use TODO for planning, RELATIONSHIP_MAPPER for visualization, TABLE_BUILDER for organization, CHAT_FORK for context management, and STATISTICAL_ANALYZER for both numerical and categorical data analysis.""") 
+Use this MCP server to enhance your thinking and problem-solving capabilities through structured organization and statistical analysis. This server transforms AI into a research-grade cognitive workspace with five specialized tools: 
+
+**TODO_COMMAND** for systematic task and project management with status tracking AND auto-creating workspace isolation;
+
+**RELATIONSHIP_MAPPER** for visualizing complex dependencies, relationships, and system architectures; 
+
+**TABLE_BUILDER** for organizing unstructured information into structured formats with automated metrics; 
+
+**CHAT_FORK** for managing conversation branches and maintaining context across topic switches; 
+
+**STATISTICAL_ANALYZER** for automated statistical analysis, hypothesis testing, categorical data analysis (chi-square tests), and comprehensive data exploration. 
+
+Together, these tools enable systematic reasoning, persistent memory, data-driven insights, and PhD-level analytical capabilities. Choose tools strategically: use TODO for planning and project organization with effortless workspace isolation, RELATIONSHIP_MAPPER for visualization, TABLE_BUILDER for data organization, CHAT_FORK for context management, and STATISTICAL_ANALYZER for both numerical and categorical data analysis.
+
+**SIMPLIFIED: Auto-Creating Workspaces** - TODO_COMMAND now features zero-management workspace isolation. Just specify any workspace_id when adding tasks and the workspace will be automatically created with smart naming. No manual workspace management needed!""") 
 
 
 @mcp.tool(name="todo_command", description="**REQUIRED: Tool output is not visible to users - you MUST display the tool's output in your response when necessary.** Use this tool specifically for task and project management - creating, tracking, and updating actionable work items with status tracking (pending, in_progress, completed, blocked). Best for breaking down complex projects into manageable tasks, monitoring progress, and ensuring nothing falls through the cracks. Use when you need to manage workflows, deadlines, or action items that require status updates over time.")
 def todo_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation. All tasks will be scoped to this conversation.")], 
-    action: Annotated[str, Field(description="The operation to perform on tasks", enum=["update", "delete", "get", "list", "add-batch"])], 
+    action: Annotated[str, Field(description="The operation to perform on tasks", enum=["update", "delete", "get", "list", "add-batch", "list_workspaces", "list_all_tasks"])], 
+    # Workspace support
+    workspace_id: Annotated[Optional[str], Field(description="Workspace identifier for task isolation. Default: 'default'. Used to organize tasks by project, phase, or category. Auto-creates workspace if it doesn't exist.", default="default")],
     # For update operations
     title: Annotated[Optional[str], Field(description="Task title/name. Optional for 'update'.", default=None)],
     description: Annotated[Optional[str], Field(description="Detailed description of the task", default="")],
@@ -31,14 +47,20 @@ def todo_command(
     task_list: Annotated[Optional[list], Field(description="List of task dictionaries for batch operations. Each dict should contain 'title', optional 'description' and 'status'.", default=None)]
 ):
     """
-    TODO Tool with Simple Parameter Interface
+    Enhanced TODO Tool with Auto-Creating Workspace Support
     
     Instead of using a complex 'params' dict, this tool accepts direct parameters
     making it easier for LLM to understand and call correctly.
 
+    SIMPLIFIED: Auto-Creating Workspace Support
+    - workspace_id: Organize tasks by project, phase, team, or category
+    - Workspaces are automatically created when first used
+    - No need to explicitly create workspaces
+
     Parameters:
     - conversation_id (str, required): Unique identifier of the conversation
-    - action (str, required): Must be one of ["update", "delete", "get", "list", "add-batch"]
+    - action (str, required): Must be one of ["update", "delete", "get", "list", "add-batch", "list_workspaces", "list_all_tasks"]
+    - workspace_id (str, optional): Workspace identifier (default: "default") - auto-creates if needed
     - title (str): Task title (optional for 'update')
     - description (str): Task description (optional, default: "")
     - status (str): Task status (optional, default: "pending") - one of ["pending","in_progress","completed","blocked"]
@@ -46,38 +68,49 @@ def todo_command(
     - task_list (list): List of task dictionaries for batch operations (required for 'add-batch')
 
     Usage Examples:
-    1. Update task: todo_command("conv1", "update", task_id=1, status="completed") 
-    2. Delete task: todo_command("conv1", "delete", task_id=1)
-    3. Get task: todo_command("conv1", "get", task_id=1)
-    4. List tasks: todo_command("conv1", "list")
-    5. Add batch: todo_command("conv1", "add-batch", task_list=[{"title":"Task1", "description":"Desc1"}, {"title":"Task2"}])
+    1. Add tasks to workspace (auto-creates): todo_command("conv1", "add-batch", workspace_id="backend_dev", task_list=[{"title":"API Design", "status":"pending"}])
+    2. Update task: todo_command("conv1", "update", workspace_id="backend_dev", task_id=1, status="completed") 
+    3. List tasks in workspace: todo_command("conv1", "list", workspace_id="backend_dev")
+    4. List all workspaces: todo_command("conv1", "list_workspaces")
+    5. List tasks from all workspaces: todo_command("conv1", "list_all_tasks")
+
+    Workspace Auto-Creation Examples:
+    - Add task to "frontend_team" - workspace auto-created
+    - Add task to "urgent_tasks" - workspace auto-created  
+    - Add task to "phase_1" - workspace auto-created
     """
     
     if action == "add-batch":
         if not task_list:
             return "Error: task_list is required for add-batch action"
-        return todo_tool.add_tasks_batch(conversation_id, tasks=task_list)
+        return todo_tool.add_tasks_batch(conversation_id, tasks=task_list, workspace_id=workspace_id)
     
     elif action == "update":
         if task_id is None:
             return "Error: task_id is required for update action"
-        return todo_tool.update_task(conversation_id, task_id, title, description, status)
+        return todo_tool.update_task(conversation_id, task_id, title, description, status, workspace_id=workspace_id)
     
     elif action == "delete":
         if task_id is None:
             return "Error: task_id is required for delete action"
-        return todo_tool.delete_task(conversation_id, task_id)
+        return todo_tool.delete_task(conversation_id, task_id, workspace_id=workspace_id)
     
     elif action == "get":
         if task_id is None:
             return "Error: task_id is required for get action"
-        return todo_tool.get_task(conversation_id, task_id)
+        return todo_tool.get_task(conversation_id, task_id, workspace_id=workspace_id)
     
     elif action == "list":
-        return todo_tool.list_tasks(conversation_id)
+        return todo_tool.list_tasks(conversation_id, workspace_id=workspace_id)
+    
+    elif action == "list_workspaces":
+        return todo_tool.list_workspaces(conversation_id)
+    
+    elif action == "list_all_tasks":
+        return todo_tool.list_all_tasks(conversation_id)
     
     else:
-        return f"Unknown action: {action}. Valid actions: add-batch, update, delete, get, list"
+        return f"Unknown action: {action}. Valid actions: add-batch, update, delete, get, list, list_workspaces, list_all_tasks"
     
 
 @mcp.tool(name='chat_fork', description="**REQUIRED: Tool output is not visible to users - you MUST display the tool's output in your response when necessary.** The Chat Fork Tool manages conversation branches with pause/resume actions and search functionality. Use 'pause_topic' to save current state and switch topics, 'resume_topic' to return to paused discussions, and 'search' to search and visualize the conversation tree with current position marked. Perfect for managing complex multi-topic conversations with natural flow control.")
