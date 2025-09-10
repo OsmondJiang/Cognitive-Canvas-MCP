@@ -16,35 +16,69 @@ class Edge:
 
 class RelationshipMapper:
     def __init__(self):
-        self.conversations: Dict[str, Dict] = {}  # conversation_id -> {"nodes": {}, "edges": [], "visualization_type": str}
+        # Updated structure: conversation_id -> workspace_id -> {"nodes": {}, "edges": [], "visualization_type": str}
+        self.conversations: Dict[str, Dict[str, Dict]] = {}  
+        # Workspace metadata: conversation_id -> workspace_id -> {"name": str, "created_at": str}
+        self.workspaces_metadata: Dict[str, Dict[str, Dict]] = {}
 
     def _ensure_conv(self, conversation_id: str):
+        """Ensure conversation structure exists"""
         if conversation_id not in self.conversations:
-            self.conversations[conversation_id] = {"nodes": {}, "edges": [], "visualization_type": "flowchart"}
+            self.conversations[conversation_id] = {"workspaces": {}}
+        if conversation_id not in self.workspaces_metadata:
+            self.workspaces_metadata[conversation_id] = {}
+
+    def _ensure_workspace(self, conversation_id: str, workspace_id: str = "default"):
+        """Ensure workspace structure exists - auto-creates workspace if needed"""
+        self._ensure_conv(conversation_id)
+        
+        if "workspaces" not in self.conversations[conversation_id]:
+            self.conversations[conversation_id]["workspaces"] = {}
+        
+        if workspace_id not in self.conversations[conversation_id]["workspaces"]:
+            self.conversations[conversation_id]["workspaces"][workspace_id] = {
+                "nodes": {}, 
+                "edges": [], 
+                "visualization_type": "flowchart"
+            }
+        
+        if workspace_id not in self.workspaces_metadata[conversation_id]:
+            # Auto-create workspace with ID as default name
+            display_name = "Default Workspace" if workspace_id == "default" else workspace_id.replace("_", " ").title()
+            self.workspaces_metadata[conversation_id][workspace_id] = {
+                "name": display_name,
+                "created_at": "auto-created"
+            }
+
+    def _get_workspace_data(self, conversation_id: str, workspace_id: str = "default"):
+        """Get workspace data with auto-creation"""
+        self._ensure_workspace(conversation_id, workspace_id)
+        return self.conversations[conversation_id]["workspaces"][workspace_id]
 
     # ---------------- Node / Edge Operations ----------------
-    def add_node(self, conversation_id: str, node_id: str, label: str, metadata: Optional[dict] = None):
-        self._ensure_conv(conversation_id)
-        self.conversations[conversation_id]["nodes"][node_id] = Node(node_id, label, metadata)
+    def add_node(self, conversation_id: str, node_id: str, label: str, metadata: Optional[dict] = None, workspace_id: str = "default"):
+        workspace_data = self._get_workspace_data(conversation_id, workspace_id)
+        workspace_data["nodes"][node_id] = Node(node_id, label, metadata)
         result = {
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
-                         for nid, n in self.conversations[conversation_id]["nodes"].items()},
+                         for nid, n in workspace_data["nodes"].items()},
                 "edges": [{"source": e.source, "target": e.target, "type": e.type, "metadata": e.metadata} 
-                         for e in self.conversations[conversation_id]["edges"]],
-                "visualization_type": self.conversations[conversation_id]["visualization_type"]
+                         for e in workspace_data["edges"]],
+                "visualization_type": workspace_data["visualization_type"],
+                "workspace_id": workspace_id
             }
         }
         return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "add_node")
 
-    def update_node(self, conversation_id: str, node_id: str, label: Optional[str] = None, metadata: Optional[dict] = None):
-        self._ensure_conv(conversation_id)
-        node = self.conversations[conversation_id]["nodes"].get(node_id)
+    def update_node(self, conversation_id: str, node_id: str, label: Optional[str] = None, metadata: Optional[dict] = None, workspace_id: str = "default"):
+        workspace_data = self._get_workspace_data(conversation_id, workspace_id)
+        node = workspace_data["nodes"].get(node_id)
         if not node:
             return {
                 "success": False,
-                "error": f"Node '{node_id}' not found in conversation '{conversation_id}'. Use add_node() first to create nodes before updating."
+                "error": f"Node '{node_id}' not found in conversation '{conversation_id}' workspace '{workspace_id}'. Use add_node() first to create nodes before updating."
             }
         
         if label:
@@ -56,37 +90,39 @@ class RelationshipMapper:
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
-                         for nid, n in self.conversations[conversation_id]["nodes"].items()},
+                         for nid, n in workspace_data["nodes"].items()},
                 "edges": [{"source": e.source, "target": e.target, "type": e.type, "metadata": e.metadata} 
-                         for e in self.conversations[conversation_id]["edges"]],
-                "visualization_type": self.conversations[conversation_id]["visualization_type"]
+                         for e in workspace_data["edges"]],
+                "visualization_type": workspace_data["visualization_type"],
+                "workspace_id": workspace_id
             }
         }
         return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "update_node")
 
-    def add_edge(self, conversation_id: str, source: str, target: str, type: str, metadata: Optional[dict] = None):
-        self._ensure_conv(conversation_id)
+    def add_edge(self, conversation_id: str, source: str, target: str, type: str, metadata: Optional[dict] = None, workspace_id: str = "default"):
+        workspace_data = self._get_workspace_data(conversation_id, workspace_id)
         edge = Edge(source, target, type, metadata)
-        self.conversations[conversation_id]["edges"].append(edge)
+        workspace_data["edges"].append(edge)
         result = {
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
-                         for nid, n in self.conversations[conversation_id]["nodes"].items()},
+                         for nid, n in workspace_data["nodes"].items()},
                 "edges": [{"source": e.source, "target": e.target, "type": e.type, "metadata": e.metadata} 
-                         for e in self.conversations[conversation_id]["edges"]],
-                "visualization_type": self.conversations[conversation_id]["visualization_type"]
+                         for e in workspace_data["edges"]],
+                "visualization_type": workspace_data["visualization_type"],
+                "workspace_id": workspace_id
             }
         }
         return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "add_edge")
 
-    def update_edge(self, conversation_id: str, index: int, type: Optional[str] = None, metadata: Optional[dict] = None):
-        self._ensure_conv(conversation_id)
-        edges = self.conversations[conversation_id]["edges"]
+    def update_edge(self, conversation_id: str, index: int, type: Optional[str] = None, metadata: Optional[dict] = None, workspace_id: str = "default"):
+        workspace_data = self._get_workspace_data(conversation_id, workspace_id)
+        edges = workspace_data["edges"]
         if index >= len(edges):
             return {
                 "success": False,
-                "error": f"Edge index {index} out of range. Available indices: 0-{len(edges)-1 if edges else 'none'}. Use add_edge() to create edges first."
+                "error": f"Edge index {index} out of range in workspace '{workspace_id}'. Available indices: 0-{len(edges)-1 if edges else 'none'}. Use add_edge() to create edges first."
             }
         
         edge = edges[index]
@@ -99,21 +135,24 @@ class RelationshipMapper:
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
-                         for nid, n in self.conversations[conversation_id]["nodes"].items()},
+                         for nid, n in workspace_data["nodes"].items()},
                 "edges": [{"source": e.source, "target": e.target, "type": e.type, "metadata": e.metadata} 
-                         for e in self.conversations[conversation_id]["edges"]],
-                "visualization_type": self.conversations[conversation_id]["visualization_type"]
+                         for e in workspace_data["edges"]],
+                "visualization_type": workspace_data["visualization_type"],
+                "workspace_id": workspace_id
             }
         }
         return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "update_edge")
 
     # ---------------- Batch Operations ----------------
-    def batch_add_nodes(self, conversation_id: str, nodes: List[Dict]):
+
+    # ---------------- Batch Operations ----------------
+    def batch_add_nodes(self, conversation_id: str, workspace_id: str, nodes: List[Dict]) -> Dict:
         """
         Batch add nodes
         nodes: [{"id": str, "label": str, "metadata": dict}, ...]
         """
-        self._ensure_conv(conversation_id)
+        self._ensure_workspace(conversation_id, workspace_id)
         
         # Validate all nodes first (atomic operation)
         failed_validations = []
@@ -139,7 +178,7 @@ class RelationshipMapper:
         
         # Add all validated nodes
         for node_data in validated_nodes:
-            self.conversations[conversation_id]["nodes"][node_data["id"]] = Node(
+            self.conversations[conversation_id]["workspaces"][workspace_id]["nodes"][node_data["id"]] = Node(
                 node_data["id"], node_data["label"], node_data["metadata"]
             )
         
@@ -147,20 +186,20 @@ class RelationshipMapper:
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
-                         for nid, n in self.conversations[conversation_id]["nodes"].items()},
+                         for nid, n in self.conversations[conversation_id]["workspaces"][workspace_id]["nodes"].items()},
                 "edges": [{"source": e.source, "target": e.target, "type": e.type, "metadata": e.metadata} 
-                         for e in self.conversations[conversation_id]["edges"]],
-                "visualization_type": self.conversations[conversation_id]["visualization_type"]
+                         for e in self.conversations[conversation_id]["workspaces"][workspace_id]["edges"]],
+                "visualization_type": self.conversations[conversation_id]["workspaces"][workspace_id]["visualization_type"]
             }
         }
         return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "batch_add_nodes")
 
-    def batch_update_nodes(self, conversation_id: str, nodes: List[Dict]):
+    def batch_update_nodes(self, conversation_id: str, workspace_id: str, nodes: List[Dict]) -> Dict:
         """
         Batch update nodes
         nodes: [{"id": str, "label": str (optional), "metadata": dict (optional)}, ...]
         """
-        self._ensure_conv(conversation_id)
+        self._ensure_workspace(conversation_id, workspace_id)
         
         # Validate all updates first (atomic operation)
         failed_validations = []
@@ -175,7 +214,7 @@ class RelationshipMapper:
                 failed_validations.append(f"Update {i}: missing required 'id' field")
                 continue
                 
-            node = self.conversations[conversation_id]["nodes"].get(node_id)
+            node = self.conversations[conversation_id]["workspaces"][workspace_id]["nodes"].get(node_id)
             if not node:
                 failed_validations.append(f"Update {i}: node '{node_id}' not found")
                 continue
@@ -191,7 +230,7 @@ class RelationshipMapper:
         
         # Apply all validated updates
         for update_data in validated_updates:
-            node = self.conversations[conversation_id]["nodes"][update_data["id"]]
+            node = self.conversations[conversation_id]["workspaces"][workspace_id]["nodes"][update_data["id"]]
             if update_data["label"]:
                 node.label = update_data["label"]
             if update_data["metadata"]:
@@ -201,20 +240,20 @@ class RelationshipMapper:
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
-                         for nid, n in self.conversations[conversation_id]["nodes"].items()},
+                         for nid, n in self.conversations[conversation_id]["workspaces"][workspace_id]["nodes"].items()},
                 "edges": [{"source": e.source, "target": e.target, "type": e.type, "metadata": e.metadata} 
-                         for e in self.conversations[conversation_id]["edges"]],
-                "visualization_type": self.conversations[conversation_id]["visualization_type"]
+                         for e in self.conversations[conversation_id]["workspaces"][workspace_id]["edges"]],
+                "visualization_type": self.conversations[conversation_id]["workspaces"][workspace_id]["visualization_type"]
             }
         }
         return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "batch_update_nodes")
 
-    def batch_add_edges(self, conversation_id: str, edges: List[Dict]):
+    def batch_add_edges(self, conversation_id: str, workspace_id: str, edges: List[Dict]) -> Dict:
         """
         Batch add edges
         edges: [{"source": str, "target": str, "type": str, "metadata": dict}, ...]
         """
-        self._ensure_conv(conversation_id)
+        self._ensure_workspace(conversation_id, workspace_id)
         
         # Validate all edges first (atomic operation)
         failed_validations = []
@@ -242,27 +281,27 @@ class RelationshipMapper:
         # Add all validated edges
         for edge_data in validated_edges:
             edge = Edge(edge_data["source"], edge_data["target"], edge_data["type"], edge_data["metadata"])
-            self.conversations[conversation_id]["edges"].append(edge)
+            self.conversations[conversation_id]["workspaces"][workspace_id]["edges"].append(edge)
         
         result = {
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
-                         for nid, n in self.conversations[conversation_id]["nodes"].items()},
+                         for nid, n in self.conversations[conversation_id]["workspaces"][workspace_id]["nodes"].items()},
                 "edges": [{"source": e.source, "target": e.target, "type": e.type, "metadata": e.metadata} 
-                         for e in self.conversations[conversation_id]["edges"]],
-                "visualization_type": self.conversations[conversation_id]["visualization_type"]
+                         for e in self.conversations[conversation_id]["workspaces"][workspace_id]["edges"]],
+                "visualization_type": self.conversations[conversation_id]["workspaces"][workspace_id]["visualization_type"]
             }
         }
         return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "batch_add_edges")
 
-    def batch_update_edges(self, conversation_id: str, edges: List[Dict]):
+    def batch_update_edges(self, conversation_id: str, workspace_id: str, edges: List[Dict]) -> Dict:
         """
         Batch update edges
         edges: [{"index": int, "type": str (optional), "metadata": dict (optional)}, ...]
         """
-        self._ensure_conv(conversation_id)
-        conversation_edges = self.conversations[conversation_id]["edges"]
+        self._ensure_workspace(conversation_id, workspace_id)
+        conversation_edges = self.conversations[conversation_id]["workspaces"][workspace_id]["edges"]
         
         # Validate all updates first (atomic operation)
         failed_validations = []
@@ -302,15 +341,15 @@ class RelationshipMapper:
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
-                         for nid, n in self.conversations[conversation_id]["nodes"].items()},
+                         for nid, n in self.conversations[conversation_id]["workspaces"][workspace_id]["nodes"].items()},
                 "edges": [{"source": e.source, "target": e.target, "type": e.type, "metadata": e.metadata} 
-                         for e in self.conversations[conversation_id]["edges"]],
-                "visualization_type": self.conversations[conversation_id]["visualization_type"]
+                         for e in self.conversations[conversation_id]["workspaces"][workspace_id]["edges"]],
+                "visualization_type": self.conversations[conversation_id]["workspaces"][workspace_id]["visualization_type"]
             }
         }
         return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "batch_update_edges")
 
-    def batch_operations(self, conversation_id: str, operations: List[Dict]):
+    def batch_operations(self, conversation_id: str, workspace_id: str, operations: List[Dict]) -> Dict:
         """
         Batch execute mixed operations
         operations: [
@@ -321,7 +360,7 @@ class RelationshipMapper:
             ...
         ]
         """
-        self._ensure_conv(conversation_id)
+        self._ensure_workspace(conversation_id, workspace_id)
         
         # Execute operations sequentially to handle dependencies
         failed_operations = []
@@ -338,7 +377,7 @@ class RelationshipMapper:
                     if not node_id or not label:
                         failed_operations.append(f"Operation {i}: 'add_node' requires 'id' and 'label'")
                         continue
-                    self.conversations[conversation_id]["nodes"][node_id] = Node(node_id, label, metadata)
+                    self.conversations[conversation_id]["workspaces"][workspace_id]["nodes"][node_id] = Node(node_id, label, metadata)
                     
                 elif action == "add_edge":
                     source = data.get("source")
@@ -349,7 +388,7 @@ class RelationshipMapper:
                         failed_operations.append(f"Operation {i}: 'add_edge' requires 'source', 'target', and 'type'")
                         continue
                     edge = Edge(source, target, edge_type, metadata)
-                    self.conversations[conversation_id]["edges"].append(edge)
+                    self.conversations[conversation_id]["workspaces"][workspace_id]["edges"].append(edge)
                     
                 elif action == "update_node":
                     node_id = data.get("id")
@@ -358,7 +397,7 @@ class RelationshipMapper:
                     if not node_id:
                         failed_operations.append(f"Operation {i}: 'update_node' requires 'id'")
                         continue
-                    node = self.conversations[conversation_id]["nodes"].get(node_id)
+                    node = self.conversations[conversation_id]["workspaces"][workspace_id]["nodes"].get(node_id)
                     if not node:
                         failed_operations.append(f"Operation {i}: node '{node_id}' not found")
                         continue
@@ -374,7 +413,7 @@ class RelationshipMapper:
                     if index is None:
                         failed_operations.append(f"Operation {i}: 'update_edge' requires 'index'")
                         continue
-                    edges = self.conversations[conversation_id]["edges"]
+                    edges = self.conversations[conversation_id]["workspaces"][workspace_id]["edges"]
                     if index >= len(edges):
                         failed_operations.append(f"Operation {i}: edge index {index} out of range")
                         continue
@@ -403,38 +442,38 @@ class RelationshipMapper:
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
-                         for nid, n in self.conversations[conversation_id]["nodes"].items()},
+                         for nid, n in self.conversations[conversation_id]["workspaces"][workspace_id]["nodes"].items()},
                 "edges": [{"source": e.source, "target": e.target, "type": e.type, "metadata": e.metadata} 
-                         for e in self.conversations[conversation_id]["edges"]],
-                "visualization_type": self.conversations[conversation_id]["visualization_type"]
+                         for e in self.conversations[conversation_id]["workspaces"][workspace_id]["edges"]],
+                "visualization_type": self.conversations[conversation_id]["workspaces"][workspace_id]["visualization_type"]
             }
         }
         return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "batch_operations")
 
     # ---------------- Visualization Type ----------------
-    def set_visualization_type(self, conversation_id: str, visualization_type: str):
-        self._ensure_conv(conversation_id)
+    def set_visualization_type(self, conversation_id: str, workspace_id: str, visualization_type: str) -> Dict:
+        self._ensure_workspace(conversation_id, workspace_id)
         valid_types = ["flowchart", "sequence", "mindmap", "orgchart", "tree"]
         if visualization_type not in valid_types:
             return {
                 "success": False,
-                "error": f"Invalid visualization type '{visualization_type}'. Must be one of: {', '.join(valid_types)}. Example: set_visualization_type('conv1', 'flowchart')"
+                "error": f"Invalid visualization type '{visualization_type}'. Must be one of: {', '.join(valid_types)}. Example: set_visualization_type('conv1', 'workspace1', 'flowchart')"
             }
-        self.conversations[conversation_id]["visualization_type"] = visualization_type
+        self.conversations[conversation_id]["workspaces"][workspace_id]["visualization_type"] = visualization_type
         result = {
             "success": True,
             "data": {
                 "nodes": {nid: {"id": n.id, "label": n.label, "metadata": n.metadata} 
-                         for nid, n in self.conversations[conversation_id]["nodes"].items()},
+                         for nid, n in self.conversations[conversation_id]["workspaces"][workspace_id]["nodes"].items()},
                 "edges": [{"source": e.source, "target": e.target, "type": e.type, "metadata": e.metadata} 
-                         for e in self.conversations[conversation_id]["edges"]],
-                "visualization_type": self.conversations[conversation_id]["visualization_type"]
+                         for e in self.conversations[conversation_id]["workspaces"][workspace_id]["edges"]],
+                "visualization_type": self.conversations[conversation_id]["workspaces"][workspace_id]["visualization_type"]
             }
         }
         return DisplayRecommendations.add_to_json_result(result, "relationship_mapper", "set_visualization_type")
 
     # ---------------- Render ----------------
-    def get_visualization_content(self, conversation_id: str):
+    def get_visualization_content(self, conversation_id: str, workspace_id: str) -> str:
         """
         Generate formatted visualization content for the relationship map.
         
@@ -448,9 +487,10 @@ class RelationshipMapper:
             str: Formatted content with markdown tables/trees and display recommendations
             that the agent should use to present the relationship map to the user.
         """
-        visualization_type = self.conversations[conversation_id]["visualization_type"]
-        nodes = self.conversations[conversation_id]["nodes"]
-        edges = self.conversations[conversation_id]["edges"]
+        self._ensure_workspace(conversation_id, workspace_id)
+        visualization_type = self.conversations[conversation_id]["workspaces"][workspace_id]["visualization_type"]
+        nodes = self.conversations[conversation_id]["workspaces"][workspace_id]["nodes"]
+        edges = self.conversations[conversation_id]["workspaces"][workspace_id]["edges"]
 
         if not nodes:
             return "No nodes to render."
@@ -523,3 +563,13 @@ class RelationshipMapper:
             result = f"### Relationship Map (Table Style)\n{table_text}"
         
         return DisplayRecommendations.add_to_text_result(result, "relationship_mapper", "get_visualization_content")
+
+    # ---------------- Workspace Management ----------------
+    def list_workspaces(self, conversation_id: str) -> Dict:
+        """List all workspaces for a conversation"""
+        self._ensure_conv(conversation_id)
+        workspaces = list(self.conversations[conversation_id]["workspaces"].keys())
+        return {
+            "success": True,
+            "workspaces": workspaces
+        }

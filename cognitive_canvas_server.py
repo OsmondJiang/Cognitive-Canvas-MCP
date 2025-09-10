@@ -211,7 +211,9 @@ def chat_fork_command(
 @mcp.tool(name="relationship_mapper", description="**REQUIRED: Tool output is not visible to users - you MUST display the tool's output in your response when necessary.** Use this tool for visualizing relationships, dependencies, and hierarchical structures between entities. Create flowcharts for processes, organizational charts for hierarchies, mind maps for concept exploration, or dependency trees for system architecture. Best for showing how things connect, flow, or depend on each other. Use when you need to map relationships, visualize system architecture, or show process flows rather than just listing items.")
 def relationship_mapper_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")], 
-    action: Annotated[str, Field(description="The operation to perform on the relationship mapper", enum=["set_visualization_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "get_visualization_content"])], 
+    action: Annotated[str, Field(description="The operation to perform on the relationship mapper", enum=["set_visualization_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "get_visualization_content", "list_workspaces"])], 
+    # For workspace management
+    workspace_id: Annotated[Optional[str], Field(description="Workspace identifier for task isolation. If not provided, defaults to 'default'. Auto-creates workspace if it doesn't exist.", default=None)],
     # For diagram type
     diagram_type: Annotated[Optional[str], Field(description="Type of diagram to create", enum=["flowchart", "sequence", "mindmap", "orgchart", "tree"], default=None)],
     # For batch operations
@@ -220,63 +222,73 @@ def relationship_mapper_command(
     operations: Annotated[Optional[List[dict]], Field(description="Array of mixed operations for batch_operations. Each object should have 'action' and 'data' fields.", default=None)]
 ):
     """
-    Simplified Diagram Tool with Batch-Only Operations
+    Simplified Diagram Tool with Batch-Only Operations and Workspace Support
     
     Manages diagram nodes and relationships using only batch operations to reduce complexity.
+    Auto-creates workspaces on first use with smart naming convention.
 
     Parameters:
     - conversation_id (str, required): Unique identifier of the conversation
-    - action (str, required): Operation type - ["set_visualization_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "get_visualization_content"]
+    - action (str, required): Operation type - ["set_visualization_type", "batch_add_nodes", "batch_update_nodes", "batch_add_edges", "batch_update_edges", "batch_operations", "get_visualization_content", "list_workspaces"]
+    - workspace_id (str, optional): Workspace identifier for isolation. Defaults to 'default'. Auto-creates if needed.
     - visualization_type (str): Type of visualization (required for "set_visualization_type")
     - nodes (list): Array of node objects for batch node operations
     - edges (list): Array of edge objects for batch edge operations  
     - operations (list): Array of mixed operations for batch_operations
 
     Examples:
-    1. Set visualization type: relationship_mapper_command("conv1", "set_visualization_type", diagram_type="flowchart")
-    2. Add nodes: diagram_command("conv1", "batch_add_nodes", nodes=[{"id": "node1", "label": "Label1"}, {"id": "node2", "label": "Label2"}])
-    3. Add edges: diagram_command("conv1", "batch_add_edges", edges=[{"source": "node1", "target": "node2", "type": "connects"}])
-    4. Update nodes: diagram_command("conv1", "batch_update_nodes", nodes=[{"id": "node1", "label": "Updated Label1"}])
-    5. Update edges: diagram_command("conv1", "batch_update_edges", edges=[{"index": 0, "type": "new_type"}])
-    6. Mixed operations: diagram_command("conv1", "batch_operations", operations=[{"action": "add_node", "data": {"id": "n1", "label": "Node1"}}, {"action": "add_edge", "data": {"source": "n1", "target": "n2", "type": "link"}}])
-    7. Get visualization content: diagram_command("conv1", "get_visualization_content") - Returns formatted content that should be displayed to the user
+    1. Set visualization type: relationship_mapper_command("conv1", "set_visualization_type", workspace_id="project1", diagram_type="flowchart")
+    2. Add nodes: relationship_mapper_command("conv1", "batch_add_nodes", workspace_id="project1", nodes=[{"id": "node1", "label": "Label1"}, {"id": "node2", "label": "Label2"}])
+    3. Add edges: relationship_mapper_command("conv1", "batch_add_edges", workspace_id="project1", edges=[{"source": "node1", "target": "node2", "type": "connects"}])
+    4. Update nodes: relationship_mapper_command("conv1", "batch_update_nodes", workspace_id="project1", nodes=[{"id": "node1", "label": "Updated Label1"}])
+    5. Update edges: relationship_mapper_command("conv1", "batch_update_edges", workspace_id="project1", edges=[{"index": 0, "type": "new_type"}])
+    6. Mixed operations: relationship_mapper_command("conv1", "batch_operations", workspace_id="project1", operations=[{"action": "add_node", "data": {"id": "n1", "label": "Node1"}}, {"action": "add_edge", "data": {"source": "n1", "target": "n2", "type": "link"}}])
+    7. Get visualization content: relationship_mapper_command("conv1", "get_visualization_content", workspace_id="project1") - Returns formatted content that should be displayed to the user
+    8. List workspaces: relationship_mapper_command("conv1", "list_workspaces")
     """
     
-    if action == "set_visualization_type":
+    # Auto-assign workspace_id if not provided
+    if not workspace_id:
+        workspace_id = "default"
+    
+    if action == "list_workspaces":
+        return relationship_mapper_manager.list_workspaces(conversation_id)
+    
+    elif action == "set_visualization_type":
         if not diagram_type:
             return "Error: diagram_type is required for set_visualization_type action"
-        return relationship_mapper_manager.set_visualization_type(conversation_id, diagram_type)
+        return relationship_mapper_manager.set_visualization_type(conversation_id, workspace_id, diagram_type)
     
     elif action == "batch_add_nodes":
         if not nodes:
             return "Error: 'nodes' array is required for batch_add_nodes action"
-        return relationship_mapper_manager.batch_add_nodes(conversation_id, nodes)
+        return relationship_mapper_manager.batch_add_nodes(conversation_id, workspace_id, nodes)
     
     elif action == "batch_update_nodes":
         if not nodes:
             return "Error: 'nodes' array is required for batch_update_nodes action"
-        return relationship_mapper_manager.batch_update_nodes(conversation_id, nodes)
+        return relationship_mapper_manager.batch_update_nodes(conversation_id, workspace_id, nodes)
     
     elif action == "batch_add_edges":
         if not edges:
             return "Error: 'edges' array is required for batch_add_edges action"
-        return relationship_mapper_manager.batch_add_edges(conversation_id, edges)
+        return relationship_mapper_manager.batch_add_edges(conversation_id, workspace_id, edges)
     
     elif action == "batch_update_edges":
         if not edges:
             return "Error: 'edges' array is required for batch_update_edges action"
-        return relationship_mapper_manager.batch_update_edges(conversation_id, edges)
+        return relationship_mapper_manager.batch_update_edges(conversation_id, workspace_id, edges)
     
     elif action == "batch_operations":
         if not operations:
             return "Error: 'operations' array is required for batch_operations action"
-        return relationship_mapper_manager.batch_operations(conversation_id, operations)
+        return relationship_mapper_manager.batch_operations(conversation_id, workspace_id, operations)
     
     elif action == "get_visualization_content":
-        return relationship_mapper_manager.get_visualization_content(conversation_id)
+        return relationship_mapper_manager.get_visualization_content(conversation_id, workspace_id)
     
     else:
-        return f"Unknown action: {action}. Valid actions: set_visualization_type, batch_add_nodes, batch_update_nodes, batch_add_edges, batch_update_edges, batch_operations, get_visualization_content"
+        return f"Unknown action: {action}. Valid actions: set_visualization_type, batch_add_nodes, batch_update_nodes, batch_add_edges, batch_update_edges, batch_operations, get_visualization_content, list_workspaces"
     
 @mcp.tool(
     name="table_builder",
