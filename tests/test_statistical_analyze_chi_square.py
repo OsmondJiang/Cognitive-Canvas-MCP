@@ -39,7 +39,7 @@ class TestChiSquareBasic(unittest.TestCase):
             "conversion": ["Yes", "No", "Yes", "No", "Yes"]
         }
         
-        result = self.tool.analyze("test_chi_simple", data=data, analysis_type="chi_square_test")
+        result = self.tool.analyze("test_chi_simple", "default", data=data, analysis_type="chi_square_test")
         result_data = self._validate_json_structure(result, "Basic Chi-Square")
         
         # Check analysis type
@@ -77,7 +77,7 @@ class TestChiSquareBasic(unittest.TestCase):
             "outcome": ["Success", "Failure", "Success", "Failure"] * 4
         }
         
-        result = self.tool.analyze("test_chi_independence", data=data, analysis_type="chi_square_test")
+        result = self.tool.analyze("test_chi_independence", "default", data=data, analysis_type="chi_square_test")
         result_data = self._validate_json_structure(result, "Perfect Independence")
         
         # Check chi-square should be close to 0 for perfect independence
@@ -96,7 +96,7 @@ class TestChiSquareBasic(unittest.TestCase):
             "outcome": ["Success"] * 10 + ["Failure"] * 10
         }
         
-        result = self.tool.analyze("test_chi_strong", data=data, analysis_type="chi_square_test")
+        result = self.tool.analyze("test_chi_strong", "default", data=data, analysis_type="chi_square_test")
         result_data = self._validate_json_structure(result, "Strong Association")
         
         chi_square = result_data["analysis_report"]["results"]["chi_square"]
@@ -133,7 +133,7 @@ class TestChiSquareEdgeCases(unittest.TestCase):
             "outcome": ["X", "Y"]
         }
         
-        result = self.tool.analyze("test_chi_insufficient", data=data, analysis_type="chi_square_test")
+        result = self.tool.analyze("test_chi_insufficient", "default", data=data, analysis_type="chi_square_test")
         result_data = self._validate_json_structure(result, "Insufficient Data")
         
         # Should still return proper JSON structure
@@ -150,7 +150,7 @@ class TestChiSquareEdgeCases(unittest.TestCase):
             "outcome": ["Success", "Failure"] * 5
         }
         
-        result = self.tool.analyze("test_chi_single_cat", data=data, analysis_type="chi_square_test")
+        result = self.tool.analyze("test_chi_single_cat", "default", data=data, analysis_type="chi_square_test")
         result_data = self._validate_json_structure(result, "Single Category")
         
         # Should handle gracefully in JSON format
@@ -190,7 +190,7 @@ class TestChiSquareContingencyTable(unittest.TestCase):
             "conversion": ["Yes", "No", "Yes", "No", "Yes", "No"]
         }
         
-        result = self.tool.analyze("test_contingency", data=data, analysis_type="chi_square_test")
+        result = self.tool.analyze("test_contingency", "default", data=data, analysis_type="chi_square_test")
         result_data = self._validate_json_structure(result, "Contingency Table")
         
         chi_square = result_data["analysis_report"]["results"]["chi_square"]
@@ -217,7 +217,7 @@ class TestChiSquareContingencyTable(unittest.TestCase):
             "response": ["X", "Y", "X", "Y", "X", "Y"]
         }
         
-        result = self.tool.analyze("test_contingency_values", data=data, analysis_type="chi_square_test")
+        result = self.tool.analyze("test_contingency_values", "default", data=data, analysis_type="chi_square_test")
         result_data = self._validate_json_structure(result, "Contingency Values")
         
         chi_square = result_data["analysis_report"]["results"]["chi_square"]
@@ -257,7 +257,7 @@ class TestChiSquareIntegration(unittest.TestCase):
             "response": ["Yes", "No", "Yes", "No", "Yes", "No"]
         }
         
-        result = self.tool.analyze("test_analyze_chi", data=data, analysis_type="chi_square_test")
+        result = self.tool.analyze("test_analyze_chi", "default", data=data, analysis_type="chi_square_test")
         result_data = self._validate_json_structure(result, "Analyze Method")
         
         # Verify complete analysis structure
@@ -285,7 +285,7 @@ class TestChiSquareIntegration(unittest.TestCase):
             "outcome": ["Success", "Failure", "Success", "Failure", "Success"]
         }
         
-        result = self.tool.analyze("test_auto_chi", data=data, analysis_type="auto")
+        result = self.tool.analyze("test_auto_chi", "default", data=data, analysis_type="auto")
         result_data = self._validate_json_structure(result, "Auto Detection")
         
         # Should auto-detect chi_square_test for two categorical variables
@@ -315,7 +315,7 @@ class TestChiSquareFrequencyAnalysis(unittest.TestCase):
             "user_action": ["Click", "View", "Click", "View", "Click"]
         }
         
-        result = self.tool.analyze("test_freq_chi", data=data, analysis_type="chi_square_test")
+        result = self.tool.analyze("test_freq_chi", "default", data=data, analysis_type="chi_square_test")
         result_data = self._validate_json_structure(result, "Frequency Analysis")
         
         results = result_data["analysis_report"]["results"]

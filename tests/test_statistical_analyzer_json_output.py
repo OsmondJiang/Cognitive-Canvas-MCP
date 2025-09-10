@@ -34,7 +34,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
     def test_descriptive_analysis_json(self):
         """Test descriptive analysis JSON output"""
         data = {"test_scores": [85, 90, 78, 92, 88]}
-        result = self.tool.analyze("test_desc", data=data, analysis_type="descriptive_analysis")
+        result = self.tool.analyze("test_desc", "default", data=data, analysis_type="descriptive_analysis")
         
         result_data = self._validate_json_structure(result, ["analysis_report"], "Descriptive Analysis")
         
@@ -51,7 +51,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
         """Test comprehensive descriptive analysis JSON output"""
         # Use paired_comparison instead since comprehensive_descriptive on its own doesn't include t-test
         data = {"before": [71, 69, 70, 72, 68], "after": [79, 78, 81, 80, 76]}
-        result = self.tool.analyze("test_comp", data=data, analysis_type="paired_comparison")
+        result = self.tool.analyze("test_comp", "default", data=data, analysis_type="paired_comparison")
         
         result_data = self._validate_json_structure(result, ["analysis_report"], "Comprehensive Descriptive")
         
@@ -72,7 +72,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
             "control": [65, 67, 69, 68, 71],
             "treatment": [75, 77, 79, 78, 81]
         }
-        result = self.tool.analyze("test_two_group", groups=groups, analysis_type="two_group_comparison")
+        result = self.tool.analyze("test_two_group", "default", groups=groups, analysis_type="two_group_comparison")
         
         result_data = self._validate_json_structure(result, ["analysis_report"], "Two Group Comparison")
         
@@ -91,7 +91,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
             "height": [160, 165, 170, 175, 180],
             "weight": [55, 60, 65, 70, 75]
         }
-        result = self.tool.analyze("test_corr", data=data, analysis_type="correlation_analysis")
+        result = self.tool.analyze("test_corr", "default", data=data, analysis_type="correlation_analysis")
         
         result_data = self._validate_json_structure(result, ["analysis_report"], "Correlation Analysis")
         
@@ -115,7 +115,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
             "device": ["Mobile", "Desktop", "Tablet", "Mobile", "Desktop", "Mobile"],
             "conversion": ["Yes", "No", "Yes", "Yes", "No", "Yes"]
         }
-        result = self.tool.analyze("test_chi", data=data, analysis_type="chi_square_test")
+        result = self.tool.analyze("test_chi", "default", data=data, analysis_type="chi_square_test")
         
         result_data = self._validate_json_structure(result, ["analysis_report"], "Chi-Square Test")
         
@@ -139,7 +139,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
     def test_frequency_analysis_json(self):
         """Test frequency analysis JSON output"""
         data = {"satisfaction": ["Excellent", "Good", "Average", "Poor", "Excellent", "Good", "Excellent"]}
-        result = self.tool.analyze("test_freq", data=data, analysis_type="frequency_analysis")
+        result = self.tool.analyze("test_freq", "default", data=data, analysis_type="frequency_analysis")
         
         result_data = self._validate_json_structure(result, ["analysis_report"], "Frequency Analysis")
         
@@ -163,7 +163,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
     def test_auto_detection_numerical_single(self):
         """Test auto detection for single numerical variable"""
         data = {"scores": [85, 90, 78, 92, 88]}
-        result = self.tool.analyze("test_auto_num", data=data, analysis_type="auto")
+        result = self.tool.analyze("test_auto_num", "default", data=data, analysis_type="auto")
         
         result_data = self._validate_json_structure(result, ["analysis_report"], "Auto Detection - Numerical")
         
@@ -174,7 +174,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
     def test_auto_detection_two_numerical(self):
         """Test auto detection for two numerical variables"""
         data = {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]}
-        result = self.tool.analyze("test_auto_corr", data=data, analysis_type="auto")
+        result = self.tool.analyze("test_auto_corr", "default", data=data, analysis_type="auto")
         
         result_data = self._validate_json_structure(result, ["analysis_report"], "Auto Detection - Correlation")
         
@@ -185,7 +185,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
     def test_auto_detection_categorical(self):
         """Test auto detection for categorical data"""
         data = {"category": ["A", "B", "C", "A", "B"]}
-        result = self.tool.analyze("test_auto_cat", data=data, analysis_type="auto")
+        result = self.tool.analyze("test_auto_cat", "default", data=data, analysis_type="auto")
         
         result_data = self._validate_json_structure(result, ["analysis_report"], "Auto Detection - Categorical")
         
@@ -197,7 +197,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
     def test_auto_detection_paired_data(self):
         """Test auto detection for before/after data"""
         data = {"before": [70, 72], "after": [75, 78]}
-        result = self.tool.analyze("test_auto_paired", data=data, analysis_type="paired_comparison")
+        result = self.tool.analyze("test_auto_paired", "default", data=data, analysis_type="paired_comparison")
         
         result_data = self._validate_json_structure(result, ["analysis_report"], "Auto Detection - Paired")
         
@@ -212,7 +212,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
         
         for fmt in formats:
             with self.subTest(format=fmt):
-                result = self.tool.analyze("test_format", groups={"control": data["control"], "treatment": data["treatment"]}, 
+                result = self.tool.analyze("test_format", "default", groups={"control": data["control"], "treatment": data["treatment"]}, 
                                          analysis_type="two_group_comparison", output_format=fmt)
                 
                 result_data = self._validate_json_structure(result, ["analysis_report"], f"Format {fmt}")
@@ -224,11 +224,11 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
         conversation_id = "test_report"
         
         # First add some analyses
-        self.tool.analyze(conversation_id, data={"scores": [78, 85, 82, 79, 92]}, analysis_type="descriptive_analysis")
-        self.tool.analyze(conversation_id, data={"before": [68, 70, 72], "after": [76, 78, 80]}, analysis_type="paired_comparison")
-        self.tool.analyze(conversation_id, data={"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]}, analysis_type="correlation_analysis")
+        self.tool.analyze(conversation_id, "default", data={"scores": [78, 85, 82, 79, 92]}, analysis_type="descriptive_analysis")
+        self.tool.analyze(conversation_id, "default", data={"before": [68, 70, 72], "after": [76, 78, 80]}, analysis_type="paired_comparison")
+        self.tool.analyze(conversation_id, "default", data={"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]}, analysis_type="correlation_analysis")
         
-        result = self.tool.get_analysis_report(conversation_id)
+        result = self.tool.get_analysis_report(conversation_id, "default")
         
         result_data = self._validate_json_structure(result, ["comprehensive_statistical_report"], "Render Report")
         
@@ -250,7 +250,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
         
         for analysis_type, data in test_cases:
             with self.subTest(analysis_type=analysis_type):
-                result = self.tool.analyze(f"consistency_{analysis_type}", data=data, analysis_type=analysis_type)
+                result = self.tool.analyze(f"consistency_{analysis_type}", "default", data=data, analysis_type=analysis_type)
                 result_data = self._validate_json_structure(result, ["analysis_report"], f"Consistency {analysis_type}")
                 
                 # Check common structure elements
@@ -264,7 +264,7 @@ class TestStatisticalAnalyzerJSONOutput(unittest.TestCase):
     def test_error_handling_json(self):
         """Test that errors are properly formatted in JSON"""
         # Test with empty data - this should return an error in JSON format
-        result = self.tool.analyze("error_test", data={}, analysis_type="descriptive_analysis")
+        result = self.tool.analyze("error_test", "default", data={}, analysis_type="descriptive_analysis")
         
         # Parse as JSON and check if it's a structured error or proper analysis report
         try:

@@ -10,12 +10,19 @@ class StatisticalAnalyzer:
     """
     
     def __init__(self):
+        # conversation_id -> workspaces -> workspace_id -> data
         self.conversations = {}
     
     def _ensure_conv(self, conversation_id: str):
         """Ensure conversation exists in storage"""
         if conversation_id not in self.conversations:
-            self.conversations[conversation_id] = {
+            self.conversations[conversation_id] = {"workspaces": {}}
+
+    def _ensure_workspace(self, conversation_id: str, workspace_id: str):
+        """Ensure workspace exists (auto-create if needed)"""
+        self._ensure_conv(conversation_id)
+        if workspace_id not in self.conversations[conversation_id]["workspaces"]:
+            self.conversations[conversation_id]["workspaces"][workspace_id] = {
                 "analyses": [],
                 "data_history": []
             }
@@ -814,11 +821,11 @@ class StatisticalAnalyzer:
         except Exception as e:
             return {"error": f"Error calculating correlation: {str(e)}"}
     
-    def analyze(self, conversation_id: str, data: Optional[Dict] = None, 
+    def analyze(self, conversation_id: str, workspace_id: str, data: Optional[Dict] = None, 
                 groups: Optional[Dict] = None, analysis_type: str = "auto", 
                 output_format: str = "json") -> dict:
         """Main analysis function"""
-        self._ensure_conv(conversation_id)
+        self._ensure_workspace(conversation_id, workspace_id)
         
         # Auto-detect analysis type if needed
         if analysis_type == "auto":
@@ -886,14 +893,15 @@ class StatisticalAnalyzer:
                         results[f"frequency_{var_name}"] = self._calculate_frequency_distribution(var_values, var_name)
                         break  # Only analyze the first variable for frequency_analysis
             
-            # Store analysis in conversation history
+            # Store analysis in workspace history
             analysis_record = {
                 "analysis_type": analysis_type,
                 "results": results,
                 "data": data,
-                "groups": groups
+                "groups": groups,
+                "workspace_id": workspace_id
             }
-            self.conversations[conversation_id]["analyses"].append(analysis_record)
+            self.conversations[conversation_id]["workspaces"][workspace_id]["analyses"].append(analysis_record)
             
             return self._format_output(results, analysis_type, output_format)
         
@@ -1092,11 +1100,11 @@ class StatisticalAnalyzer:
         
         return output_data
     
-    def get_analysis_report(self, conversation_id: str, report_type: str = "summary", output_format: str = "json") -> dict:
+    def get_analysis_report(self, conversation_id: str, workspace_id: str, report_type: str = "summary", output_format: str = "json") -> dict:
         """
         Generate a comprehensive statistical analysis report for agent processing.
         
-        This method compiles all statistical analyses performed in a conversation into 
+        This method compiles all statistical analyses performed in a workspace into 
         a structured report that the agent can use to present findings to the user.
         The report includes:
         - Summary of all statistical tests performed
@@ -1106,6 +1114,7 @@ class StatisticalAnalyzer:
         
         Args:
             conversation_id: Unique identifier for the conversation
+            workspace_id: Unique identifier for the workspace
             report_type: Type of report to generate (default: "summary")
             output_format: Format of the output (default: "json")
             
@@ -1114,12 +1123,15 @@ class StatisticalAnalyzer:
             should use to present the statistical findings to the user in an appropriate format.
         """
         
-        if conversation_id not in self.conversations:
+        if conversation_id not in self.conversations or "workspaces" not in self.conversations[conversation_id]:
             return {"error": "No analyses found for this conversation."}
         
-        analyses = self.conversations[conversation_id]["analyses"]
+        if workspace_id not in self.conversations[conversation_id]["workspaces"]:
+            return {"error": f"No analyses found for workspace '{workspace_id}' in this conversation."}
+        
+        analyses = self.conversations[conversation_id]["workspaces"][workspace_id]["analyses"]
         if not analyses:
-            return {"error": "No analyses found for this conversation."}
+            return {"error": f"No analyses found for workspace '{workspace_id}' in this conversation."}
         
         if output_format == "json":
             # Create comprehensive JSON report
@@ -1127,6 +1139,7 @@ class StatisticalAnalyzer:
                 "comprehensive_statistical_report": {
                     "title": "Comprehensive Statistical Analysis Report",
                     "conversation_id": conversation_id,
+                    "workspace_id": workspace_id,
                     "report_type": report_type,
                     "total_analyses": len(analyses),
                     "statistical_summary": {

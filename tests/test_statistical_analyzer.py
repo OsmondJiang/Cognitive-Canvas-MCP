@@ -181,7 +181,7 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         """Test the main analyze method with various scenarios"""
         # Test A/B testing scenario
         ab_data = {"control": self.control_group, "treatment": self.treatment_group}
-        result = self.tool.analyze(self.conv_id, groups=ab_data, analysis_type="auto")
+        result = self.tool.analyze(self.conv_id, "default", groups=ab_data, analysis_type="auto")
         
         # Parse result (now a dictionary)
         parsed_result = result
@@ -201,7 +201,7 @@ class TestStatisticalAnalyzer(unittest.TestCase):
             "interactive": self.interactive_teaching, 
             "ai_assisted": self.ai_assisted_teaching
         }
-        anova_result = self.tool.analyze(self.conv_id, groups=edu_groups, analysis_type="auto")
+        anova_result = self.tool.analyze(self.conv_id, "default", groups=edu_groups, analysis_type="auto")
         
         # Parse ANOVA result (now a dictionary)
         anova_parsed = anova_result
@@ -213,7 +213,7 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         
         # Test correlation analysis
         corr_data = {"study_hours": self.study_hours, "test_scores": self.test_scores}
-        corr_result = self.tool.analyze(self.conv_id, data=corr_data, analysis_type="auto")
+        corr_result = self.tool.analyze(self.conv_id, "default", data=corr_data, analysis_type="auto")
         
         # Parse correlation result (now a dictionary)
         corr_parsed = corr_result
@@ -223,7 +223,7 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         
         # Test paired comparison
         paired_data = {"before": self.before_training, "after": self.after_training}
-        paired_result = self.tool.analyze(self.conv_id, data=paired_data, analysis_type="auto")
+        paired_result = self.tool.analyze(self.conv_id, "default", data=paired_data, analysis_type="auto")
         
         # Parse paired comparison result (now a dictionary)
         paired_parsed = paired_result
@@ -236,7 +236,7 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         # Perform multiple analyses first
         # 1. A/B test
         ab_data = {"control": self.control_group, "treatment": self.treatment_group}
-        self.tool.analyze(self.conv_id, groups=ab_data, analysis_type="auto")
+        self.tool.analyze(self.conv_id, "default", groups=ab_data, analysis_type="auto")
         
         # 2. Educational ANOVA
         edu_groups = {
@@ -244,14 +244,14 @@ class TestStatisticalAnalyzer(unittest.TestCase):
             "interactive": self.interactive_teaching,
             "ai_assisted": self.ai_assisted_teaching
         }
-        self.tool.analyze(self.conv_id, groups=edu_groups, analysis_type="auto")
+        self.tool.analyze(self.conv_id, "default", groups=edu_groups, analysis_type="auto")
         
         # 3. Correlation analysis
         corr_data = {"study_hours": self.study_hours, "test_scores": self.test_scores}
-        self.tool.analyze(self.conv_id, data=corr_data, analysis_type="auto")
+        self.tool.analyze(self.conv_id, "default", data=corr_data, analysis_type="auto")
         
         # Generate comprehensive report
-        report = self.tool.get_analysis_report(self.conv_id)
+        report = self.tool.get_analysis_report(self.conv_id, "default")
         
         # Parse report result (now a dictionary)
         report_parsed = report
@@ -298,7 +298,7 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         self.assertIsInstance(large_result['correlation_coefficient'], float)
         
         # Test invalid analysis type
-        invalid_result = self.tool.analyze(self.conv_id, data={"x": [1, 2, 3]}, analysis_type="invalid_type")
+        invalid_result = self.tool.analyze(self.conv_id, "default", data={"x": [1, 2, 3]}, analysis_type="invalid_type")
         self.assertIn("error", invalid_result)  # Should return error dict
         self.assertEqual(invalid_result["error"], "No results to display.")  # Check exact error message
     
@@ -307,23 +307,23 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         ab_data = {"control": self.control_group, "treatment": self.treatment_group}
         
         # Test comprehensive format (default)
-        comprehensive = self.tool.analyze(self.conv_id, groups=ab_data, output_format="comprehensive")
+        comprehensive = self.tool.analyze(self.conv_id, "default", groups=ab_data, output_format="comprehensive")
         comprehensive_data = comprehensive
         self.assertIn("analysis_report", comprehensive_data)
         self.assertIn("results", comprehensive_data["analysis_report"])
         
         # Test business format
-        business = self.tool.analyze("conv2", groups=ab_data, output_format="business")
+        business = self.tool.analyze("conv2", "default", groups=ab_data, output_format="business")
         business_data = business
         self.assertIn("analysis_report", business_data)
         
         # Test academic format
-        academic = self.tool.analyze("conv3", groups=ab_data, output_format="academic")
+        academic = self.tool.analyze("conv3", "default", groups=ab_data, output_format="academic")
         academic_data = academic
         self.assertIn("analysis_report", academic_data)
         
         # Test simple format
-        simple = self.tool.analyze("conv4", groups=ab_data, output_format="simple")
+        simple = self.tool.analyze("conv4", "default", groups=ab_data, output_format="simple")
         simple_data = simple
         self.assertIn("analysis_report", simple_data)
     
@@ -333,7 +333,7 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         response_times = [120, 135, 145, 150, 155, 160, 165, 170, 175, 180, 
                          185, 190, 195, 200, 210, 220, 250, 300, 450, 600]
         
-        result = self.tool.analyze(self.conv_id, data={"response_time": response_times}, 
+        result = self.tool.analyze(self.conv_id, "default", data={"response_time": response_times}, 
                                  analysis_type="comprehensive_descriptive")
         
         # Parse result (now a dictionary)
@@ -487,7 +487,7 @@ class TestRenderReportFunctionality(unittest.TestCase):
     
     def test_get_analysis_report_empty_conversation(self):
         """Test get_analysis_report with no analyses"""
-        result = self.tool.get_analysis_report("nonexistent_conv")
+        result = self.tool.get_analysis_report("nonexistent_conv", "default")
         result_data = result
         result_str = str(result_data)
         self.assertIn("No analyses found", result_str)
@@ -496,10 +496,10 @@ class TestRenderReportFunctionality(unittest.TestCase):
         """Test get_analysis_report with single numerical analysis"""
         # Perform a t-test
         data = {"before": [70, 72, 68], "after": [78, 80, 76]}
-        self.tool.analyze(self.conv_id, data, None, "paired_comparison")
+        self.tool.analyze(self.conv_id, "default", data=data, analysis_type="paired_comparison")
         
         # Generate report
-        report = self.tool.get_analysis_report(self.conv_id)
+        report = self.tool.get_analysis_report(self.conv_id, "default")
         
         # Parse result (now a dictionary)
         report_data = report
@@ -522,10 +522,10 @@ class TestRenderReportFunctionality(unittest.TestCase):
             "device": ["Mobile", "Desktop", "Tablet", "Mobile", "Desktop"],
             "conversion": ["Yes", "No", "Yes", "Yes", "No"]
         }
-        self.tool.analyze(self.conv_id, data, None, "chi_square_test")
+        self.tool.analyze(self.conv_id, "default", data=data, analysis_type="chi_square_test")
         
         # Generate report
-        report = self.tool.get_analysis_report(self.conv_id)
+        report = self.tool.get_analysis_report(self.conv_id, "default")
         
         # Parse result (now a dictionary)
         report_data = report
@@ -547,10 +547,10 @@ class TestRenderReportFunctionality(unittest.TestCase):
         """Test get_analysis_report with frequency analysis"""
         # Perform frequency analysis
         data = {"feedback": ["Excellent", "Good", "Average", "Poor", "Excellent", "Good"]}
-        self.tool.analyze(self.conv_id, data, None, "frequency_analysis")
+        self.tool.analyze(self.conv_id, "default", data=data, analysis_type="frequency_analysis")
         
         # Generate report
-        report = self.tool.get_analysis_report(self.conv_id)
+        report = self.tool.get_analysis_report(self.conv_id, "default")
         
         # Parse result (now a dictionary)
         report_data = report
@@ -571,21 +571,21 @@ class TestRenderReportFunctionality(unittest.TestCase):
         """Test get_analysis_report with mixed numerical and categorical analyses"""
         # Numerical analysis (t-test)
         numerical_data = {"before": [70, 72, 68], "after": [78, 80, 76]}
-        self.tool.analyze(self.conv_id, numerical_data, None, "paired_comparison")
+        self.tool.analyze(self.conv_id, "default", data=numerical_data, analysis_type="paired_comparison")
         
         # Categorical analysis (chi-square) - need at least 5 observations
         categorical_data = {
             "age_group": ["18-25", "26-35", "36-45", "18-25", "26-35"],
             "product": ["A", "B", "C", "A", "B"]
         }
-        self.tool.analyze(self.conv_id, categorical_data, None, "chi_square_test")
+        self.tool.analyze(self.conv_id, "default", data=categorical_data, analysis_type="chi_square_test")
         
         # Correlation analysis
         correlation_data = {"x": [1, 2, 3, 4, 5], "y": [2, 4, 6, 8, 10]}
-        self.tool.analyze(self.conv_id, correlation_data, None, "correlation_analysis")
+        self.tool.analyze(self.conv_id, "default", data=correlation_data, analysis_type="correlation_analysis")
         
         # Generate report
-        report = self.tool.get_analysis_report(self.conv_id)
+        report = self.tool.get_analysis_report(self.conv_id, "default")
         
         # Parse result (now a dictionary)
         report_data = report
@@ -611,17 +611,17 @@ class TestRenderReportFunctionality(unittest.TestCase):
         """Test that effect sizes are properly counted in report"""
         # Analysis with Cohen's d
         data = {"before": [70, 72, 68], "after": [78, 80, 76]}
-        self.tool.analyze(self.conv_id, data, None, "paired_comparison")
+        self.tool.analyze(self.conv_id, "default", data=data, analysis_type="paired_comparison")
         
         # Analysis with Cramér's V - need at least 5 observations
         categorical_data = {
             "device": ["Mobile", "Desktop", "Tablet", "Mobile", "Desktop"],
             "conversion": ["Yes", "No", "Yes", "Yes", "No"]
         }
-        self.tool.analyze(self.conv_id, categorical_data, None, "chi_square_test")
+        self.tool.analyze(self.conv_id, "default", data=categorical_data, analysis_type="chi_square_test")
         
         # Generate report
-        report = self.tool.get_analysis_report(self.conv_id)
+        report = self.tool.get_analysis_report(self.conv_id, "default")
         
         # Parse result (now a dictionary)
         report_data = report
@@ -653,7 +653,7 @@ class TestMixedDataTypeHandling(unittest.TestCase):
     def test_numerical_data_range_display(self):
         """Test that numerical data shows range in reports"""
         data = {"scores": [85, 92, 78, 88, 91]}
-        result = self.tool.analyze(self.conv_id, data, None, "descriptive_analysis")
+        result = self.tool.analyze(self.conv_id, "default", data=data, analysis_type="descriptive_analysis")
         
         # Should not error with numerical data and should be valid dict
         result_data = result
@@ -667,7 +667,7 @@ class TestMixedDataTypeHandling(unittest.TestCase):
     def test_categorical_data_unique_values_display(self):
         """Test that categorical data shows unique values count"""
         data = {"category": ["A", "B", "C", "A", "B", "A"]}
-        result = self.tool.analyze(self.conv_id, data, None, "frequency_analysis")
+        result = self.tool.analyze(self.conv_id, "default", data=data, analysis_type="frequency_analysis")
         
         # Should handle categorical data without trying to calculate min/max and should be valid dict
         result_data = result
@@ -678,14 +678,14 @@ class TestMixedDataTypeHandling(unittest.TestCase):
         """Test get_analysis_report handles mixed data types correctly"""
         # Add numerical analysis
         numerical_data = {"values": [10, 15, 12, 18, 14]}
-        self.tool.analyze(self.conv_id, numerical_data, None, "descriptive_analysis")
+        self.tool.analyze(self.conv_id, "default", data=numerical_data, analysis_type="descriptive_analysis")
         
         # Add categorical analysis  
         categorical_data = {"categories": ["Red", "Blue", "Green", "Red", "Blue"]}
-        self.tool.analyze(self.conv_id, categorical_data, None, "frequency_analysis")
+        self.tool.analyze(self.conv_id, "default", data=categorical_data, analysis_type="frequency_analysis")
         
         # Generate report - should not crash on mixed data types
-        report = self.tool.get_analysis_report(self.conv_id)
+        report = self.tool.get_analysis_report(self.conv_id, "default")
         
         # Parse result (now a dictionary)
         report_data = report
@@ -724,7 +724,7 @@ class TestStringDataBugFixes(unittest.TestCase):
         
         # Should not raise ValueError for string min/max
         try:
-            result = self.tool.analyze(self.conv_id, string_data, None, "chi_square_test")
+            result = self.tool.analyze(self.conv_id, "default", data=string_data, analysis_type="chi_square_test")
             result_data = result
             self.assertIsInstance(result, dict)
         except ValueError as e:
@@ -741,7 +741,7 @@ class TestStringDataBugFixes(unittest.TestCase):
         
         # Should handle unicode strings without errors
         try:
-            result = self.tool.analyze(self.conv_id, unicode_data, None, "chi_square_test")
+            result = self.tool.analyze(self.conv_id, "default", data=unicode_data, analysis_type="chi_square_test")
             result_data = result
             self.assertIsInstance(result, dict)
             
@@ -761,7 +761,7 @@ class TestStringDataBugFixes(unittest.TestCase):
         }
         
         # Should detect and handle appropriately
-        result = self.tool.analyze(self.conv_id, categorical_data, None, "chi_square_test")
+        result = self.tool.analyze(self.conv_id, "default", data=categorical_data, analysis_type="chi_square_test")
         result_data = result
         self.assertIsInstance(result, dict)
         

@@ -368,6 +368,7 @@ def table_builder_command(
 def statistical_analyzer(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")],
     action: Annotated[str, Field(description="The operation to perform", enum=["analyze", "get_analysis_report"])],
+    workspace_id: Annotated[str, Field(description="Unique identifier for the workspace. Use 'default' for main workspace.", default="default")],
     
     # Data input (supports multiple formats)
     data: Annotated[Optional[dict], Field(description="Single dataset or paired data (e.g., {'before': [1,2,3], 'after': [4,5,6]}) for analysis", default=None)],
@@ -389,6 +390,7 @@ def statistical_analyzer(
     Parameters:
     - conversation_id (str, required): Unique identifier of the conversation
     - action (str, required): Operation type - ["analyze", "get_analysis_report"]
+    - workspace_id (str): Workspace identifier for data isolation (default: "default")
     - data (dict, optional): Data for analysis (paired/related variables)
     - groups (dict, optional): Groups for comparison (independent groups)
     - analysis_type (str): Type of analysis (default: "auto" for automatic detection)
@@ -396,22 +398,22 @@ def statistical_analyzer(
     - confidence_level (float): Confidence level for statistical tests (default: 0.95)
 
     Usage Examples:
-    1. Auto-detect analysis: statistical_analyzer("conv1", "analyze", data={"before": [70,72,68], "after": [78,80,76]})
-    2. Group comparison: statistical_analyzer("conv1", "analyze", groups={"React": [85,87,83], "Vue": [78,82,80], "Angular": [88,90,85]})
-    3. Paired comparison: statistical_analyzer("conv1", "analyze", data={"baseline": [70,72,68], "treatment": [78,80,76]}, analysis_type="paired_comparison")
-    4. Correlation analysis: statistical_analyzer("conv1", "analyze", data={"experience": [1,3,5,7], "performance": [65,75,85,95]}, analysis_type="correlation_analysis")
-    5. Chi-square test: statistical_analyzer("conv1", "analyze", data={"age_group": ["18-25", "26-35", "36-45"], "product_preference": ["Electronics", "Books", "Fashion"]}, analysis_type="chi_square_test")
-    6. Frequency analysis: statistical_analyzer("conv1", "analyze", data={"feedback": ["Excellent", "Good", "Average", "Poor"]}, analysis_type="frequency_analysis")
-    7. Generate analysis report: statistical_analyzer("conv1", "get_analysis_report") - Returns comprehensive statistical report for user presentation
+    1. Auto-detect analysis: statistical_analyzer("conv1", "analyze", workspace_id="default", data={"before": [70,72,68], "after": [78,80,76]})
+    2. Group comparison: statistical_analyzer("conv1", "analyze", workspace_id="default", groups={"React": [85,87,83], "Vue": [78,82,80], "Angular": [88,90,85]})
+    3. Paired comparison: statistical_analyzer("conv1", "analyze", workspace_id="default", data={"baseline": [70,72,68], "treatment": [78,80,76]}, analysis_type="paired_comparison")
+    4. Correlation analysis: statistical_analyzer("conv1", "analyze", workspace_id="default", data={"experience": [1,3,5,7], "performance": [65,75,85,95]}, analysis_type="correlation_analysis")
+    5. Chi-square test: statistical_analyzer("conv1", "analyze", workspace_id="default", data={"age_group": ["18-25", "26-35", "36-45"], "product_preference": ["Electronics", "Books", "Fashion"]}, analysis_type="chi_square_test")
+    6. Frequency analysis: statistical_analyzer("conv1", "analyze", workspace_id="default", data={"feedback": ["Excellent", "Good", "Average", "Poor"]}, analysis_type="frequency_analysis")
+    7. Generate analysis report: statistical_analyzer("conv1", "get_analysis_report", workspace_id="default") - Returns comprehensive statistical report for user presentation
     """
     
     if action == "analyze":
         if not data and not groups:
             return "Error: Either 'data' or 'groups' is required for analyze action"
-        return statistical_analyzer_manager.analyze(conversation_id, data, groups, analysis_type, output_format)
+        return statistical_analyzer_manager.analyze(conversation_id, workspace_id, data, groups, analysis_type, output_format)
     
     elif action == "get_analysis_report":
-        return statistical_analyzer_manager.get_analysis_report(conversation_id, "summary")
+        return statistical_analyzer_manager.get_analysis_report(conversation_id, workspace_id, "summary")
     
     else:
         return f"Unknown action: {action}. Valid actions: analyze, get_analysis_report"
