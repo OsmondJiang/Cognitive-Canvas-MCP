@@ -30,11 +30,7 @@ Use this MCP server to enhance your thinking and problem-solving capabilities th
 
 **STATISTICAL_ANALYZER** for automated statistical analysis, hypothesis testing, categorical data analysis (chi-square tests), and comprehensive data exploration. 
 
-Together, these tools enable systematic reasoning, persistent memory, knowledge accumulation, data-driven insights, and PhD-level analytical capabilities. Choose tools strategically: use TODO for planning and project organization, NOTES for knowledge management and experience tracking with intelligent search, RELATIONSHIP_MAPPER for visualization, TABLE_BUILDER for data organization, CHAT_FORK for context management, and STATISTICAL_ANALYZER for both numerical and categorical data analysis.
-
-**NOTES FEATURE HIGHLIGHTS**: Record solutions, problems, experiences, and insights with automatic title generation. Intelligent semantic search finds relevant notes even with partial keywords. Score-based filtering (threshold ≥ 0.1) ensures quality results. Combined search boosts documents with matching tags. Supports cross-conversation search for global knowledge retrieval.
-
-**SIMPLIFIED: Auto-Creating Workspaces** - TODO_COMMAND now features zero-management workspace isolation. Just specify any workspace_id when adding tasks and the workspace will be automatically created with smart naming. No manual workspace management needed!""") 
+Together, these tools enable systematic reasoning, persistent memory, knowledge accumulation, data-driven insights, and PhD-level analytical capabilities. Choose tools strategically: use TODO for planning and project organization, NOTES for knowledge management and experience tracking with intelligent search, RELATIONSHIP_MAPPER for visualization, TABLE_BUILDER for data organization, CHAT_FORK for context management, and STATISTICAL_ANALYZER for both numerical and categorical data analysis.""") 
 
 
 @mcp.tool(name="todo_command", description="**REQUIRED: Tool output is not visible to users - you MUST display the tool's output in your response when necessary.** Use this tool specifically for task and project management - creating, tracking, and updating actionable work items with status tracking (pending, in_progress, completed, blocked). Best for breaking down complex projects into manageable tasks, monitoring progress, and ensuring nothing falls through the cracks. Use when you need to manage workflows, deadlines, or action items that require status updates over time.")
