@@ -98,12 +98,12 @@ class NotesManager:
         search_pool = self.all_notes if include_other_conversations else self.notes_by_conversation[conversation_id]
         
         if not search_pool:
-            return {
+            result = {
                 "success": True,
                 "results": [],
-                "total_count": 0,
-                "_show_to_user": "No relevant notes found"
+                "total_count": 0
             }
+            return DisplayRecommendations.add_to_json_result(result, "notes", "search")
         
         # Convert notes to dictionaries for search
         search_documents = [note.to_dict() for note in search_pool]
@@ -134,13 +134,14 @@ class NotesManager:
                         
             except Exception as e:
                 # Don't fallback silently - return error information
-                return {
+                result = {
                     "success": False,
                     "error": f"Semantic search failed: {str(e)}",
                     "error_type": "semantic_search_unavailable",
                     "suggestion": "Try using tag-based search instead",
                     "_show_to_user": f"Semantic search is not available: {str(e)}. Please try tag-based search."
                 }
+                return result
         
         # Tag-only search or when no query provided
         if search_tags and (search_type in ["tag", "combined"] or not query):
@@ -178,11 +179,12 @@ class NotesManager:
         
         # If no query and no tags, return error
         if not query and not search_tags:
-            return {
+            result = {
                 "success": False,
                 "error": "Either query or search_tags must be provided",
-                "_show_to_user": "Please provide either a search query or tags to search for"
+                "_show_to_user": "Please provide either a search query or tags to search for notes."
             }
+            return result
         
         # Remove duplicates and sort by relevance score and recency
         unique_notes = {}
@@ -201,16 +203,17 @@ class NotesManager:
             result_item["preview"] = note.content[:150] + "..." if len(note.content) > 150 else note.content
             results.append(result_item)
         
-        return {
+        result = {
             "success": True,
             "results": results,
             "total_count": len(final_notes),
             "search_query": query,
             "search_tags": search_tags,
             "search_type": search_type,
-            "search_method": search_method,
-            "_show_to_user": f"Found {len(final_notes)} relevant notes using {search_method} search, showing top {len(limited_results)} results"
+            "search_method": search_method
         }
+        
+        return DisplayRecommendations.add_to_json_result(result, "notes", "search")
     
     def get_notes_by_ids(self, conversation_id: str, note_ids: List[str]) -> Dict:
         """Get specific notes by their IDs"""
@@ -307,10 +310,12 @@ class NotesManager:
         note = self._find_note_by_id(note_id)
         
         if not note:
-            return {
+            result = {
                 "success": False,
-                "error": f"Note {note_id} does not exist"
+                "error": f"Note {note_id} does not exist",
+                "_show_to_user": f"Note '{note_id}' was not found. Please check the note ID and try again."
             }
+            return result
         
         # Update fields
         if content is not None:
@@ -337,10 +342,12 @@ class NotesManager:
         note = self._find_note_by_id(note_id)
         
         if not note:
-            return {
+            result = {
                 "success": False,
-                "error": f"Note {note_id} does not exist"
+                "error": f"Note {note_id} does not exist",
+                "_show_to_user": f"Note '{note_id}' was not found. Please check the note ID and try again."
             }
+            return result
         
         # Remove from conversation notes
         if conversation_id in self.notes_by_conversation:
