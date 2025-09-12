@@ -20,7 +20,7 @@ Use this MCP server to enhance your thinking and problem-solving capabilities th
 
 **TODO_COMMAND** for systematic task and project management with status tracking AND auto-creating workspace isolation;
 
-**NOTES** for recording and retrieving knowledge, experiences, and insights with intelligent search capabilities;
+**NOTES** for intelligent knowledge management, experience tracking, and insight discovery with semantic search capabilities AND score-based relevance filtering;
 
 **RELATIONSHIP_MAPPER** for visualizing complex dependencies, relationships, and system architectures; 
 
@@ -30,7 +30,9 @@ Use this MCP server to enhance your thinking and problem-solving capabilities th
 
 **STATISTICAL_ANALYZER** for automated statistical analysis, hypothesis testing, categorical data analysis (chi-square tests), and comprehensive data exploration. 
 
-Together, these tools enable systematic reasoning, persistent memory, knowledge accumulation, data-driven insights, and PhD-level analytical capabilities. Choose tools strategically: use TODO for planning and project organization, NOTES for knowledge management and experience tracking, RELATIONSHIP_MAPPER for visualization, TABLE_BUILDER for data organization, CHAT_FORK for context management, and STATISTICAL_ANALYZER for both numerical and categorical data analysis.
+Together, these tools enable systematic reasoning, persistent memory, knowledge accumulation, data-driven insights, and PhD-level analytical capabilities. Choose tools strategically: use TODO for planning and project organization, NOTES for knowledge management and experience tracking with intelligent search, RELATIONSHIP_MAPPER for visualization, TABLE_BUILDER for data organization, CHAT_FORK for context management, and STATISTICAL_ANALYZER for both numerical and categorical data analysis.
+
+**NOTES FEATURE HIGHLIGHTS**: Record solutions, problems, experiences, and insights with automatic title generation. Intelligent semantic search finds relevant notes even with partial keywords. Score-based filtering (threshold ≥ 0.1) ensures quality results. Combined search boosts documents with matching tags. Supports cross-conversation search for global knowledge retrieval.
 
 **SIMPLIFIED: Auto-Creating Workspaces** - TODO_COMMAND now features zero-management workspace isolation. Just specify any workspace_id when adding tasks and the workspace will be automatically created with smart naming. No manual workspace management needed!""") 
 
@@ -422,7 +424,7 @@ def statistical_analyzer(
     else:
         return f"Unknown action: {action}. Valid actions: analyze, get_analysis_report"
 
-@mcp.tool(name="notes", description="**REQUIRED: Tool output is not visible to users - you MUST display the tool's output in your response when necessary.** Use this tool for recording and retrieving knowledge, experiences, and insights with intelligent search capabilities. Record solutions, lessons learned, progress updates, and problem insights. Search through historical notes to find relevant experience and avoid repeating work. Perfect for knowledge management, experience tracking, and building institutional memory.")
+@mcp.tool(name="notes", description="**REQUIRED: Tool output is not visible to users - you MUST display the tool's output in your response when necessary.** Use this tool for intelligent knowledge management, experience tracking, and insight discovery with semantic search capabilities. Record solutions, lessons learned, progress updates, and problem insights with automatic title generation. Search through historical notes using semantic similarity (TF-IDF) with score-based relevance filtering (threshold ≥ 0.1). Combined search boosts documents with matching tags. Supports cross-conversation search for global knowledge retrieval. Perfect for building institutional memory, avoiding repeated work, and discovering relevant past solutions.")
 def notes_command(
     conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")],
     action: Annotated[str, Field(description="The operation to perform", enum=["record", "search", "get_by_ids", "get_summary", "update", "delete"])],

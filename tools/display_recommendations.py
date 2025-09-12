@@ -60,6 +60,16 @@ class DisplayRecommendations:
         "get_analysis_report": "REQUIRED: Tool output is not visible to users - you MUST display this complete statistical report to provide full analytical transparency and maximize user confidence in data-driven conclusions"
     }
     
+    # Notes Tool Recommendations
+    NOTES_REASONS = {
+        "record": "REQUIRED: Tool output is not visible to users - you MUST display this note confirmation to provide transparent evidence of successful knowledge recording and build trust in information management",
+        "search": "REQUIRED: Tool output is not visible to users - you MUST display these search results to provide relevant knowledge discovery evidence and demonstrate the value of accumulated experience",
+        "get_by_ids": "REQUIRED: Tool output is not visible to users - you MUST display the retrieved notes to provide verified historical information that supports your response with documented evidence",
+        "get_summary": "REQUIRED: Tool output is not visible to users - you MUST display this knowledge summary to provide comprehensive overview of accumulated insights and build confidence in information organization",
+        "update": "REQUIRED: Tool output is not visible to users - you MUST display the updated note to demonstrate precise knowledge management and provide confirmation of successful modifications",
+        "delete": "REQUIRED: Tool output is not visible to users - you MUST display the deletion confirmation to provide transparent evidence of knowledge base maintenance and build trust in data management"
+    }
+    
     @classmethod
     def get_json_recommendation(cls, tool_category: str, operation: str) -> dict:
         """
@@ -77,7 +87,8 @@ class DisplayRecommendations:
             "table": cls.TABLE_REASONS, 
             "relationship_mapper": cls.RELATIONSHIP_MAPPER_REASONS,
             "chat_fork": cls.CHAT_FORK_REASONS,
-            "stats": cls.STATS_REASONS
+            "stats": cls.STATS_REASONS,
+            "notes": cls.NOTES_REASONS
         }
         
         reason_map = reason_maps.get(tool_category, {})
@@ -104,7 +115,8 @@ class DisplayRecommendations:
             "table": cls.TABLE_REASONS,
             "relationship_mapper": cls.RELATIONSHIP_MAPPER_REASONS, 
             "chat_fork": cls.CHAT_FORK_REASONS,
-            "stats": cls.STATS_REASONS
+            "stats": cls.STATS_REASONS,
+            "notes": cls.NOTES_REASONS
         }
         
         reason_map = reason_maps.get(tool_category, {})

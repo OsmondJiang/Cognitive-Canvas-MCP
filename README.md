@@ -1,34 +1,38 @@
 # Cognitive Canvas
 
-A comprehensive Model Context Protocol (MCP) server that transforms AI assistants into research-grade cognitive workspaces with systematic reasoning, evidence-based analysis, and persistent memory management.
+A comprehensive Model Context Protocol (MCP) server that transforms AI assistants into research-grade cognitive workspaces with systematic reasoning, evidence-based analysis, persistent memory management, and intelligent knowledge discovery.
 
 ## Overview
 
-Cognitive Canvas is an advanced MCP server that provides AI agents with human-like organizational abilities for complex problem-solving. It transforms simple chat assistants into sophisticated research agents capable of systematic thinking, statistical evidence generation, and persistent knowledge building.
+Cognitive Canvas is an advanced MCP server that provides AI agents with human-like organizational abilities for complex problem-solving. It transforms simple chat assistants into sophisticated research agents capable of systematic thinking, statistical evidence generation, persistent knowledge building, and intelligent knowledge retrieval through semantic search.
 
-**Core Philosophy**: Transform any AI from a basic chat interface into a comprehensive research laboratory with structured reasoning, dependency mapping, statistical validation, and context management capabilities.
+**Core Philosophy**: Transform any AI from a basic chat interface into a comprehensive research laboratory with structured reasoning, dependency mapping, statistical validation, context management, and intelligent knowledge discovery capabilities.
 
 ### Key Transformations
 
 **From Simple Chat to Research Agent**
 - Before: AI gives quick answers and forgets context
-- After: AI builds knowledge systematically, maintains research state, and develops insights over time
+- After: AI builds knowledge systematically, maintains research state, develops insights over time, and discovers relevant past solutions
 
 **From Linear Responses to Deep-Thinking Mode**
 - Before: AI provides immediate, surface-level responses
-- After: AI breaks down complex problems, maps dependencies, validates hypotheses with statistical evidence
+- After: AI breaks down complex problems, maps dependencies, validates hypotheses with statistical evidence, and leverages historical knowledge
 
 **From Stateless to Persistent Intelligence**
 - Before: Each conversation starts from scratch
-- After: AI accumulates knowledge, tracks progress, maintains statistical evidence, and builds upon previous work
+- After: AI accumulates knowledge, tracks progress, maintains statistical evidence, builds upon previous work, and discovers relevant past insights through semantic search
 
 **From Opinion-Based to Evidence-Driven**
 - Before: AI provides subjective recommendations
-- After: AI generates statistical evidence, calculates significance levels, and provides data-backed conclusions
+- After: AI generates statistical evidence, calculates significance levels, provides data-backed conclusions, and leverages documented solutions from past experiences
+
+**From Isolated Knowledge to Connected Intelligence**
+- Before: AI cannot access or learn from previous problem-solving sessions
+- After: AI searches through accumulated knowledge using semantic similarity, finds relevant solutions even with partial matches, and builds upon documented experiences
 
 ## Example Prompts
 
-Your AI assistant will automatically use these tools when you include the trigger phrase **"use cognitive canvas"** along with specific cognitive requests. To ensure optimal tool usage, always include **"use cognitive canvas"** followed by specific actions like **task management**, **statistical analysis**, **relationship mapping**, **structured data**, or **context switching**.
+Your AI assistant will automatically use these tools when you include the trigger phrase **"use cognitive canvas"** along with specific cognitive requests. To ensure optimal tool usage, always include **"use cognitive canvas"** followed by specific actions like **task management**, **knowledge recording**, **intelligent search**, **statistical analysis**, **relationship mapping**, **structured data**, or **context switching**.
 
 ### Strategic Planning and Task Management
 "I need to build a machine learning pipeline for customer segmentation. **Use cognitive canvas** to break this down into actionable tasks and track progress systematically."
@@ -36,6 +40,24 @@ Your AI assistant will automatically use these tools when you include the trigge
 "Can you **use cognitive canvas** to organize the steps for launching a SaaS product and help me track dependencies between different phases?"
 
 "Let's systematically plan our Q4 product roadmap. **Use cognitive canvas** for task management and dependency visualization."
+
+### Knowledge Management and Experience Tracking
+"I just solved a complex database performance issue. **Use cognitive canvas** to record this solution with proper tags so I can find it later when similar problems occur."
+
+"**Use cognitive canvas** to search through my previous experiences with API optimization. I remember solving something similar but need to find the exact solution."
+
+"Record this lesson learned: **Use cognitive canvas** to document that microservice timeouts were caused by connection pool exhaustion, tagged with performance and architecture."
+
+"**Use cognitive canvas** to find all my previous notes about React performance optimization - I need to see what techniques I've documented before."
+
+### Intelligent Knowledge Discovery
+"I'm facing a production issue with slow database queries. **Use cognitive canvas** to search through my knowledge base for any previous solutions or similar problems I've encountered."
+
+"**Use cognitive canvas** to search for any documented solutions related to API rate limiting and caching strategies from my past work."
+
+"Before implementing this new feature, **use cognitive canvas** to find relevant insights from previous similar implementations I've documented."
+
+"**Use cognitive canvas** to search across all my conversations for any experience with Kubernetes scaling issues - semantic search should find related solutions even if I use different terminology."
 
 ### Research and Evidence-Based Analysis
 "I collected survey data on employee satisfaction vs productivity. **Use cognitive canvas** to analyze with statistical evidence - are these factors significantly related?"
@@ -87,6 +109,16 @@ Your AI assistant will automatically use these tools when you include the trigge
 "**Use cognitive canvas** for evidence-driven research planning: Structure my experiment design, track methodology steps, analyze results with statistical rigor, and organize findings systematically."
 
 ## Key Features
+
+### Intelligent Knowledge Management and Experience Tracking
+- Record solutions, problems, experiences, and insights with automatic title generation
+- Intelligent semantic search using TF-IDF vectorization for finding relevant knowledge
+- Score-based relevance filtering (threshold ≥ 0.1) ensures quality search results
+- Combined search that boosts documents with matching tags for enhanced relevance
+- Cross-conversation search capabilities for global knowledge retrieval
+- Support for multiple note types: problems, solutions, experiences, progress, general
+- Update effectiveness scores for solution tracking and continuous improvement
+- Metadata support for rich context and advanced filtering capabilities
 
 ### Task Management and Action Planning
 - Break down complex problems into actionable tasks with batch operations
