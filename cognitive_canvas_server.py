@@ -6,17 +6,21 @@ from tools.chat_fork import ChatForkManager
 from tools.relationship_mapper import RelationshipMapper
 from tools.table_builder import TableBuilder
 from tools.statistical_analyzer import StatisticalAnalyzer
+from tools.notes import NotesManager
 
 chat_fork_manager = ChatForkManager()
 relationship_mapper_manager = RelationshipMapper()
 table_builder_manager = TableBuilder()
 statistical_analyzer_manager = StatisticalAnalyzer()
+notes_manager = NotesManager()
 
 mcp = FastMCP(name = "Cognitive Canvas", instructions="""**REQUIRED: ALL TOOL OUTPUTS ARE HIDDEN FROM USERS** - Users cannot see any tool output. You MUST include relevant tool output content in your response when necessary. Each tool output contains a '_show_to_user' field with specific display requirements.
 
-Use this MCP server to enhance your thinking and problem-solving capabilities through structured organization and statistical analysis. This server transforms AI into a research-grade cognitive workspace with five specialized tools: 
+Use this MCP server to enhance your thinking and problem-solving capabilities through structured organization, knowledge management, and statistical analysis. This server transforms AI into a research-grade cognitive workspace with six specialized tools: 
 
 **TODO_COMMAND** for systematic task and project management with status tracking AND auto-creating workspace isolation;
+
+**NOTES** for recording and retrieving knowledge, experiences, and insights with intelligent search capabilities;
 
 **RELATIONSHIP_MAPPER** for visualizing complex dependencies, relationships, and system architectures; 
 
@@ -26,7 +30,7 @@ Use this MCP server to enhance your thinking and problem-solving capabilities th
 
 **STATISTICAL_ANALYZER** for automated statistical analysis, hypothesis testing, categorical data analysis (chi-square tests), and comprehensive data exploration. 
 
-Together, these tools enable systematic reasoning, persistent memory, data-driven insights, and PhD-level analytical capabilities. Choose tools strategically: use TODO for planning and project organization with effortless workspace isolation, RELATIONSHIP_MAPPER for visualization, TABLE_BUILDER for data organization, CHAT_FORK for context management, and STATISTICAL_ANALYZER for both numerical and categorical data analysis.
+Together, these tools enable systematic reasoning, persistent memory, knowledge accumulation, data-driven insights, and PhD-level analytical capabilities. Choose tools strategically: use TODO for planning and project organization, NOTES for knowledge management and experience tracking, RELATIONSHIP_MAPPER for visualization, TABLE_BUILDER for data organization, CHAT_FORK for context management, and STATISTICAL_ANALYZER for both numerical and categorical data analysis.
 
 **SIMPLIFIED: Auto-Creating Workspaces** - TODO_COMMAND now features zero-management workspace isolation. Just specify any workspace_id when adding tasks and the workspace will be automatically created with smart naming. No manual workspace management needed!""") 
 
@@ -417,6 +421,112 @@ def statistical_analyzer(
     
     else:
         return f"Unknown action: {action}. Valid actions: analyze, get_analysis_report"
+
+@mcp.tool(name="notes", description="**REQUIRED: Tool output is not visible to users - you MUST display the tool's output in your response when necessary.** Use this tool for recording and retrieving knowledge, experiences, and insights with intelligent search capabilities. Record solutions, lessons learned, progress updates, and problem insights. Search through historical notes to find relevant experience and avoid repeating work. Perfect for knowledge management, experience tracking, and building institutional memory.")
+def notes_command(
+    conversation_id: Annotated[str, Field(description="Unique identifier of the conversation")],
+    action: Annotated[str, Field(description="The operation to perform", enum=["record", "search", "get_by_ids", "get_summary", "update", "delete"])],
+    
+    # Recording parameters
+    content: Annotated[Optional[str], Field(description="Main content of the note", default=None)],
+    title: Annotated[Optional[str], Field(description="Optional title for the note (auto-generated if not provided)", default=None)],
+    note_type: Annotated[Optional[str], Field(description="Type of note", enum=["problem", "solution", "experience", "progress", "general"], default="general")],
+    tags: Annotated[Optional[List[str]], Field(description="Tags for categorizing and searching the note", default=None)],
+    metadata: Annotated[Optional[dict], Field(description="Additional metadata for the note", default=None)],
+    
+    # Search parameters
+    query: Annotated[Optional[str], Field(description="Search query for finding relevant notes", default=None)],
+    search_tags: Annotated[Optional[List[str]], Field(description="Tags to search for", default=None)],
+    search_type: Annotated[Optional[str], Field(description="Type of search to perform", enum=["semantic", "tag", "combined"], default="combined")],
+    limit: Annotated[Optional[int], Field(description="Maximum number of results to return", default=10)],
+    include_other_conversations: Annotated[Optional[bool], Field(description="Whether to search across all conversations", default=False)],
+    
+    # Retrieval parameters
+    note_ids: Annotated[Optional[List[str]], Field(description="List of note IDs to retrieve", default=None)],
+    context_data: Annotated[Optional[dict], Field(description="Context information for filtering summary", default=None)],
+    
+    # Update parameters
+    note_id: Annotated[Optional[str], Field(description="ID of note to update or delete", default=None)],
+    effectiveness_score: Annotated[Optional[int], Field(description="Effectiveness score (1-5) for solution notes", default=None)]
+):
+    """
+    Notes Tool for Knowledge Management and Experience Tracking
+    
+    Record and retrieve insights, solutions, and experiences to build persistent knowledge.
+    Supports intelligent search across notes to find relevant historical information.
+
+    Parameters:
+    - conversation_id (str, required): Unique identifier of the conversation
+    - action (str, required): Operation type - ["record", "search", "get_by_ids", "get_summary", "update", "delete"]
+    
+    For recording (action="record"):
+    - content (str, required): Main content of the note
+    - title (str, optional): Title for the note (auto-generated if not provided)  
+    - note_type (str, optional): Type - "problem", "solution", "experience", "progress", "general"
+    - tags (list, optional): Tags for categorization
+    - metadata (dict, optional): Additional context information
+    
+    For searching (action="search"):
+    - query (str, optional): Search query text
+    - search_tags (list, optional): Tags to search for
+    - search_type (str, optional): "semantic", "tag", or "combined" search
+    - limit (int, optional): Maximum results to return (default: 10)
+    - include_other_conversations (bool, optional): Search across all conversations
+    
+    For retrieval (action="get_by_ids"):
+    - note_ids (list, required): List of specific note IDs to retrieve
+    
+    For summary (action="get_summary"):
+    - context_data (dict, optional): Context for filtering summary
+    
+    For updates (action="update"):
+    - note_id (str, required): ID of note to update
+    - content/title/tags/effectiveness_score (optional): Fields to update
+    
+    For deletion (action="delete"):
+    - note_id (str, required): ID of note to delete
+
+    Usage Examples:
+    1. Record solution: notes_command("conv1", "record", content="Fixed API timeout by increasing connection pool size from 10 to 50", note_type="solution", tags=["api", "performance", "timeout"])
+    2. Record problem: notes_command("conv1", "record", content="Database queries are slow on user table, affecting login performance", note_type="problem", tags=["database", "performance", "users"])
+    3. Search for solutions: notes_command("conv1", "search", query="API performance issues", search_type="combined", limit=5)
+    4. Search by tags: notes_command("conv1", "search", search_tags=["database", "optimization"], search_type="tag")
+    5. Get specific notes: notes_command("conv1", "get_by_ids", note_ids=["note_123", "note_456"])
+    6. Get conversation summary: notes_command("conv1", "get_summary")
+    7. Update note effectiveness: notes_command("conv1", "update", note_id="note_123", effectiveness_score=5)
+    8. Delete note: notes_command("conv1", "delete", note_id="note_123")
+    """
+    
+    if action == "record":
+        if not content:
+            return "Error: content is required for record action"
+        return notes_manager.record_note(conversation_id, content, title, note_type, tags, metadata)
+    
+    elif action == "search":
+        if not query and not search_tags:
+            return "Error: either query or search_tags is required for search action"
+        return notes_manager.search_notes(conversation_id, query, search_tags, search_type, limit, include_other_conversations)
+    
+    elif action == "get_by_ids":
+        if not note_ids:
+            return "Error: note_ids list is required for get_by_ids action"
+        return notes_manager.get_notes_by_ids(conversation_id, note_ids)
+    
+    elif action == "get_summary":
+        return notes_manager.get_conversation_summary(conversation_id, context_data)
+    
+    elif action == "update":
+        if not note_id:
+            return "Error: note_id is required for update action"
+        return notes_manager.update_note(conversation_id, note_id, content, title, tags, effectiveness_score, metadata)
+    
+    elif action == "delete":
+        if not note_id:
+            return "Error: note_id is required for delete action"  
+        return notes_manager.delete_note(conversation_id, note_id)
+    
+    else:
+        return f"Unknown action: {action}. Valid actions: record, search, get_by_ids, get_summary, update, delete"
 
 def main():
     """Main entry point for the MCP server when installed via pip"""
