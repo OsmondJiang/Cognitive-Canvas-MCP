@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional, Tuple
 import re
+from datetime import datetime
 from .display_recommendations import DisplayRecommendations
 
 class ChatNode:
@@ -15,10 +16,55 @@ class ChatNode:
         # Bookmark functionality
         self.is_bookmarked = False
         self.bookmark_name = ""
+        # Time tracking for notes integration
+        self.created_at = datetime.now().isoformat()
+        self.last_active = self.created_at
 
 class ChatForkManager:
     def __init__(self):
         self.conversations: Dict[str, ChatNode] = {}
+        # Optional reference to notes manager for integration
+        self._notes_manager = None
+
+    def set_notes_manager(self, notes_manager):
+        """Set notes manager for integration features"""
+        self._notes_manager = notes_manager
+
+    def _get_related_notes_hint(self, conversation_id: str, start_time: str, end_time: str = None) -> List[Dict]:
+        """Get related notes hint for time period (weak integration)"""
+        if not self._notes_manager:
+            return []
+        
+        try:
+            # Get all notes for conversation
+            if conversation_id not in self._notes_manager.notes_by_conversation:
+                return []
+            
+            notes = self._notes_manager.notes_by_conversation[conversation_id]
+            if not notes:
+                return []
+            
+            # Filter notes by time range
+            related_notes = []
+            current_time = datetime.now().isoformat() if not end_time else end_time
+            
+            for note in notes:
+                # Check if note timestamp is within the time range
+                if start_time <= note.timestamp <= current_time:
+                    related_notes.append({
+                        "id": note.id,
+                        "title": note.title,
+                        "type": note.note_type,
+                        "timestamp": note.timestamp
+                    })
+            
+            # Sort by timestamp (newest first) and limit to 5
+            related_notes.sort(key=lambda x: x["timestamp"], reverse=True)
+            return related_notes[:5]
+            
+        except Exception:
+            # Silent fallback - integration should not break main functionality
+            return []
 
     def pause_topic(self, conversation_id: str, new_topic: str, current_context: str = "", 
                     progress_status: str = "", next_steps: str = "", pause_type: str = "nested",
@@ -78,6 +124,9 @@ class ChatForkManager:
             new_topic_node = ChatNode(new_topic, "", parent=current)
             new_topic_node._pause_type = "nested"  # Mark pause type
             
+            # Update current node's last_active before switching
+            current.last_active = datetime.now().isoformat()
+            
             # The new subtopic should get the context information
             if current_context:
                 new_topic_node.current_context = current_context
@@ -123,6 +172,9 @@ class ChatForkManager:
                 "progress_status": current.progress_status,
                 "next_steps": current.next_steps
             }
+            
+            # Update current node's last_active before switching
+            current.last_active = datetime.now().isoformat()
             
             # DON'T update current node context for parallel - we're switching topics, not updating
             # The parallel pause context describes the NEW topic we're starting
@@ -257,6 +309,16 @@ class ChatForkManager:
         # Execute resume
         self.conversations[conversation_id] = target_node
         
+        # Update target node's last_active time
+        target_node.last_active = datetime.now().isoformat()
+        
+        # Get related notes hint for the resumed topic's time period
+        related_notes_hint = self._get_related_notes_hint(
+            conversation_id, 
+            target_node.created_at, 
+            target_node.last_active
+        )
+        
         result = {
             "status": "success",
             "message": f"Completed topic '{current.summary}' and resumed: {target_node.summary}",
@@ -273,6 +335,12 @@ class ChatForkManager:
             "action": "topic_resumed",
             "resumed_to_bookmark": target_node.bookmark_name if target_node.is_bookmarked else None
         }
+        
+        # Add related notes hint if available (weak integration)
+        if related_notes_hint:
+            result["related_notes_hint"] = related_notes_hint
+            result["notes_hint_message"] = f"Found {len(related_notes_hint)} notes from this topic's time period - use notes tool to view details"
+        
         result.update(DisplayRecommendations.get_json_recommendation("chat_fork", "resume_topic"))
         return result
 

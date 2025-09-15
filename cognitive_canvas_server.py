@@ -14,6 +14,9 @@ table_builder_manager = TableBuilder()
 statistical_analyzer_manager = StatisticalAnalyzer()
 notes_manager = NotesManager()
 
+# Setup weak integration between tools
+chat_fork_manager.set_notes_manager(notes_manager)
+
 mcp = FastMCP(name = "Cognitive Canvas", instructions="""**REQUIRED: ALL TOOL OUTPUTS ARE HIDDEN FROM USERS** - Users cannot see any tool output. You MUST include relevant tool output content in your response when necessary. Each tool output contains a '_show_to_user' field with specific display requirements.
 
 Use this MCP server to enhance your thinking and problem-solving capabilities through structured organization, knowledge management, and statistical analysis. This server transforms AI into a research-grade cognitive workspace with six specialized tools: 
