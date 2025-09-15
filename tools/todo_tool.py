@@ -1,5 +1,62 @@
 from .display_recommendations import DisplayRecommendations
 
+# Optional reference to notes manager for integration
+_notes_manager = None
+
+def set_notes_manager(notes_manager):
+    """Set notes manager for integration features"""
+    global _notes_manager
+    _notes_manager = notes_manager
+
+def _get_related_notes_hint(conversation_id: str, task_content: str, limit: int = 3) -> list:
+    """Get related notes hint based on task content (weak integration)"""
+    if not _notes_manager:
+        return []
+    
+    try:
+        # First try semantic search
+        search_result = _notes_manager.search_notes(
+            conversation_id=conversation_id,
+            query=task_content,
+            limit=limit,
+            include_other_conversations=False
+        )
+        
+        if search_result.get("success") and search_result.get("results"):
+            # Extract relevant note information
+            related_notes = []
+            for note in search_result["results"]:
+                related_notes.append({
+                    "id": note["id"],
+                    "title": note["title"],
+                    "type": note["note_type"],
+                    "relevance_score": note.get("relevance_score", 0),
+                    "preview": note.get("preview", "")
+                })
+            return related_notes
+        
+        # If semantic search fails, try to get recent notes as fallback
+        summary_result = _notes_manager.get_conversation_summary(conversation_id)
+        if summary_result.get("success") and summary_result.get("summary", {}).get("recent_notes"):
+            # Return recent notes as fallback
+            recent_notes = summary_result["summary"]["recent_notes"][:limit]
+            related_notes = []
+            for note in recent_notes:
+                related_notes.append({
+                    "id": note["id"],
+                    "title": note["title"],
+                    "type": note["type"],
+                    "relevance_score": 0.5,  # Default relevance for fallback
+                    "preview": f"Recent note: {note['title']}"
+                })
+            return related_notes
+        
+        return []
+        
+    except Exception:
+        # Silent fallback - integration should not break main functionality
+        return []
+
 # Updated data structure to support workspaces
 # Format: {conversation_id: {workspace_id: [tasks]}}
 tasks_by_workspace = {}
@@ -158,12 +215,31 @@ def update_task(conversation_id: str, task_id: int, title: str = None, descripti
                 t["description"] = description
             if status is not None:
                 t["status"] = status
+            
+            # Create a copy of all tasks for the response
+            tasks_copy = []
+            for task in _get_tasks(conversation_id, workspace_id):
+                task_copy = task.copy()
+                
+                # Add related notes hint only to the updated task
+                if task["id"] == task_id and (status == "completed" or status == "in_progress"):
+                    task_content = f"{task['title']} {task.get('description', '')}"
+                    related_notes = _get_related_notes_hint(conversation_id, task_content)
+                    if related_notes:
+                        task_copy["related_notes_hint"] = related_notes
+                        if status == "completed":
+                            task_copy["notes_hint_message"] = f"Task completed! Found {len(related_notes)} related notes - consider recording your experience"
+                        else:
+                            task_copy["notes_hint_message"] = f"Found {len(related_notes)} potentially helpful notes for this task"
+                
+                tasks_copy.append(task_copy)
                 
             result = {
                 "success": True,
-                "data": _get_tasks(conversation_id, workspace_id),
+                "data": tasks_copy,
                 "workspace_id": workspace_id
             }
+            
             return DisplayRecommendations.add_to_json_result(result, "todo", "update_task")
     
     return {
@@ -193,11 +269,22 @@ def delete_task(conversation_id: str, task_id: int, workspace_id: str = "default
 def get_task(conversation_id: str, task_id: int, workspace_id: str = "default") -> dict:
     for t in _get_tasks(conversation_id, workspace_id):
         if t["id"] == task_id:
+            # Create a copy of the task to avoid modifying the original
+            task_copy = t.copy()
+            
+            # Add related notes hint directly to the task data if notes integration is available
+            task_content = f"{t['title']} {t.get('description', '')}"
+            related_notes = _get_related_notes_hint(conversation_id, task_content)
+            if related_notes:
+                task_copy["related_notes_hint"] = related_notes
+                task_copy["notes_hint_message"] = f"Found {len(related_notes)} potentially relevant notes - use notes tool to view details"
+            
             result = {
                 "success": True,
-                "data": [t],  # Return as single-item list for consistency
+                "data": [task_copy],  # Return as single-item list for consistency
                 "workspace_id": workspace_id
             }
+            
             return DisplayRecommendations.add_to_json_result(result, "todo", "get_task")
     return {
         "success": False,
@@ -206,9 +293,24 @@ def get_task(conversation_id: str, task_id: int, workspace_id: str = "default") 
 
 def list_tasks(conversation_id: str, workspace_id: str = "default") -> dict:
     tasks = _get_tasks(conversation_id, workspace_id)
+    
+    # Create copies of tasks with related notes hints
+    tasks_with_notes = []
+    for task in tasks:
+        task_copy = task.copy()
+        
+        # Add related notes hint for each task if notes integration is available
+        task_content = f"{task['title']} {task.get('description', '')}"
+        related_notes = _get_related_notes_hint(conversation_id, task_content)
+        if related_notes:
+            task_copy["related_notes_hint"] = related_notes
+            task_copy["notes_hint_message"] = f"Found {len(related_notes)} potentially relevant notes - use notes tool to view details"
+        
+        tasks_with_notes.append(task_copy)
+    
     result = {
         "success": True,
-        "data": tasks,
+        "data": tasks_with_notes,
         "workspace_id": workspace_id
     }
     return DisplayRecommendations.add_to_json_result(result, "todo", "list_tasks")
@@ -244,6 +346,14 @@ def list_all_tasks(conversation_id: str) -> dict:
             task_with_workspace = task.copy()
             task_with_workspace["workspace_id"] = workspace_id
             task_with_workspace["workspace_name"] = workspaces_metadata[conversation_id][workspace_id]["name"]
+            
+            # Add related notes hint for each task if notes integration is available
+            task_content = f"{task['title']} {task.get('description', '')}"
+            related_notes = _get_related_notes_hint(conversation_id, task_content)
+            if related_notes:
+                task_with_workspace["related_notes_hint"] = related_notes
+                task_with_workspace["notes_hint_message"] = f"Found {len(related_notes)} potentially relevant notes - use notes tool to view details"
+            
             all_tasks.append(task_with_workspace)
     
     result = {

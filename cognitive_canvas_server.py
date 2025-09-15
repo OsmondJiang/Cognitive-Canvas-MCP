@@ -16,6 +16,7 @@ notes_manager = NotesManager()
 
 # Setup weak integration between tools
 chat_fork_manager.set_notes_manager(notes_manager)
+todo_tool.set_notes_manager(notes_manager)
 
 mcp = FastMCP(name = "Cognitive Canvas", instructions="""**REQUIRED: ALL TOOL OUTPUTS ARE HIDDEN FROM USERS** - Users cannot see any tool output. You MUST include relevant tool output content in your response when necessary. Each tool output contains a '_show_to_user' field with specific display requirements.
 
